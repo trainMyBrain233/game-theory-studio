@@ -1,0 +1,1045 @@
+{
+  "schema_version": "2.0",
+  "title": "四个问题，看懂一场博弈",
+  "language": "zh-CN",
+  "duration": 173.3,
+  "fps_reference": 30,
+  "timing_status": "manual_voiceover_reference_not_audio_aligned",
+  "timing_notice": "本时间轴没有真人口播音频作为依据。发声时长、句内停顿与数值出现点均为人工参考；录制后应以实际呼吸和语义停顿重对齐，不能宣称已经按音频对齐。",
+  "speech_guidance": {
+    "tone": "清楚、平和，像面对一个第一次接触博弈论的人讲解。",
+    "names": "小A、小B中的字母读英语字母名称；不要读成甲乙，也不要省掉人名。",
+    "numbers_and_symbols": "数值全部用中文数字口播；（0，5）读成小A得零分、小B得五分；≠读不等于；行读 háng。",
+    "pace": "句内逗号轻停，问句和定义后留理解时间。允许局部伸缩，不要为踩时间码加速。",
+    "subtitle_policy": "整句或语义块完整出现；不逐字打字。字幕从start保留到end，包含尾部停顿，不提前收走。",
+    "pause_after_definition": "pause_after位于start/end显示窗的结尾：end = voiceover_end + pause_after。不是在end后再追加一次。"
+  },
+  "visual_contract": {
+    "participants": [
+      "小A",
+      "小B"
+    ],
+    "game_rounds": 1,
+    "matrix_orientation": "小A为行，小B为列",
+    "matrix_score_order": [
+      "小A",
+      "小B"
+    ],
+    "matrix_values": {
+      "RR": [
+        3,
+        3
+      ],
+      "RB": [
+        0,
+        5
+      ],
+      "BR": [
+        5,
+        0
+      ],
+      "BB": [
+        1,
+        1
+      ]
+    },
+    "matrix_reveal_order": [
+      "RR",
+      "RB",
+      "BR",
+      "BB"
+    ],
+    "multi_round_is_comparison_only": true,
+    "framework_note": "四问是入门整理，不是唯一公认分类。",
+    "information_note": "知道完整计分规则而看不到本轮行动，不能据此称为不完全信息。",
+    "persistent_visual_notes": [
+      "虚构教学案例",
+      "本片：一轮游戏"
+    ],
+    "transitions": "转场优先落在pause_after内；字幕层保持清晰、稳定，不把转场时间从阅读窗硬扣除。"
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "title": "四个问题，看懂一场博弈",
+      "start": 0.0,
+      "end": 11.2
+    },
+    {
+      "id": "players",
+      "title": "参与者：谁在做决定",
+      "start": 11.2,
+      "end": 30.8
+    },
+    {
+      "id": "information",
+      "title": "信息：做决定时知道什么",
+      "start": 30.8,
+      "end": 56.1
+    },
+    {
+      "id": "strategy",
+      "title": "策略：能怎样选择",
+      "start": 56.1,
+      "end": 90.1
+    },
+    {
+      "id": "payoffs",
+      "title": "收益：不同选择，各得什么",
+      "start": 90.1,
+      "end": 155.8
+    },
+    {
+      "id": "recap",
+      "title": "四问复盘",
+      "start": 155.8,
+      "end": 173.3
+    }
+  ],
+  "segments": [
+    {
+      "section": "intro",
+      "text": "两个人都想多拿分，\n为什么还得琢磨对方怎么选？",
+      "voiceover": "两个人都想多拿分，为什么还得琢磨对方怎么选？",
+      "spoken_duration": 5.7,
+      "pause_after": 0.8,
+      "lines": [
+        "两个人都想多拿分，",
+        "为什么还得琢磨对方怎么选？"
+      ],
+      "visual_cue": {
+        "action": "show_shared_game",
+        "note": "同一桌面、同一对角色和红蓝牌；第一句不抢先解释。"
+      },
+      "breath_points": [
+        "多拿分，"
+      ],
+      "id": "s01_hook",
+      "start": 0.0,
+      "voiceover_end": 5.7,
+      "end": 6.5,
+      "display_duration": 6.5,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "intro",
+      "text": "看懂一场博弈，先问四个问题。",
+      "voiceover": "看懂一场博弈，先问四个问题。",
+      "spoken_duration": 3.9,
+      "pause_after": 0.8,
+      "lines": [
+        "看懂一场博弈，先问四个问题。"
+      ],
+      "visual_cue": {
+        "action": "introduce_four_questions",
+        "note": "四个卡片有序出现，仅突出总标题。"
+      },
+      "breath_points": [
+        "一场博弈，"
+      ],
+      "id": "s02_four_questions",
+      "start": 6.5,
+      "voiceover_end": 10.4,
+      "end": 11.2,
+      "display_duration": 4.7,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "players",
+      "text": "第一，谁在做决定？",
+      "voiceover": "第一，谁在做决定？",
+      "spoken_duration": 2.5,
+      "pause_after": 0.7,
+      "lines": [
+        "第一，谁在做决定？"
+      ],
+      "visual_cue": {
+        "action": "focus_question",
+        "question": 1
+      },
+      "breath_points": [],
+      "id": "s03_question",
+      "start": 11.2,
+      "voiceover_end": 13.7,
+      "end": 14.4,
+      "display_duration": 3.2,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "players",
+      "text": "假设小A和小B，玩一轮积分游戏。",
+      "voiceover": "假设小A和小B，玩一轮积分游戏。",
+      "spoken_duration": 4.2,
+      "pause_after": 0.6,
+      "lines": [
+        "假设小A和小B，玩一轮积分游戏。"
+      ],
+      "visual_cue": {
+        "action": "introduce_players",
+        "note": "标注小A、小B；本片：一轮游戏。"
+      },
+      "breath_points": [
+        "小B，"
+      ],
+      "id": "s04_setup",
+      "start": 14.4,
+      "voiceover_end": 18.6,
+      "end": 19.2,
+      "display_duration": 4.8,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "players",
+      "text": "他们各自选牌，都希望自己的得分更高。",
+      "voiceover": "他们各自选牌，都希望自己的得分更高。",
+      "spoken_duration": 4.5,
+      "pause_after": 0.6,
+      "lines": [
+        "他们各自选牌，都希望自己的得分更高。"
+      ],
+      "visual_cue": {
+        "action": "show_individual_goals",
+        "note": "两个角色各自的得分目标，避免看成团队积分。"
+      },
+      "breath_points": [
+        "各自选牌，"
+      ],
+      "id": "s05_goal",
+      "start": 19.2,
+      "voiceover_end": 23.7,
+      "end": 24.3,
+      "display_duration": 5.1,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "players",
+      "text": "认识参与者，要弄清谁能决定，\n以及他们在乎什么。",
+      "voiceover": "认识参与者，要弄清谁能决定，以及他们在乎什么。",
+      "spoken_duration": 5.6,
+      "pause_after": 0.9,
+      "lines": [
+        "认识参与者，要弄清谁能决定，",
+        "以及他们在乎什么。"
+      ],
+      "visual_cue": {
+        "action": "define_players",
+        "note": "参与者不只表示人数；谁决定、在乎什么依次强调。"
+      },
+      "breath_points": [
+        "参与者，",
+        "谁能决定，"
+      ],
+      "id": "s06_definition",
+      "start": 24.3,
+      "voiceover_end": 29.9,
+      "end": 30.8,
+      "display_duration": 6.5,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "information",
+      "text": "第二，做决定时，知道什么？",
+      "voiceover": "第二，做决定时，知道什么？",
+      "spoken_duration": 3.0,
+      "pause_after": 0.8,
+      "lines": [
+        "第二，做决定时，知道什么？"
+      ],
+      "visual_cue": {
+        "action": "focus_question",
+        "question": 2
+      },
+      "breath_points": [
+        "做决定时，"
+      ],
+      "id": "s07_question",
+      "start": 30.8,
+      "voiceover_end": 33.8,
+      "end": 34.6,
+      "display_duration": 3.8,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "information",
+      "text": "两人都知道计分规则，\n但看不到对方这次选的牌。",
+      "voiceover": "两人都知道计分规则，但看不到对方这次选的牌。",
+      "spoken_duration": 5.6,
+      "pause_after": 0.8,
+      "lines": [
+        "两人都知道计分规则，",
+        "但看不到对方这次选的牌。"
+      ],
+      "visual_cue": {
+        "action": "show_public_rules_hidden_choices",
+        "note": "规则公开，当前选牌遮挡；不要标成“不完全信息”。"
+      },
+      "breath_points": [
+        "计分规则，"
+      ],
+      "id": "s08_known_unknown",
+      "start": 34.6,
+      "voiceover_end": 40.2,
+      "end": 41.0,
+      "display_duration": 6.4,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "information",
+      "text": "他们各自选好，再一起亮牌。",
+      "voiceover": "他们各自选好，再一起亮牌。",
+      "spoken_duration": 3.5,
+      "pause_after": 0.6,
+      "lines": [
+        "他们各自选好，再一起亮牌。"
+      ],
+      "visual_cue": {
+        "action": "choose_then_reveal_together",
+        "note": "两个动作分开，不结算得分。"
+      },
+      "breath_points": [
+        "各自选好，"
+      ],
+      "id": "s09_simultaneous",
+      "start": 41.0,
+      "voiceover_end": 44.5,
+      "end": 45.1,
+      "display_duration": 4.1,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "information",
+      "text": "知道规则，不等于知道对方这次出什么。",
+      "voiceover": "知道规则，不等于知道对方这次出什么。",
+      "spoken_duration": 4.8,
+      "pause_after": 0.9,
+      "lines": [
+        "知道规则，不等于知道对方这次出什么。"
+      ],
+      "visual_cue": {
+        "action": "contrast_rule_and_current_choice",
+        "note": "画面可以用≠，口播读“不等于”。"
+      },
+      "breath_points": [
+        "知道规则，"
+      ],
+      "id": "s10_distinction",
+      "start": 45.1,
+      "voiceover_end": 49.9,
+      "end": 50.8,
+      "display_duration": 5.7,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "information",
+      "text": "谁先行动，能看到什么，也要交代清楚。",
+      "voiceover": "谁先行动，能看到什么，也要交代清楚。",
+      "spoken_duration": 4.4,
+      "pause_after": 0.9,
+      "lines": [
+        "谁先行动，能看到什么，也要交代清楚。"
+      ],
+      "visual_cue": {
+        "action": "summarize_information",
+        "note": "行动顺序和可见信息作为两项清晰标签。"
+      },
+      "breath_points": [
+        "谁先行动，",
+        "能看到什么，"
+      ],
+      "id": "s11_timing",
+      "start": 50.8,
+      "voiceover_end": 55.2,
+      "end": 56.1,
+      "display_duration": 5.3,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "strategy",
+      "text": "第三，能怎样选择？",
+      "voiceover": "第三，能怎样选择？",
+      "spoken_duration": 2.3,
+      "pause_after": 0.7,
+      "lines": [
+        "第三，能怎样选择？"
+      ],
+      "visual_cue": {
+        "action": "focus_question",
+        "question": 3
+      },
+      "breath_points": [],
+      "id": "s12_question",
+      "start": 56.1,
+      "voiceover_end": 58.4,
+      "end": 59.1,
+      "display_duration": 3.0,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "strategy",
+      "text": "这一轮，每人都可以选红牌，或者蓝牌。",
+      "voiceover": "这一轮，每人都可以选红牌，或者蓝牌。",
+      "spoken_duration": 4.6,
+      "pause_after": 0.6,
+      "lines": [
+        "这一轮，每人都可以选红牌，或者蓝牌。"
+      ],
+      "visual_cue": {
+        "action": "show_two_actions",
+        "note": "同一角色的红、蓝牌上都保留文字。"
+      },
+      "breath_points": [
+        "这一轮，",
+        "选红牌，"
+      ],
+      "id": "s13_options",
+      "start": 59.1,
+      "voiceover_end": 63.7,
+      "end": 64.3,
+      "display_duration": 5.2,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "strategy",
+      "text": "这里只有一次选择，\n红和蓝就是两个纯策略。",
+      "voiceover": "这里只有一次选择，红和蓝就是两个纯策略。",
+      "spoken_duration": 4.8,
+      "pause_after": 0.9,
+      "lines": [
+        "这里只有一次选择，",
+        "红和蓝就是两个纯策略。"
+      ],
+      "visual_cue": {
+        "action": "map_actions_to_pure_strategies",
+        "note": "固定显示“本例：单次决策”，不把一般策略等同于一个动作。"
+      },
+      "breath_points": [
+        "一次选择，"
+      ],
+      "id": "s14_simple_case",
+      "start": 64.3,
+      "voiceover_end": 69.1,
+      "end": 70.0,
+      "display_duration": 5.7,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "strategy",
+      "text": "一般来说，策略是一整套应对计划。",
+      "voiceover": "一般来说，策略是一整套应对计划。",
+      "spoken_duration": 4.0,
+      "pause_after": 1.1,
+      "lines": [
+        "一般来说，策略是一整套应对计划。"
+      ],
+      "visual_cue": {
+        "action": "define_strategy",
+        "note": "定义完整显示，读完后留一秒消化。"
+      },
+      "breath_points": [
+        "一般来说，"
+      ],
+      "id": "s15_definition",
+      "start": 70.0,
+      "voiceover_end": 74.0,
+      "end": 75.1,
+      "display_duration": 5.1,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "strategy",
+      "text": "比如，如果改成多轮：",
+      "voiceover": "比如，如果改成多轮：",
+      "spoken_duration": 2.7,
+      "pause_after": 0.6,
+      "lines": [
+        "比如，如果改成多轮："
+      ],
+      "visual_cue": {
+        "action": "open_multi_round_comparison",
+        "note": "明确标题“如果改成多轮：概念对照”。"
+      },
+      "breath_points": [],
+      "id": "s16_comparison_intro",
+      "start": 75.1,
+      "voiceover_end": 77.8,
+      "end": 78.4,
+      "display_duration": 3.3,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "strategy",
+      "text": "第一轮选红；\n以后，跟着对方上一轮的牌选。",
+      "voiceover": "第一轮选红；以后，跟着对方上一轮的牌选。",
+      "spoken_duration": 5.0,
+      "pause_after": 0.9,
+      "lines": [
+        "第一轮选红；",
+        "以后，跟着对方上一轮的牌选。"
+      ],
+      "visual_cue": {
+        "action": "show_multi_round_plan",
+        "note": "先显示第一轮红，再显示后续轮根据对手上一轮选牌；不结算、不分析重复博弈。"
+      },
+      "breath_points": [
+        "第一轮选红；",
+        "以后，"
+      ],
+      "id": "s17_comparison_example",
+      "start": 78.4,
+      "voiceover_end": 83.4,
+      "end": 84.3,
+      "display_duration": 5.9,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "strategy",
+      "text": "这是一套跨轮次的计划。\n本片仍然只玩一轮。",
+      "voiceover": "这是一套跨轮次的计划。本片仍然只玩一轮。",
+      "spoken_duration": 4.8,
+      "pause_after": 1.0,
+      "lines": [
+        "这是一套跨轮次的计划。",
+        "本片仍然只玩一轮。"
+      ],
+      "visual_cue": {
+        "action": "return_to_single_round",
+        "note": "从对照插页回原桌面，固定“本片：一轮游戏”。"
+      },
+      "breath_points": [
+        "计划。"
+      ],
+      "id": "s18_return_single_round",
+      "start": 84.3,
+      "voiceover_end": 89.1,
+      "end": 90.1,
+      "display_duration": 5.8,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "第四，不同选择，各得多少分？",
+      "voiceover": "第四，不同选择，各得多少分？",
+      "spoken_duration": 3.5,
+      "pause_after": 0.8,
+      "lines": [
+        "第四，不同选择，各得多少分？"
+      ],
+      "visual_cue": {
+        "action": "focus_question",
+        "question": 4
+      },
+      "breath_points": [
+        "不同选择，"
+      ],
+      "id": "s19_question",
+      "start": 90.1,
+      "voiceover_end": 93.6,
+      "end": 94.4,
+      "display_duration": 4.3,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "这就是收益，也叫支付。",
+      "voiceover": "这就是收益，也叫支付。",
+      "spoken_duration": 2.8,
+      "pause_after": 1.0,
+      "lines": [
+        "这就是收益，也叫支付。"
+      ],
+      "visual_cue": {
+        "action": "define_payoff",
+        "note": "只出现收益（支付）一个概念，不叠加效用/函数术语。"
+      },
+      "breath_points": [
+        "收益，"
+      ],
+      "id": "s20_definition",
+      "start": 94.4,
+      "voiceover_end": 97.2,
+      "end": 98.2,
+      "display_duration": 3.8,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "看这张表：行，是小A的选择。",
+      "voiceover": "看这张表：行，是小A的选择。",
+      "spoken_duration": 3.8,
+      "pause_after": 0.7,
+      "lines": [
+        "看这张表：行，是小A的选择。"
+      ],
+      "visual_cue": {
+        "action": "introduce_matrix_rows",
+        "note": "只突出行标签小A及红、蓝，不亮数值。"
+      },
+      "breath_points": [
+        "看这张表：",
+        "行，"
+      ],
+      "id": "s21_rows",
+      "start": 98.2,
+      "voiceover_end": 102.0,
+      "end": 102.7,
+      "display_duration": 4.5,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "列，是小B的选择。",
+      "voiceover": "列，是小B的选择。",
+      "spoken_duration": 2.5,
+      "pause_after": 0.7,
+      "lines": [
+        "列，是小B的选择。"
+      ],
+      "visual_cue": {
+        "action": "introduce_matrix_columns",
+        "note": "只突出列标签小B及红、蓝，不亮数值。"
+      },
+      "breath_points": [
+        "列，"
+      ],
+      "id": "s22_columns",
+      "start": 102.7,
+      "voiceover_end": 105.2,
+      "end": 105.9,
+      "display_duration": 3.2,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "每格先读小A的得分，\n再读小B的得分。",
+      "voiceover": "每格先读小A的得分，再读小B的得分。",
+      "spoken_duration": 4.5,
+      "pause_after": 0.9,
+      "lines": [
+        "每格先读小A的得分，",
+        "再读小B的得分。"
+      ],
+      "visual_cue": {
+        "action": "introduce_score_order",
+        "note": "常驻“（小A得分，小B得分）”；文字与人物颜色一致。"
+      },
+      "breath_points": [
+        "小A的得分，"
+      ],
+      "id": "s23_score_order",
+      "start": 105.9,
+      "voiceover_end": 110.4,
+      "end": 111.3,
+      "display_duration": 5.4,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "小A选红，小B也选红。",
+      "voiceover": "小A选红，小B也选红。",
+      "spoken_duration": 3.5,
+      "pause_after": 0.6,
+      "lines": [
+        "小A选红，小B也选红。"
+      ],
+      "visual_cue": {
+        "action": "highlight_choices",
+        "matrix_cell": "RR",
+        "choices": {
+          "A": "红",
+          "B": "红"
+        },
+        "note": "先沿行列找到交点，格内数字暂不出现。"
+      },
+      "breath_points": [
+        "小A选红，"
+      ],
+      "id": "s24_rr_select",
+      "start": 111.3,
+      "voiceover_end": 114.8,
+      "end": 115.4,
+      "display_duration": 4.1,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "两个人，各得三分。",
+      "voiceover": "两个人，各得三分。",
+      "spoken_duration": 2.5,
+      "pause_after": 0.9,
+      "lines": [
+        "两个人，各得三分。"
+      ],
+      "visual_cue": {
+        "action": "reveal_scores",
+        "matrix_cell": "RR",
+        "scores": [
+          3,
+          3
+        ],
+        "score_reveals": [
+          {
+            "offset": 1.8,
+            "player": "A",
+            "value": 3
+          },
+          {
+            "offset": 1.8,
+            "player": "B",
+            "value": 3
+          }
+        ],
+        "note": "两者同时得三分；固定数对（3，3）。"
+      },
+      "breath_points": [
+        "两个人，"
+      ],
+      "id": "s25_rr_score",
+      "start": 115.4,
+      "voiceover_end": 117.9,
+      "end": 118.8,
+      "display_duration": 3.4,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "小A选红，小B选蓝。",
+      "voiceover": "小A选红，小B选蓝。",
+      "spoken_duration": 3.3,
+      "pause_after": 0.6,
+      "lines": [
+        "小A选红，小B选蓝。"
+      ],
+      "visual_cue": {
+        "action": "highlight_choices",
+        "matrix_cell": "RB",
+        "choices": {
+          "A": "红",
+          "B": "蓝"
+        },
+        "note": "先选择，再结算；不可交换收益数对。"
+      },
+      "breath_points": [
+        "小A选红，"
+      ],
+      "id": "s26_rb_select",
+      "start": 118.8,
+      "voiceover_end": 122.1,
+      "end": 122.7,
+      "display_duration": 3.9,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "小A得零分，小B得五分。",
+      "voiceover": "小A得零分，小B得五分。",
+      "spoken_duration": 3.8,
+      "pause_after": 0.9,
+      "lines": [
+        "小A得零分，小B得五分。"
+      ],
+      "visual_cue": {
+        "action": "reveal_scores",
+        "matrix_cell": "RB",
+        "scores": [
+          0,
+          5
+        ],
+        "score_reveals": [
+          {
+            "offset": 1.0,
+            "player": "A",
+            "value": 0
+          },
+          {
+            "offset": 3.0,
+            "player": "B",
+            "value": 5
+          }
+        ],
+        "note": "依次显出A零、B五；固定数对（0，5）。"
+      },
+      "breath_points": [
+        "小A得零分，"
+      ],
+      "id": "s27_rb_score",
+      "start": 122.7,
+      "voiceover_end": 126.5,
+      "end": 127.4,
+      "display_duration": 4.7,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "小A选蓝，小B选红。",
+      "voiceover": "小A选蓝，小B选红。",
+      "spoken_duration": 3.3,
+      "pause_after": 0.6,
+      "lines": [
+        "小A选蓝，小B选红。"
+      ],
+      "visual_cue": {
+        "action": "highlight_choices",
+        "matrix_cell": "BR",
+        "choices": {
+          "A": "蓝",
+          "B": "红"
+        },
+        "note": "先选择，再结算。"
+      },
+      "breath_points": [
+        "小A选蓝，"
+      ],
+      "id": "s28_br_select",
+      "start": 127.4,
+      "voiceover_end": 130.7,
+      "end": 131.3,
+      "display_duration": 3.9,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "小A得五分，小B得零分。",
+      "voiceover": "小A得五分，小B得零分。",
+      "spoken_duration": 3.8,
+      "pause_after": 0.9,
+      "lines": [
+        "小A得五分，小B得零分。"
+      ],
+      "visual_cue": {
+        "action": "reveal_scores",
+        "matrix_cell": "BR",
+        "scores": [
+          5,
+          0
+        ],
+        "score_reveals": [
+          {
+            "offset": 1.0,
+            "player": "A",
+            "value": 5
+          },
+          {
+            "offset": 3.0,
+            "player": "B",
+            "value": 0
+          }
+        ],
+        "note": "依次显出A五、B零；固定数对（5，0）。"
+      },
+      "breath_points": [
+        "小A得五分，"
+      ],
+      "id": "s29_br_score",
+      "start": 131.3,
+      "voiceover_end": 135.1,
+      "end": 136.0,
+      "display_duration": 4.7,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "小A选蓝，小B也选蓝。",
+      "voiceover": "小A选蓝，小B也选蓝。",
+      "spoken_duration": 3.5,
+      "pause_after": 0.6,
+      "lines": [
+        "小A选蓝，小B也选蓝。"
+      ],
+      "visual_cue": {
+        "action": "highlight_choices",
+        "matrix_cell": "BB",
+        "choices": {
+          "A": "蓝",
+          "B": "蓝"
+        },
+        "note": "先选择，再结算。"
+      },
+      "breath_points": [
+        "小A选蓝，"
+      ],
+      "id": "s30_bb_select",
+      "start": 136.0,
+      "voiceover_end": 139.5,
+      "end": 140.1,
+      "display_duration": 4.1,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "两个人，各得一分。",
+      "voiceover": "两个人，各得一分。",
+      "spoken_duration": 2.5,
+      "pause_after": 1.0,
+      "lines": [
+        "两个人，各得一分。"
+      ],
+      "visual_cue": {
+        "action": "reveal_scores",
+        "matrix_cell": "BB",
+        "scores": [
+          1,
+          1
+        ],
+        "score_reveals": [
+          {
+            "offset": 1.8,
+            "player": "A",
+            "value": 1
+          },
+          {
+            "offset": 1.8,
+            "player": "B",
+            "value": 1
+          }
+        ],
+        "note": "固定数对（1，1）；四格全部保留。"
+      },
+      "breath_points": [
+        "两个人，"
+      ],
+      "id": "s31_bb_score",
+      "start": 140.1,
+      "voiceover_end": 142.6,
+      "end": 143.6,
+      "display_duration": 3.5,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "所以，收益取决于两个人的选择组合。",
+      "voiceover": "所以，收益取决于两个人的选择组合。",
+      "spoken_duration": 4.3,
+      "pause_after": 0.9,
+      "lines": [
+        "所以，收益取决于两个人的选择组合。"
+      ],
+      "visual_cue": {
+        "action": "summarize_joint_choices",
+        "note": "完整矩阵静置，轻扫同一行的不同收益。"
+      },
+      "breath_points": [
+        "所以，"
+      ],
+      "id": "s32_joint_choices",
+      "start": 143.6,
+      "voiceover_end": 147.9,
+      "end": 148.8,
+      "display_duration": 5.2,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "payoffs",
+      "text": "收益不一定是钱，\n还可以表示时间、声誉，或对结果的偏好。",
+      "voiceover": "收益不一定是钱，还可以表示时间、声誉，或对结果的偏好。",
+      "spoken_duration": 6.0,
+      "pause_after": 1.0,
+      "lines": [
+        "收益不一定是钱，",
+        "还可以表示时间、声誉，或对结果的偏好。"
+      ],
+      "visual_cue": {
+        "action": "broaden_payoff_meaning",
+        "note": "小图标配文字，避免把时间/声誉画成必定能直接相加的数。"
+      },
+      "breath_points": [
+        "不一定是钱，",
+        "时间、声誉，"
+      ],
+      "id": "s33_beyond_money",
+      "start": 148.8,
+      "voiceover_end": 154.8,
+      "end": 155.8,
+      "display_duration": 7.0,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "recap",
+      "text": "最后，记住这四问：",
+      "voiceover": "最后，记住这四问：",
+      "spoken_duration": 2.3,
+      "pause_after": 0.7,
+      "lines": [
+        "最后，记住这四问："
+      ],
+      "visual_cue": {
+        "action": "restore_four_questions"
+      },
+      "breath_points": [],
+      "id": "s34_intro",
+      "start": 155.8,
+      "voiceover_end": 158.1,
+      "end": 158.8,
+      "display_duration": 3.0,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "recap",
+      "text": "谁来决定？知道什么？",
+      "voiceover": "谁来决定？知道什么？",
+      "spoken_duration": 2.8,
+      "pause_after": 0.8,
+      "lines": [
+        "谁来决定？知道什么？"
+      ],
+      "visual_cue": {
+        "action": "recap_first_pair",
+        "note": "参与者、信息两卡分别高亮。"
+      },
+      "breath_points": [
+        "谁来决定？"
+      ],
+      "id": "s35_first_pair",
+      "start": 158.8,
+      "voiceover_end": 161.6,
+      "end": 162.4,
+      "display_duration": 3.6,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "recap",
+      "text": "怎么选择？各得什么？",
+      "voiceover": "怎么选择？各得什么？",
+      "spoken_duration": 2.8,
+      "pause_after": 0.8,
+      "lines": [
+        "怎么选择？各得什么？"
+      ],
+      "visual_cue": {
+        "action": "recap_second_pair",
+        "note": "策略、收益两卡分别高亮。"
+      },
+      "breath_points": [
+        "怎么选择？"
+      ],
+      "id": "s36_second_pair",
+      "start": 162.4,
+      "voiceover_end": 165.2,
+      "end": 166.0,
+      "display_duration": 3.6,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    },
+    {
+      "section": "recap",
+      "text": "先把博弈讲清楚，再分析大家会怎么选。",
+      "voiceover": "先把博弈讲清楚，再分析大家会怎么选。",
+      "spoken_duration": 4.8,
+      "pause_after": 2.5,
+      "lines": [
+        "先把博弈讲清楚，再分析大家会怎么选。"
+      ],
+      "visual_cue": {
+        "action": "closing_hold",
+        "note": "四问和完整原例稳定停留；最后两秒半不给新信息。"
+      },
+      "breath_points": [
+        "讲清楚，"
+      ],
+      "id": "s37_closing",
+      "start": 166.0,
+      "voiceover_end": 170.8,
+      "end": 173.3,
+      "display_duration": 7.3,
+      "speech_plan_note": "估计口播窗，包含句内自然微停；不是实际录音的强制对齐结果。"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "game-theory-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reusable Chinese game-theory explainer foundations; B textbook visual style selected; recurring cast and full V2 export pending.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "setup:fonts": "python3 scripts/setup_fonts.py",
+    "render:proposals": "node --import ./scripts/isolated-fonts.mjs design/render-proposals.mjs",
+    "qa:design": "node --import ./scripts/isolated-fonts.mjs design/qa.mjs",
+    "qa:fonts": "python3 scripts/setup_fonts.py --verify-only && node --import ./scripts/isolated-fonts.mjs typography/qa-fonts.mjs && python3 scripts/qa_glyphs.py",
+    "build:narration": "python3 chapters/01-four-elements/narration/build_narration.py",
+    "qa:data": "node scripts/qa-data.mjs",
+    "qa:source": "python3 scripts/qa_source.py",
+    "test": "npm run qa:data && npm run qa:fonts && npm run render:proposals && npm run qa:design && npm run render:cast && npm run qa:cast && npm run qa:source",
+    "render:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/draw_cast.mjs && node assets/characters/archive/proposals/build_manifest.mjs",
+    "qa:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/check_clearance.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.10"
+  },
+  "devDependencies": {
+    "ajv": "8.17.1"
+  }
+}

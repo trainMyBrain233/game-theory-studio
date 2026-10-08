@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "status": "third_party_character_direction_selected_art_pending",
+  "selectedDirection": "Plants vs. Zombies zombies",
+  "selectedAppearance": null,
+  "activeCast": null,
+  "roles": {
+    "A": {
+      "displayName": "小A",
+      "identityShape": "circle",
+      "matrixAxis": "row",
+      "payoffIndex": 0,
+      "asset": null
+    },
+    "B": {
+      "displayName": "小B",
+      "identityShape": "square",
+      "matrixAxis": "column",
+      "payoffIndex": 1,
+      "asset": null
+    }
+  },
+  "usageNote": "A/B are generic layout and data roles. Third-party character artwork and redraws are not distributed in this source repository. See docs/third-party-content.md."
+}
