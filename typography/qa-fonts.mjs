@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createCanvas, GlobalFonts} from '@napi-rs/canvas';
+import {createHash} from 'node:crypto';
 import {registerFonts, canvasFont, FONT_FAMILY, SERIF_FAMILY, CJK_REGRESSION} from './fonts.mjs';
+import {assertAppliedFont} from './font-contract.mjs';
 import {chapterDirectories} from '../scripts/chapters.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 assert.equal(process.env.DISABLE_SYSTEM_FONTS_LOAD, '1', 'Use the isolated-fonts preload');
@@ -28,13 +30,24 @@ const lines = [
 let y = 50;
 for (const serif of [false, true]) for (const weight of [400, 700]) {
   ctx.font = canvasFont(34, weight, {serif});
-  assert.equal(Number(ctx.font.match(/([0-9.]+)px/)?.[1]), 34, 'Applied canvas font size must match the request');
+  assertAppliedFont(ctx,{size:34,weight,family:serif?SERIF_FAMILY:FONT_FAMILY});
   const glyph = ctx.measureText('博');
   assert(glyph.actualBoundingBoxAscent + glyph.actualBoundingBoxDescent > 24, 'SC glyph should have a readable physical extent');
   const text = `${serif ? 'Serif' : 'Sans'} SC ${weight}：${lines[0]}`;
   assert(ctx.measureText(text).width < 1800);
   ctx.fillText(text, 60, y); y += 64;
 }
+// Same text, position and background: the weight/family alone must change glyph pixels.
+const glyphHashes=new Map();
+for(const serif of [false,true])for(const weight of [400,700]){
+ const proof=createCanvas(640,96),context=proof.getContext('2d');
+ context.font=canvasFont(48,weight,{serif});
+ assertAppliedFont(context,{size:48,weight,family:serif?SERIF_FAMILY:FONT_FAMILY});
+ context.fillStyle='#243E66';context.fillText('博弈论 参与者 0,5',16,64);
+ glyphHashes.set(`${serif}/${weight}`,createHash('sha256').update(proof.data()).digest('hex'));
+}
+for(const serif of [false,true])assert.notEqual(glyphHashes.get(`${serif}/400`),glyphHashes.get(`${serif}/700`),'Regular and bold must render different glyph pixels');
+for(const weight of [400,700])assert.notEqual(glyphHashes.get(`false/${weight}`),glyphHashes.get(`true/${weight}`),'Sans and Serif must render different glyph pixels');
 ctx.font = canvasFont(36, 700);
 for (const text of lines.slice(1)) { ctx.fillText(text, 60, y); y += 74; }
 fs.writeFileSync(path.join(out, 'sc-specimen.png'), canvas.toBuffer('image/png'));
@@ -47,4 +60,4 @@ const textRuns = [...templateRuns, CJK_REGRESSION, ...lines,
   ...scenes.frames.flatMap(f => [f.title, f.lead, f.subtitle, f.section]),
   ...timelines.flatMap(timeline => [timeline.title, ...timeline.segments.flatMap(s => [s.text, s.voiceover]), ...timeline.sections.map(s => s.title)])];
 fs.writeFileSync(path.join(out, 'text-runs.json'), JSON.stringify({textRuns}, null, 2) + '\n');
-console.log('Font runtime: explicit SC Sans/Serif; real 400/700 weights; no system-font loading; specimen rendered.');
+console.log('Font runtime: applied SC family/size/400/700 asserted; identical-text weight/family pixels differ; no system-font loading; specimen rendered.');

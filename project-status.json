@@ -6,9 +6,13 @@
     "status": "selected"
   },
   "casting": {
-    "status": "third_party_character_direction_selected_art_pending",
+    "status": "private_visual_preview_generated_public_art_excluded",
     "selectedDirection": "Plants vs. Zombies zombies",
-    "selectedAppearance": null,
+    "selectedAppearance": {
+      "A": "normal_zombie",
+      "B": "conehead_zombie",
+      "assets": "external_private_RGBA_layers"
+    },
     "assetsInRepository": false,
     "note": "Public source contains generic interfaces, original archived proposals and five original production placeholder SVGs. EA images/redraws remain external."
   },
@@ -18,7 +22,23 @@
     "fullV2Export": "not_in_repository",
     "renderer": "six_section_explicit_time_renderer_available",
     "publicSmoke": "original_placeholder_only",
-    "audio": "no_recorded_voiceover"
+    "audio": "no_recorded_voiceover",
+    "privateVisualPreview": {
+      "status": "generated_and_independently_verified",
+      "verifiedSourceCommit": "f694678f2f55d2169f5241f5f9453f203bfdc41e",
+      "durationSeconds": 173.3,
+      "decodedFrames": 5199,
+      "audioTracks": 0,
+      "verificationSource": "cloud_production_verification_report",
+      "checks": [
+        "full_decode",
+        "independent_189_sampled_frames_and_37_subtitle_windows",
+        "video_and_14_keyframes_byte_equal_to_accepted_preview"
+      ],
+      "layersAndMediaInRepository": false,
+      "currentHeadVerification": "pending_after_review_fixes"
+    },
+    "productionStatus": "private_visual_preview_available_voiceover_not_aligned"
   },
   "implementedSceneTemplates": [
     "participants",

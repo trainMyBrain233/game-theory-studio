@@ -5,6 +5,9 @@
 | `Missing fontTools` | 运行 `npm run setup:python`；npm 自动使用 `.venv`。直接调用系统 `python3` 可能绕过虚拟环境。必要时设置 `PYTHON` 为明确的解释器路径，再安装相同 requirements。不要把本机路径提交。 |
 | 字体缺失 | `npm run setup:fonts -- --source-dir /path/to/fonts` 支持 macOS/Linux 安装目录或显式目录；无本地字体时用 `--download`。不会回退到系统 sans-serif。 |
 | 本机 TTC 版本旧/JP face | 默认离线准备会拒绝错误家族/版本；显式 `--download` 对缺失/无效目标优先使用固定官方完整 SC OTF，不先选旧本机 TTC。有效已准备字体复用；下载校验失败保留已有目标，不伪造 SC 别名。 |
+| 缓存元数据正确但checksum失败 | 不会用文件自己的新hash更新manifest。官方OTF须固定SHA；本地TTC须保留原源文件与source SHA，并可重复提取出相同字节。先审查来源，再用 `--download` 或显式 `--source-dir` 重新准备；verify-only不修复/写回。 |
+| 归档SVG/JSON被报stale | `qa:cast` 临时重建比较并保留原修改。先审查生成器和SVG/JSON差异，确需生成时显式 `build:cast`；不要把测试改为覆盖文件。 |
+| 单项/缺少score_reveals | Schema2.1使用完整格揭示，需唯一A/B各一个事件；按player分配左右，数组顺序不决定位置。零/单项输入在渲染前被拒绝。 |
 | 官方下载失败/校验值不符 | 检查网络到 raw.githubusercontent.com；不要关闭 TLS 或删掉 checksum 检查。可把同版本官方 OTF 放在显式源目录离线准备。失败临时下载不当成可用字体；官方来源版本与 SHA 见脚本和字体文档。 |
 | npm Canvas 原生绑定缺失 | 使用与当前平台/CPU 匹配的 Node，重新 `npm ci --ignore-scripts`。保留 npm optionalDependencies；不要使用 `--omit=optional`，不要复用 Linux 的 node_modules 到 Mac。包锁包含 macOS arm64/x64、Linux glibc/musl 对应预编译包。 |
 | 字幕或 timeline 过期 | 编辑本章生成器后 `npm run build:narration -- <id>`；检查 diff 再跑 `qa:data`。QA 不会替你覆盖手改字幕。 |

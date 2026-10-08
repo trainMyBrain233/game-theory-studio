@@ -1,12 +1,15 @@
 """Negative fixtures for publication boundaries, UTF-8 I/O and font recovery."""
 from pathlib import Path
 import hashlib
+import base64
 from contextlib import redirect_stdout, redirect_stderr
 import io
 import os
 import subprocess
 import sys
 import tempfile
+import struct
+import zlib
 import unittest
 from unittest.mock import patch
 
@@ -33,6 +36,60 @@ class PublicationTests(unittest.TestCase):
 
     def test_script_svg_rejected(self):
         self.assertTrue(self.scan('source.svg', b'<svg><script>bad()</script></svg>'))
+
+    @staticmethod
+    def pixel_uri():
+        # An original opaque-white 1x1 PNG with valid chunk CRCs, never an external image.
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 6, 0, 0, 0))
+        png += chunk(b'IDAT', zlib.compress(b'\x00\xff\xff\xff\xff')) + chunk(b'IEND', b'')
+        return 'data:image/png;base64,' + base64.b64encode(png).decode('ascii')
+
+    def test_svg_extension_case_and_namespace_are_not_image_bypasses(self):
+        uri = self.pixel_uri()
+        for suffix in ['svg', 'SVG', 'sVg']:
+            for source in [f'<svg><image href="{uri}"/></svg>',
+                           f'<SVG><IMAGE HREF="{uri}"/></SVG>',
+                           f'<s:svg xmlns:s="http://www.w3.org/2000/svg"><s:image href="{uri}"/></s:svg>']:
+                with self.subTest(suffix=suffix, source=source[:50]):
+                    self.assertTrue(self.scan('embedded.' + suffix, source.encode('utf-8')))
+
+    def test_svg_parsed_attribute_and_element_variants_are_rejected(self):
+        for source in ['<svg xmlns:x="urn:test"><x:SCRIPT/></svg>',
+                       '<svg xmlns:x="urn:test"><x:ForeignObject/></svg>',
+                       '<svg><use href="d&#97;ta:image/png;base64,AA=="/></svg>',
+                       '<svg xmlns:x="urn:test"><use x:HREF="HTTPS://example.invalid/a.svg"/></svg>',
+                       '<svg><use href=" //example.invalid/a.svg"/></svg>',
+                       '<svg><path style="fill:url(https://example.invalid/a.svg)"/></svg>',
+                       '<svg><x:image/></svg>',
+                       '<!DOCTYPE svg [<!ENTITY source "data:bad">]><svg><use href="&source;"/></svg>']:
+            with self.subTest(source=source):
+                self.assertTrue(self.scan('source.SVG', source.encode('utf-8')))
+
+    def test_svg_local_vector_namespace_references_are_allowed(self):
+        source = b'<s:svg xmlns:s="http://www.w3.org/2000/svg" xmlns:l="http://www.w3.org/1999/xlink"><s:defs><s:path id="shape" d="M0 0L1 1"/></s:defs><s:use l:href="#shape" fill="url(#shape)"/></s:svg>'
+        self.assertFalse(self.scan('original.SVG', source))
+
+    def test_public_pack_rejects_embedded_svg_in_every_extension_case_without_replacing_archive(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for relative in ['scripts/qa_source.py', 'production/pack_source.py']:
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((ROOT / relative).read_bytes())
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, capture_output=True)
+            archive = root / 'production/output/game_theory_studio_public_source.zip'
+            archive.parent.mkdir()
+            archive.write_bytes(b'preserve-existing-archive')
+            for suffix in ['svg', 'SVG', 'sVg']:
+                target = root / ('embedded.' + suffix)
+                target.write_text(f'<svg><image href="{self.pixel_uri()}"/></svg>', encoding='utf-8')
+                run = subprocess.run([sys.executable, str(root / 'production/pack_source.py'), '--public'], capture_output=True)
+                self.assertNotEqual(run.returncode, 0)
+                self.assertIn(target.name.encode(), run.stderr)
+                self.assertEqual(archive.read_bytes(), b'preserve-existing-archive')
+                target.unlink()
 
     def test_credential_pattern_without_logging_value(self):
         credential = ('gh' + 'p_' + 'a' * 36).encode()
@@ -110,6 +167,53 @@ class NarrationTests(unittest.TestCase):
 
 
 class FontRecoveryTests(unittest.TestCase):
+    def test_reused_official_font_rejects_unknown_bytes_even_with_self_consistent_manifest(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / 'NotoSansCJKSC-Regular.otf'
+            target.write_bytes(b'changed-complete-font')
+            recorded = {'source_kind':'official_pinned_otf','sha256':hashlib.sha256(target.read_bytes()).hexdigest()}
+            with patch.object(setup_fonts, 'verify', return_value={'sha256':recorded['sha256']}) as metadata:
+                with self.assertRaisesRegex(ValueError, 'pinned official'):
+                    setup_fonts.verify_cached(target, 'Sans', 'Regular', recorded)
+                metadata.assert_not_called()
+
+    def test_verify_only_does_not_rewrite_manifest_or_certify_modified_official_targets(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            payload = b'known-official-fixture'
+            checksum = hashlib.sha256(payload).hexdigest()
+            checksums = {key: checksum for key in setup_fonts.OFFICIAL_SHA256}
+            for kind, weight in checksums:
+                (output / f'Noto{kind}CJKSC-{weight}.otf').write_bytes(payload)
+            manifest = output / 'prepared_font_manifest.json'
+            entries = {f'Noto{kind}CJKSC-{weight}.otf':{'sha256':checksum} for kind,weight in checksums}
+            entries['preserve'] = 'original provenance'
+            import json
+            manifest.write_text(json.dumps(entries) + '\n', encoding='utf-8')
+            before = manifest.read_bytes()
+            with patch.object(sys, 'argv', ['setup_fonts.py','--output-dir',str(output),'--verify-only']), \
+                 patch.object(setup_fonts, 'OFFICIAL_SHA256', checksums), \
+                 patch.object(setup_fonts, 'verify', return_value={'sha256':checksum}), \
+                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                self.assertEqual(setup_fonts.main(), 0)
+                self.assertEqual(manifest.read_bytes(), before)
+                (output / 'NotoSansCJKSC-Regular.otf').write_bytes(payload + b'changed')
+                self.assertEqual(setup_fonts.main(), 1)
+                self.assertEqual(manifest.read_bytes(), before)
+
+    def test_local_ttc_manifest_cannot_certify_a_different_extracted_target(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / 'source.ttc'; source.write_bytes(b'trusted-complete-source')
+            target = root / 'prepared.otf'; target.write_bytes(b'changed-prepared-face')
+            recorded = {'source_kind':'local_ttc_extraction','source':str(source),'face_index':2,
+                        'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),
+                        'sha256':hashlib.sha256(target.read_bytes()).hexdigest()}
+            expected = {'sha256':hashlib.sha256(b'original-derived-face').hexdigest(),'face_index':2}
+            with patch.object(setup_fonts, 'prepare', return_value=expected):
+                with self.assertRaisesRegex(ValueError, 're-extracted'):
+                    setup_fonts.verify_cached(target,'Sans','Regular',recorded)
+
     def test_download_ignores_old_installed_candidate(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

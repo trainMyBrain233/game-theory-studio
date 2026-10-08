@@ -41,10 +41,19 @@ for(const [name,mutate] of [
   ['unknown cell without score reveal',x=>{x.segments[0].visual_cue.matrix_cell='XY';}],
   ['score mismatched without score_reveals',x=>{x.segments[0].visual_cue={action:'reveal_scores',matrix_cell:'RB',scores:[5,0]};}],
   ['score event outside speech',x=>{x.segments.find(s=>s.visual_cue.score_reveals).visual_cue.score_reveals[0].offset=99;}],
+  ['omitted reveal list',x=>{delete x.segments.find(s=>s.visual_cue.action==='reveal_scores').visual_cue.score_reveals;}],
+  ['empty reveal list',x=>{x.segments.find(s=>s.visual_cue.action==='reveal_scores').visual_cue.score_reveals=[];}],
+  ['single player reveal',x=>{x.segments.find(s=>s.visual_cue.action==='reveal_scores').visual_cue.score_reveals.pop();}],
+  ['duplicate score owner',x=>{const cue=x.segments.find(s=>s.visual_cue.matrix_cell==='RR'&&s.visual_cue.score_reveals).visual_cue;cue.score_reveals[1].player='A';}],
   ['empty referenced section',x=>{x.sections.push({id:'unused',title:'空章节',start:x.duration,end:x.duration+1});}],
   ['duplicate section id',x=>{x.sections[1].id=x.sections[0].id;}],
   ['subtitle/voiceover disagreement',x=>{x.segments[0].voiceover='不一致';}],
 ]) test(`timeline rejects ${name}`,()=>{const x=structuredClone(timeline);mutate(x);assert.throws(()=>validateTimeline(x,scenes));});
+test('timeline accepts reordered A/B reveal events with unchanged ownership and timing',()=>{
+ const reordered=structuredClone(timeline);
+ for(const segment of reordered.segments)segment.visual_cue.score_reveals?.reverse();
+ validateTimeline(reordered,scenes);
+});
 test('tokens allow supported typography and reject unsupported geometry instead of ignoring it',()=>{
   const tokens=readJSON(path.join(ROOT,'design/tokens.json'));
   tokens.canvas.subtitleFont=48;tokens.styles.textbook.titleFamily='serif';validateSchema('tokens',tokens);

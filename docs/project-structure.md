@@ -27,8 +27,8 @@
 | --- | --- |
 | `scenes.schema.json` | `schemaVersion: 1.0`；固定角色 id A/B、策略 id red/blue、2×2 矩阵；可改显示名、策略名、0–99 整数收益、默认选择、模板文案 |
 | `tokens.schema.json` | `schemaVersion: 1.0`；可改合法 RGB 颜色、字幕 38–48px、正文 36–42px、每风格标题 sans/serif；当前原生几何、角色形状和字重是固定合同，修改会明确报错 |
-| `chapter.schema.json` | `schemaVersion: 1.0`；`NN-slug` id、SemVer 内容版本、B 风格、当前案例；阶段字段保留后续阶段，但 Schema 2.0 的参考时间轴只能标为 prototype |
-| `timeline.schema.json` | `schema_version: 2.0`；人工口播参考；语义块、章节、选择/收益事件及玩家引用；当前不接受“已按音频对齐”声明 |
+| `chapter.schema.json` | `schemaVersion: 1.0`；`NN-slug` id、SemVer 内容版本、B 风格、当前案例；阶段字段保留后续阶段，但 Schema 2.1 的参考时间轴只能标为 prototype |
+| `timeline.schema.json` | `schema_version: 2.1`；人工口播参考；语义块、章节、选择/收益事件及玩家引用；当前不接受“已按音频对齐”声明；完整格揭示需A/B各一个事件，数组可乱序 |
 
 production cast 1.1 不重复名字，content 2.1 不重复收益矩阵，tokens 1.0 固定六节布局；验证未知字段、身份形状、共享来源、六节顺序和固定布局。实际案例/时间轴/字体来自根目录，新增章节脚手架仅生成内容原型，不自动生成新整集动画。完整字段见 [生产模块](../production/README.md)。
 
@@ -37,6 +37,8 @@ production cast 1.1 不重复名字，content 2.1 不重复收益矩阵，tokens
 选择的优先级：基础场景 → `override.data.selected` → 显式 `override.selected`。A 始终为行，B 始终为列；每格数对按 A/B 排列。红/蓝 id 是策略颜色/形状身份，显示名可以为“合作/退出”；它们不是角色身份。
 
 本例所有参与者目标仍为“自己的得分更高”，属于当前模板合同。一般博弈、更多参与者、负数/小数收益、第三策略或不同目标需要先定义新合同，不用未验证的数据硬塞进此模板。
+
+Schema2.0 → 2.1迁移：`reveal_scores`必须包含matrix_cell/scores/score_reveals，且有唯一A/B各一个事件；拒绝旧合同曾允许的零/单项揭示。修改生成器后 `build:narration` 更新版本元信息；现有字幕/SRT/参考窗不变，事件存储顺序不影响像素。归档SVG/JSON由 `qa:cast` 临时重建比较，只在显式 `build:cast` 时写回。
 
 ## 版本与更新流程
 

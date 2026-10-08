@@ -7,10 +7,18 @@
 - **视觉方向 B「清爽教材」**：暖白底、深蓝字线、固定收益矩阵。A/C 保留为同内容回归样例。
 - 已实现两参与者/两策略/2×2 收益矩阵、显示名和选择驱动的说明、两类静帧模板、字幕/口播生成与检查、原创章节脚手架、六节整集渲染器和双平台 CI。
 - 第一章是 **173.3 秒、37 个语义块的人工口播参考**，没有实际音轨，尚未按音频对齐。`00-original-example` 是 9 秒、两段原创测试例，不计入正片。
-- 生产角色方向为 **PvZ 高清分层位图 + 独立绘制的文字/矩阵**；具体角色外观和动作由生产任务完成。EA 图像、重绘角色、截图、字体二进制和视频不放此公开 MIT 仓库。PNG 包进 SVG 仍是位图，不能称为矢量。
+- 生产角色方向为 **PvZ 高清分层位图 + 独立绘制的文字/矩阵**；普通僵尸A/路障僵尸B的真实分层视觉预览已在云端私下生成并验收，素材与影片仍由仓库外生产流程管理。EA 图像、重绘角色、截图、字体二进制和视频不放此公开 MIT 仓库。PNG 包进 SVG 仍是位图，不能称为矢量。
+- 云端已从 `f694678` 的干净 checkout 使用统一命令和八个私有RGBA层输出173.3秒1080p视觉预览，5199帧完整解码通过；与此前独立189帧/37字幕窗验收版的MP4及14张关键帧逐字节一致。此为私有素材的视觉验收回报，不是公开CI，也没有真人配音/实际音频对齐；本轮修复后还需绑定新head重新验证，未记录未知新hash。
 - 完整时间线代码可执行，公开模式使用原创人物，`test:episode` 验证中间布局与关键帧；当前仓库的模板检查、占位角色与原创几何烟测**不是完整 V2 影片验收**。机器状态见 [project-status.json](project-status.json)，实际范围见 [验证记录](docs/validation.md)。
 
 ## 开始使用
+
+当前工程仍在 [草稿PR #2](https://github.com/trainMyBrain233/game-theory-studio/pull/2) 的评审分支，`main` 未合并，仅含原MIT LICENSE。首次获取需明确检出工程分支（或对应评审分支）：
+
+```sh
+git clone --branch infra/quality-pipeline https://github.com/trainMyBrain233/game-theory-studio.git
+cd game-theory-studio
+```
 
 Node 22+、npm、Python 3.10+；CI 固定 Node 24.19.0 / Python 3.12 系列。macOS/Linux 从仓库根目录运行同一组命令：
 
@@ -23,7 +31,7 @@ npm test
 
 `setup:python` 创建项目 `.venv` 并安装精确版本 requirements；后续 npm 命令自动选它，不需要激活或全局安装。`PYTHON` 可显式选择解释器。Canvas 使用当前平台的预编译 optional dependency，不要加 `--omit=optional`。
 
-字体只使用完整 Noto CJK SC 2.004/2.003、真实 400/700。`--download` 对缺失/无效目标优先下载固定官方 commit 的 OTF，核验 SHA256，失败保留原目标；有效已准备字体可重复复用。已有对应本地字体可离线运行：
+字体只使用完整 Noto CJK SC 2.004/2.003、真实 400/700。`--download` 对缺失/无效目标优先下载固定官方 commit 的 OTF，核验 SHA256，失败保留原目标；复用缓存仍核对固定SHA；`--verify-only` 不改manifest。本地TTC提取走独立来源指纹与重提合同，不能冒称下载OTF的固定SHA。已有固定官方OTF或完整同版本TTC可离线运行：
 
 ```sh
 npm run setup:fonts -- --source-dir /path/to/noto-fonts
@@ -41,8 +49,8 @@ npm run qa:fonts
 | `npm run setup:fonts -- --download` | 官方完整 SC 字体准备；离线可用 `--source-dir` |
 | `npm run qa:data` | scenes/tokens/所有章节 Schema、语义/收益/时间窗、临时重建逐字节比较；不覆写被检查文件 |
 | `npm run test:core` | 配置/选择/得分/暂停负向样本、只读 QA、非 UTF-8 locale、生成失败保留与字体恢复 |
-| `npm run qa:fonts` | 明确 SC 家族/字重、实际应用字号/字形范围、所有章节和模板字符覆盖 |
-| `npm run test:render` | 重建 6 静帧/3 对照板、53 基础检查、15 状态文字边界/碰撞、原创归档角色净空 |
+| `npm run qa:fonts` | 明确SC家族/400/700、实际ctx.font字号/字重/完整家族、同字像素差异、篡改缓存/manifest负例与所有章节字符覆盖 |
+| `npm run test:render` | 重建 6 静帧/3 对照板、53 基础检查、15状态文字边界/碰撞、归档SVG/JSON临时重建只读比较与角色净空 |
 | `npm run render:smoke` | 12 个变异矩阵、4 选牌状态、48px/宋体实际像素、原创几何 0/0.5/1s 确定性 |
 | `npm run test:episode` | 整集Schema/语义、633布局采样、4格变更案例实际像素/字形、字体与5 SVG、导出文本与5张1080p占位帧 |
 | `npm run render:episode:preview -- --placeholder-cast` | 13秒原创占位视频预览，需FFmpeg；整片/4K/音效/联系图命令见生产模块 |
@@ -50,9 +58,13 @@ npm run qa:fonts
 | `npm run qa:source` | 候选源码中的常见秘密、私有路径、二进制、嵌入图片 SVG 和过大文件 |
 | `npm test` | 上述自动检查；需先准备字体，编码/音效不属于默认CI |
 | `npm run build:narration -- <id>` | 只重建指定章节；省略 id 重建全部 |
+| `npm run build:cast` | 显式重建归档9 SVG/2 JSON及PNG；先审查生成器，QA失败不会代替用户覆盖编辑 |
+| `npm run test:font-mutations -- --full-pipeline` | 隔离副本强制regular/8px/Sans负例；确认完整npm test在实际字重断言处失败 |
 | `npm run chapter:new -- 02-example "章节标题"` | 创建原创两段原型章节，不覆盖已有章节 |
 
 整集制作/配置与素材模式见 [production/README](production/README.md)。视频编码需要外部 FFmpeg/libx264；可选 `setup:media` 安装固定 NumPy/Pillow，用于原创音效和联系图。
+
+`qa:cast` 先在临时目录重建并比较9 SVG/2 JSON，再做净空检查；`npm test` 不写回这些跟踪文件。需要更新产物时显式 `build:cast`（`render:cast` 为兼容别名）。
 
 单独渲染可用 `render:proposals` / `qa:design` / `qa:layout` / `render:cast` / `qa:cast`。输出位于 `design/frames/`、`design/boards/`、`typography/qa/`、原创归档提案本地产物目录及 `artifacts/smoke/`。
 
@@ -63,6 +75,8 @@ npm run qa:fonts
 A 为行、B 为列，每格顺序始终为 (A,B)。当前原例 RR(3,3)、RB(0,5)、BR(5,0)、BB(1,1)。策略红/蓝身份不代表参与者。当前章解释参与者、信息、策略、收益，不把选中格称为最优/均衡；“看不到本轮选择”不等于“不完全信息”。
 
 目前只支持两参与者、两策略、0–99 整数收益和有限长度文案。显示名最多 4 字符、策略名最多 2 字符；实际溢出/碰撞会失败，不缩小字号掩盖问题。字幕 38–48px、正文 36–42px、sans/serif 标题和颜色是支持的视觉配置；固定几何的更改需要更新 Schema 和布局合同。整集共用字幕、标题字体和B色板；其正文33px/次要页眉27px等固定合同见生产模块，不受静帧正文 token 控制。
+
+timeline Schema 2.1 的 `reveal_scores` 是完整四格揭示合同：必须有各一个A/B事件，数组顺序任意，位置由player决定，汇总数对等到最晚offset；零/单项/重复玩家会在渲染前被拒绝。
 
 `pause_after` 已包含在 start/end 字幕窗中：`end = voiceover_end + pause_after`。实际录音后按自然呼吸和语义重新对齐，不能重复追加尾停或把人工参考当同步验收。
 

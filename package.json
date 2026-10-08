@@ -12,17 +12,17 @@
     "setup:fonts": "node scripts/python.mjs scripts/setup_fonts.py",
     "render:proposals": "node --import ./scripts/isolated-fonts.mjs design/render-proposals.mjs",
     "qa:design": "node --import ./scripts/isolated-fonts.mjs design/qa.mjs",
-    "qa:fonts": "node scripts/python.mjs scripts/setup_fonts.py --verify-only && node --import ./scripts/isolated-fonts.mjs typography/qa-fonts.mjs && node scripts/python.mjs scripts/qa_glyphs.py",
+    "qa:fonts": "node scripts/python.mjs scripts/setup_fonts.py --verify-only && node --import ./scripts/isolated-fonts.mjs typography/qa-fonts.mjs && node scripts/python.mjs scripts/qa_glyphs.py && node scripts/python.mjs scripts/qa_font_provenance.py && npm run test:font-mutations",
     "build:narration": "node scripts/build-narration.mjs",
     "qa:data": "node scripts/qa-data.mjs",
     "qa:source": "node scripts/python.mjs scripts/qa_source.py",
     "test": "npm run qa:data && npm run test:core && npm run qa:fonts && npm run test:render && npm run render:smoke && npm run test:episode && npm run qa:source",
-    "render:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/draw_cast.mjs && node assets/characters/archive/proposals/build_manifest.mjs",
-    "qa:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/check_clearance.mjs",
+    "render:cast": "npm run build:cast",
+    "qa:cast": "node scripts/qa-cast-source.mjs && node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/check_clearance.mjs",
     "setup:python": "node scripts/setup-python.mjs",
     "qa:layout": "node --import ./scripts/isolated-fonts.mjs scripts/qa-layout.mjs",
     "test:core": "node --test tests/*.test.mjs && node scripts/python.mjs -m unittest discover -s tests -p test_*.py",
-    "test:render": "npm run render:proposals && npm run qa:design && npm run qa:layout && npm run render:cast && npm run qa:cast",
+    "test:render": "npm run render:proposals && npm run qa:design && npm run qa:layout && npm run qa:cast",
     "render:smoke": "node --import ./scripts/isolated-fonts.mjs scripts/render-smoke.mjs",
     "chapter:new": "node scripts/new-chapter.mjs",
     "render:episode": "node scripts/production.mjs render.mjs --width 1920",
@@ -40,7 +40,9 @@
     "make:episode:boards": "node scripts/python.mjs production/make_contact_sheets.py",
     "qa:episode:media": "node scripts/python.mjs production/qa/verify_media.py",
     "render:episode:smoke": "npm run test:episode",
-    "pack:source": "node scripts/python.mjs production/pack_source.py --public"
+    "pack:source": "node scripts/python.mjs production/pack_source.py --public",
+    "build:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/draw_cast.mjs && node assets/characters/archive/proposals/build_manifest.mjs",
+    "test:font-mutations": "node scripts/font-mutation-smoke.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.10"

@@ -3,7 +3,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {loadImage} from '@napi-rs/canvas';
 import {CAST,resolveCastText} from './cast.mjs';
-import {registerFonts,canvasFont} from '../typography/fonts.mjs';
+import {registerFonts,canvasFont,FONT_FAMILY,SERIF_FAMILY} from '../typography/fonts.mjs';
+import {assertAppliedFont} from '../../typography/font-contract.mjs';
 registerFonts({serif:true});
 export {TOKENS} from './model.mjs';
 import {TOKENS} from './model.mjs';
@@ -33,6 +34,10 @@ export async function prepareAssets(scale=2){
   const vw=isPerson?420:140,vh=isPerson?500:190;
   if(path.extname(file).toLowerCase()==='.svg'){
    let svg=fs.readFileSync(file,'utf8');
+   if(!isPerson){
+    const colors={'#FFFEF8':C.paper,'#243E66':C.ink,'#BC3D31':C.red,'#345D9E':C.blue};
+    svg=svg.replace(/\b(fill|stroke)="(#[0-9a-f]{6})"/gi,(_,attribute,color)=>`${attribute}="${colors[color.toUpperCase()]??color}"`);
+   }
    // Rasterize true vectors at the delivery resolution; preserve an explicit viewBox.
    const vb=reg.viewBox||[0,0,vw,vh];
    svg=svg.replace(/<svg\b[^>]*>/,`<svg xmlns="http://www.w3.org/2000/svg" width="${vw*scale}" height="${vh*scale}" viewBox="${vb.join(' ')}">`);
@@ -50,10 +55,10 @@ export let routes=[];
 export function resetRecords(){records=[];routes=[]}
 export function tx(c,str,x,y,size=36,weight=400,color=C.ink,align='left',opts={}){
  str=resolveCastText(str); c.save(); c.font=canvasFont(size,weight,{serif:opts.serif??false});
- const appliedSize=Number(c.font.match(/([0-9.]+)px/)?.[1]);if(appliedSize!==size)throw Error(`Applied production font ${c.font} does not match ${size}px`);
+ const applied=assertAppliedFont(c,{size,weight,family:opts.serif?SERIF_FAMILY:FONT_FAMILY});
  c.fillStyle=color;c.textAlign=align;c.textBaseline='alphabetic';
  const m=c.measureText(str);c.fillText(str,x,y);
- if(opts.record!==false && c.globalAlpha>.02){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size,weight,appliedFont:c.font,alpha:c.globalAlpha});}
+ if(opts.record!==false && c.globalAlpha>.02){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size:applied.size,weight:applied.weight,family:applied.family,appliedFont:c.font,alpha:c.globalAlpha});}
  c.restore();
 }
 export function line(c,x1,y1,x2,y2,color=C.ink,w=3,p=1,dashed=false){if(p<=0)return;c.save();c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';if(dashed)c.setLineDash([10,10]);c.beginPath();c.moveTo(x1,y1);c.lineTo(mix(x1,x2,p),mix(y1,y2,p));c.stroke();if(c.globalAlpha>.02){const tr=c.getTransform(),s=c.canvas.width/1920;const point=(x,y)=>[(tr.a*x+tr.c*y+tr.e)/s,(tr.b*x+tr.d*y+tr.f)/s];routes.push({from:point(x1,y1),to:point(mix(x1,x2,p),mix(y1,y2,p)),width:w,alpha:c.globalAlpha});}c.restore()}
@@ -65,7 +70,7 @@ export function arrow(c,x1,y1,x2,y2,p=1,{color=C.ink,w=3,dashed=false}={}){
 export function group(c,alpha,dx,dy,fn){if(alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.translate(dx,dy);fn();c.restore()}
 export function reveal(c,t,start,fn,{d=.55,dy=12}={}){const p=ramp(t,start,d);group(c,p,0,(1-p)*dy,fn)}
 export function person(c,id,x,y,s=1,alpha=1){if(characterRenderer){characterRenderer.draw(c,id,{x,y,scale:s,alpha,t:currentSceneTime});return;}if(!assets['person-'+id.toLowerCase()])return;group(c,alpha,0,0,()=>{c.drawImage(assets['person-'+id.toLowerCase()],x,y,420*s,500*s);if(CAST.actors[id].badge_anchor!==null)tx(c,id,x+(CAST.actors[id].badge_anchor?.[0]||164)*s,y+((CAST.actors[id].badge_anchor?.[1]||374)+10)*s,26*s,700,C.white,'center',{record:false})})}
-export function badge(c,id,x,y,r=25,{name=false}={}){if(id==='A')circle(c,x,y,r,C.ink,null);else round(c,x-r,y-r,r*2,r*2,1,C.ink,null);tx(c,id,x,y+r*.4,r*1.05,700,C.white,'center',{record:false});if(name)tx(c,process.argv.includes('--placeholder-cast')?CAST.actors[id].display_name:CAST.actors[id].type_name||CAST.actors[id].display_name,x+r+17,y+11,31,700)}
+export function badge(c,id,x,y,r=25,{name=false}={}){if(id==='A')circle(c,x,y,r,C.ink,null);else round(c,x-r,y-r,r*2,r*2,1,C.ink,null);tx(c,id,x,y+r*.4,r*1.05,700,C.white,'center',{record:false});if(name)tx(c,CAST.actors[id].display_name,x+r+17,y+11,31,700)}
 export function card(c,kind,x,y,w=112,{angle=0,flip=1,alpha=1,label=true}={}){
  const h=w*190/140;c.save();c.globalAlpha*=alpha;c.translate(x,y);c.rotate(angle);c.scale(Math.max(Math.abs(flip),.012),1);
  const image=assets['card-'+kind];if(image)c.drawImage(image,-w/2,-h/2,w,h);else round(c,-w/2,-h/2,w,h,8,C.paper,C.ink,3);

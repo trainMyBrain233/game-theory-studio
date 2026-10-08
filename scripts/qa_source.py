@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
 forbidden_suffixes = {'.otf', '.ttf', '.ttc', '.woff', '.woff2', '.mp4', '.mov', '.webm', '.wav', '.mp3', '.zip', '.png', '.jpg', '.jpeg', '.webp', '.pem', '.key', '.p12', '.pfx'}
@@ -16,6 +17,32 @@ patterns = {
     'machine workspace path': re.compile(r'/(?:workspace|home|Users|root)/[A-Za-z0-9_.-]+/'),
     'internal note reference': re.compile(r'/(?:agent_notes|user_notes)/|dream' + r'_notes'),
 }
+
+def svg_source_issue(text):
+    """Inspect parsed names/decoded attributes, independent of prefixes and case."""
+    if re.search(r'<!\s*(?:DOCTYPE|ENTITY)\b|<\?xml-stylesheet\b', text, re.I):
+        return 'SVG has an unsupported declaration or stylesheet reference'
+    try:
+        document = ET.fromstring(text)
+    except ET.ParseError:
+        return 'SVG is not well-formed XML'
+    local_name = lambda name: name.rsplit('}', 1)[-1].casefold()
+    if local_name(document.tag) != 'svg':
+        return 'SVG root is not svg'
+    for element in document.iter():
+        if local_name(element.tag) in {'image', 'feimage', 'script', 'foreignobject'}:
+            return 'SVG has script, embedded image, or foreign content'
+        for name, value in element.attrib.items():
+            if local_name(name) == 'href' and value.strip() and not value.strip().startswith('#'):
+                return 'SVG has a nonlocal resource reference'
+        css = ' '.join([element.text or '', *element.attrib.values()])
+        if re.search(r'@import\b', css, re.I):
+            return 'SVG has a stylesheet import'
+        for reference in re.findall(r'url\s*\((.*?)\)', css, re.I | re.S):
+            if not reference.strip().strip('\'"').strip().startswith('#'):
+                return 'SVG has a nonlocal resource reference'
+    return None
+
 def scan_sources(root, files):
     errors = []
     total = 0
@@ -34,8 +61,9 @@ def scan_sources(root, files):
             errors.append((relative, 'non-UTF-8 source')); continue
         for label, pattern in patterns.items():
             if pattern.search(text): errors.append((relative, label))
-        if file.suffix == '.svg' and re.search(r'<(?:script|image|foreignObject)\b|(?:href|xlink:href)\s*=\s*[\'\"](?:https?:|data:)', text, re.I):
-            errors.append((relative, 'SVG has script, embedded image, or remote reference'))
+        if file.suffix.lower() == '.svg':
+            issue = svg_source_issue(text)
+            if issue: errors.append((relative, issue))
     return errors, total
 
 

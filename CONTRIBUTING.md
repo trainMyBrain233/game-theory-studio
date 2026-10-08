@@ -1,6 +1,6 @@
 # 贡献指南
 
-先阅读 [AGENTS.md](AGENTS.md)、[工程与配置契约](docs/project-structure.md) 和 [第三方内容边界](docs/third-party-content.md)。保留原 MIT LICENSE，使用功能分支提交草稿 PR。
+先阅读 [AGENTS.md](AGENTS.md)、[工程与配置契约](docs/project-structure.md) 和 [第三方内容边界](docs/third-party-content.md)。保留原 MIT LICENSE，使用功能分支提交草稿PR。当前main仅LICENSE，按根README检出infra/quality-pipeline或对应评审分支后再运行工程命令。
 
 ## 从干净依赖开始
 
@@ -24,7 +24,7 @@ npm test
 
 `chapter:new` 创建原型元数据、两段原创测试稿、生成器、UTF-8 时间轴/SRT/录音参考稿；拒绝路径穿越和覆盖已有章节。`00-original-example` 是随源码保留的非 IP 示例，不是正片章节。
 
-共享的显示名、策略名、收益和默认选择维护在 `design/scenes.json`。章节口播生成器从该案例读取这些值。修改后执行 `build:narration` 重建全部章节，检查中文数字、语义断行、参考语速和所有派生产物的 diff；真实录音完成后再对齐时间。手改派生 SRT 会被只读 QA 报为过期，不会被 QA 覆盖。
+共享的显示名、策略名、收益和默认选择维护在 `design/scenes.json`。章节口播生成器从该案例读取这些值。修改后执行 `build:narration` 重建全部章节，检查中文数字、语义断行、参考语速和所有派生产物的 diff；真实录音完成后再对齐时间。手改派生SRT、归档SVG/JSON会被只读QA报为过期，不会被QA覆盖。归档构建用显式 `build:cast`，测试只在临时目录重建比较。
 
 内容修改时递增该章节的 `contentVersion`。结构契约改变时先更新 Schema/版本与迁移说明，再改消费者；不要为了绕过验证删除 Schema 或负向样本。详见 [版本与更新流程](docs/project-structure.md#版本与更新流程)。
 
@@ -35,6 +35,7 @@ npm test
 - `@napi-rs/canvas` 1.0.10 用于本机 Skia/Canvas，Ajv 8.20.0 用于 draft-07/2020-12 Schema，fontTools 4.61.1 用于完整 SC face 提取/字形检查。Ajv 从 8.17.1 升级以避开 [已公开的 `$data` ReDoS 问题](https://github.com/advisories/GHSA-2g4f-4pwh-qvx6)；本项目没有启用 `$data`。
 - 可选 NumPy 2.3.5（BSD）用于固定种子的原创SFX，Pillow12.3.0（HPND）用于联系图；默认CI和静帧不用它们，使用 `setup:media` 安装同一虚拟环境。编码依赖外部FFmpeg/libx264，不自动下载安装。
 - 整集修改保留根案例/时间轴/字体唯一来源，运行 `test:episode`，查看受影响转场；新章节内容脚手架不自动创建动画。
+- timeline2.1完整格揭示需唯一A/B事件各一个，数组顺序可改变；零/单项输入不支持。修改配置名字和牌色时，也检查生产标签及实际牌像素，不能只验证模型值。
 - 字体从官方固定 commit 下载并核验 SHA256；Actions 也固定 commit。升级时逐项复跑，不能只更新注释中的版本号。
 
 ## 提交与审查

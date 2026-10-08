@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createCanvas, loadImage} from '@napi-rs/canvas';
-import {registerFonts,canvasFont} from '../typography/fonts.mjs';
+import {registerFonts,canvasFont,FONT_FAMILY,SERIF_FAMILY} from '../typography/fonts.mjs';
+import {assertAppliedFont} from '../typography/font-contract.mjs';
 import {validateScenes,validateSchema} from '../scripts/validate-data.mjs';
 import {checkTextLayout} from '../scripts/layout.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
@@ -21,9 +22,10 @@ function line(x1,y1,x2,y2,color=S.ink,lw=3){c.beginPath();c.moveTo(x1,y1);c.line
 function shape(points,fill,stroke=null,lw=3){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke()}}
 function oval(x,y,rx,ry,fill,stroke=null,lw=3){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke()}}
 function curve(pts,color=S.ink,lw=3){c.beginPath();c.moveTo(pts[0],pts[1]);c.bezierCurveTo(...pts.slice(2));c.strokeStyle=color;c.lineWidth=lw;c.stroke()}
-function txt(t,x,y,size=36,weight=400,color=S.ink,align='left',family='sans',track=false){c.save();c.fillStyle=color;c.font=canvasFont(size,weight,{serif:family==='serif'});const appliedSize=Number(c.font.match(/([0-9.]+)px/)?.[1]);if(appliedSize!==size)throw Error(`Applied canvas font ${c.font} does not match ${size}px`);c.textBaseline='middle';c.textAlign=align;c.fillText(t,x,y);const metrics=c.measureText(t);let w=metrics.width;const bx=align==='center'?x-w/2:align==='right'?x-w:x;const by=y-metrics.actualBoundingBoxAscent;const m=c.getTransform();const pts=[[bx,by],[bx+w,by],[bx,by+metrics.actualBoundingBoxAscent+metrics.actualBoundingBoxDescent],[bx+w,by+metrics.actualBoundingBoxAscent+metrics.actualBoundingBoxDescent]].map(([px,py])=>[m.a*px+m.c*py+m.e,m.b*px+m.d*py+m.f]);const xx=pts.map(p=>p[0]),yy=pts.map(p=>p[1]);bounds.push({text:t,x:Math.min(...xx),y:Math.min(...yy),width:Math.max(...xx)-Math.min(...xx),height:Math.max(...yy)-Math.min(...yy),size:appliedSize*Math.hypot(m.a,m.b),appliedFont:c.font,glyphHeight:c.measureText(t).actualBoundingBoxAscent+c.measureText(t).actualBoundingBoxDescent});c.restore()}
+function txt(t,x,y,size=36,weight=400,color=S.ink,align='left',family='sans',track=false){c.save();c.fillStyle=color;c.font=canvasFont(size,weight,{serif:family==='serif'});const applied=assertAppliedFont(c,{size,weight,family:family==='serif'?SERIF_FAMILY:FONT_FAMILY});const appliedSize=applied.size;c.textBaseline='middle';c.textAlign=align;c.fillText(t,x,y);const metrics=c.measureText(t);let w=metrics.width;const bx=align==='center'?x-w/2:align==='right'?x-w:x;const by=y-metrics.actualBoundingBoxAscent;const m=c.getTransform();const pts=[[bx,by],[bx+w,by],[bx,by+metrics.actualBoundingBoxAscent+metrics.actualBoundingBoxDescent],[bx+w,by+metrics.actualBoundingBoxAscent+metrics.actualBoundingBoxDescent]].map(([px,py])=>[m.a*px+m.c*py+m.e,m.b*px+m.d*py+m.f]);const xx=pts.map(p=>p[0]),yy=pts.map(p=>p[1]);bounds.push({text:t,x:Math.min(...xx),y:Math.min(...yy),width:Math.max(...xx)-Math.min(...xx),height:Math.max(...yy)-Math.min(...yy),size:appliedSize*Math.hypot(m.a,m.b),weight:applied.weight,family:applied.family,appliedFont:c.font,glyphHeight:c.measureText(t).actualBoundingBoxAscent+c.measureText(t).actualBoundingBoxDescent});c.restore()}
 function wrapped(text,x,y,size,lineHeight,maxWidth,weight=400,family='sans'){
  c.font=canvasFont(size,weight,{serif:family==='serif'});
+ assertAppliedFont(c,{size,weight,family:family==='serif'?SERIF_FAMILY:FONT_FAMILY});
  const lines=[];let remaining=text;
  while(remaining){
   if(c.measureText(remaining).width<=maxWidth){lines.push(remaining);break}

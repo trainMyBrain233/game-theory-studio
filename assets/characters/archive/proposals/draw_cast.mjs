@@ -3,7 +3,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createCanvas,loadImage} from '@napi-rs/canvas';
 import {registerFonts,canvasFont} from '../../../../typography/fonts.mjs';
-registerFonts();
+const sourceOnly=process.argv.includes('--source-only');
+if(!sourceOnly)registerFonts();
 const OUT=path.dirname(fileURLToPath(import.meta.url));
 for (const dir of ['svg', 'png', 'qa']) fs.mkdirSync(path.join(OUT, dir), {recursive:true});
 const P={paper:'#FFFEF8',ink:'#243E66',muted:'#51617A',line:'#B9C5D4',wash:'#EAF0F6',warm:'#D5B47D',warmLight:'#EADBBD',cool:'#9DB4CA',coolLight:'#DCE6EF',skin:'#E6C5A7',fur:'#B2A18D',cream:'#F2EBDE',steel:'#CAD1D7',dark:'#45516B'};
@@ -71,13 +72,14 @@ const proposals=[
 {id:'animal',number:'02',label:'动物街坊',names:['阿栗','高墨'],roles:['獾 · 修理铺店主','苍鹭 · 印务铺店主'],feature:'历史原创方案',description:'宽窄剪影一眼分清，安静但有戏。',cost:'物种只影响外形，不预设谁更聪明。',prop:['宽肩短身 · 工具腰包','细长轮廓 · 样纸夹'],recommend:false},
 {id:'robot',number:'03',label:'复古机器人',names:['零九','拾一'],roles:['机器人 · 旧件翻新铺主','机器人 · 移动打印车主'],feature:'更实验的备选',description:'机械关节利于动画，识别度鲜明。',cost:'要避免观众把行为误读为程序定死。',prop:['低重心方机身 · 零件盒','高挑圆筒机身 · 纸卷盒'],recommend:false}
 ];
-const imgs={};for(const k of Object.keys(drawings))imgs[k]=await loadImage(path.join(OUT,'svg',`${k}.svg`));
+const imgs={};if(!sourceOnly)for(const k of Object.keys(drawings))imgs[k]=await loadImage(path.join(OUT,'svg',`${k}.svg`));
 function txt(ctx,text,x,y,size=24,weight=400,color=S,align='left'){ctx.font=canvasFont(size,weight);ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline='alphabetic';ctx.fillText(text,x,y);}
 function rounded(ctx,x,y,w,h,r,fill,stroke=null,lw=1){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}}
 function line(ctx,x1,y1,x2,y2,color=P.line,w=1){ctx.strokeStyle=color;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
 function chip(ctx,text,x,y,w,bg=P.wash,color=S){rounded(ctx,x,y,w,42,21,bg);txt(ctx,text,x+w/2,y+28,20,700,color,'center');}
 function backdrop(ctx,x,y,w,h){ctx.strokeStyle='#DCE3EA';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x+20,y+h);ctx.lineTo(x+20,y+80);ctx.lineTo(x+w*0.35,y+15);ctx.lineTo(x+w*0.67,y+80);ctx.lineTo(x+w-20,y+30);ctx.lineTo(x+w-20,y+h);ctx.stroke();ctx.beginPath();ctx.moveTo(x+20,y+80);ctx.lineTo(x+w*0.67,y+80);ctx.stroke();ctx.beginPath();ctx.roundRect(x+w*.43,y+150,w*.18,h-150,50);ctx.stroke();line(ctx,x,y+h,x+w,y+h,'#CFD8E2',3);}
 for(const p of proposals){
+if(!sourceOnly){
 const cc=createCanvas(1800,1280),ctx=cc.getContext('2d');ctx.fillStyle=P.paper;ctx.fillRect(0,0,1800,1280);
 txt(ctx,'博弈论连续系列 / 历史原创方案',84,76,22,700,P.muted);txt(ctx,`${p.number}  ${p.label}`,84,154,54,700);chip(ctx,p.feature,1320,101,396,p.recommend?'#E3EAF2':'#F0EDE5');txt(ctx,'同一座合租小院，各自经营一间小铺。',84,205,27,400,P.muted);
 backdrop(ctx,260,283,1280,705);
@@ -87,6 +89,7 @@ chip(ctx,'A',92,391,54,WL);txt(ctx,p.names[0],166,425,46,700);txt(ctx,p.roles[0]
 chip(ctx,'B',1400,492,54,CL);txt(ctx,p.names[1],1474,526,46,700);txt(ctx,p.roles[1],1400,571,25,400,P.muted);
 rounded(ctx,84,1118,1632,106,14,'#F0F3F5');txt(ctx,p.prop[0],130,1162,25,700);txt(ctx,p.prop[1],960,1162,25,700);txt(ctx,p.description+' '+p.cost,130,1201,22,400,P.muted);
 fs.writeFileSync(path.join(OUT,'png',`${p.number}_${p.id}_pair.png`),cc.toBuffer('image/png'));
+}
 // Pair SVG preserves geometry without relying on Chinese text rendering.
 const insideA=drawings[`${p.id}_A`].replace(/^.*?<g /s,'<g ').replace(/<\/svg>$/,'');
 const insideB=drawings[`${p.id}_B`].replace(/^.*?<g /s,'<g ').replace(/<\/svg>$/,'');
@@ -96,6 +99,7 @@ pair=pair.replace(/id="([^"]+)"/g,(m,id,offset)=>`id="${offset<pair.indexOf('tra
 fs.writeFileSync(path.join(OUT,'svg',`${p.id}_pair.svg`),pair);
 }
 // Main selection board: visual comparisons dominate; same setting and scale for a fair read.
+if(!sourceOnly){
 const cc=createCanvas(2700,1740),ctx=cc.getContext('2d');ctx.fillStyle=P.paper;ctx.fillRect(0,0,2700,1740);
 txt(ctx,'博弈论连续系列',90,74,24,700,P.muted);txt(ctx,'历史原创角色方案 · 已归档',90,161,66,700);txt(ctx,'同一座合租小院 · 两间邻铺 · 主持人负责讲解，角色负责做选择',93,218,28,400,P.muted);line(ctx,90,254,2610,254);
 for(let i=0;i<proposals.length;i++){
@@ -114,5 +118,6 @@ txt(ctx,'长期可演：',x+36,1460,23,700);txt(ctx,'合租分账 / 共用仓库
 }
 txt(ctx,'角色没有“永远合作”或“永远背叛”的人设。规则、信息和目标变了，选择也会变。',90,1660,27,400,P.muted);
 fs.writeFileSync(path.join(OUT,'png','00_cast_comparison.png'),cc.toBuffer('image/png'));
+}
 fs.writeFileSync(path.join(OUT,'proposals.json'),JSON.stringify(proposals,null,2));
-console.log('Created 6 individual SVGs, 3 pair SVGs, 3 pair PNGs, and a selection board.');
+console.log(sourceOnly?'Created 9 source SVGs and proposal metadata only.':'Created 6 individual SVGs, 3 pair SVGs, 3 pair PNGs, and a selection board.');

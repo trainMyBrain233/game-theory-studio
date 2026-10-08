@@ -22,7 +22,7 @@ for (const directory of chapterDirectories()) {
   validateTimeline(timeline, scenes);
   assert.equal(config.title, timeline.title);
   assert.equal(config.caseId, scenes.caseId);
-  assert.equal(config.stage, 'prototype', 'Current schema 2.0 is not audio-aligned');
+  assert.equal(config.stage, 'prototype', 'Current schema 2.1 is not audio-aligned');
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-narration-'));
   try {
     const build = runPython([path.join(narration, 'build_narration.py'), '--output-dir', temporary], {encoding: 'utf8', stdio: 'pipe'});

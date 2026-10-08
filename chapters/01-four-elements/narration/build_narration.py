@@ -73,7 +73,7 @@ for s in names:
     sr=[r for r in rows if r['section']==s]
     sections.append({'id':s,'title':names[s],'start':sr[0]['start'],'end':sr[-1]['end']})
 data={
- 'schema_version':'2.0','title':'四个问题，看懂一场博弈','language':'zh-CN','duration':t,'fps_reference':30,
+ 'schema_version':'2.1','title':'四个问题，看懂一场博弈','language':'zh-CN','duration':t,'fps_reference':30,
  'timing_status':'manual_voiceover_reference_not_audio_aligned',
  'timing_notice':'本时间轴没有真人口播音频作为依据。发声时长、句内停顿与数值出现点均为人工参考；录制后应以实际呼吸和语义停顿重对齐，不能宣称已经按音频对齐。',
  'speech_guidance':{'tone':'清楚、平和，像面对一个第一次接触博弈论的人讲解。','names':'小A、小B中的字母读英语字母名称；不要读成甲乙，也不要省掉人名。','numbers_and_symbols':'数值全部用中文数字口播；（0，5）读成小A得零分、小B得五分；≠读不等于；行读 háng。','pace':'句内逗号轻停，问句和定义后留理解时间。允许局部伸缩，不要为踩时间码加速。','subtitle_policy':'整句或语义块完整出现；不逐字打字。字幕从start保留到end，包含尾部停顿，不提前收走。','pause_after_definition':'pause_after位于start/end显示窗的结尾：end = voiceover_end + pause_after。不是在end后再追加一次。'},

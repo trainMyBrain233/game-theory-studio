@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "status": "third_party_character_direction_selected_art_pending",
+  "status": "generic_public_interface_private_visual_preview_external",
   "selectedDirection": "Plants vs. Zombies zombies",
   "selectedAppearance": null,
   "activeCast": null,
@@ -20,5 +20,5 @@
       "asset": null
     }
   },
-  "usageNote": "A/B are generic layout and data roles. Third-party character artwork and redraws are not distributed in this source repository. See docs/third-party-content.md."
+  "usageNote": "A/B are generic layout and data roles. Third-party character artwork and redraws are not distributed in this source repository. See docs/third-party-content.md. A verified private visual preview exists; this generic registry carries no artwork. See project-status.json for its verified source commit and the pending current-head revalidation."
 }

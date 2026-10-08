@@ -1,6 +1,6 @@
 # 第一集完整时间线渲染模块
 
-`production/` 提供 173.3 秒、六节、30fps 的 B 暖白/深蓝教材风渲染器：参与者、信息遮挡与亮牌、一轮/多轮策略对照、四格逐项读表和复盘。代码可执行整段时间线；当前时间窗是人工口播参考，没有配音对齐。源码验收和原创占位角色检查不等于私有角色正片验收。
+`production/` 提供 173.3 秒、六节、30fps 的 B 暖白/深蓝教材风渲染器：参与者、信息遮挡与亮牌、一轮/多轮策略对照、四格逐项读表和复盘。当前main仅LICENSE；先按根README检出infra/quality-pipeline或对应评审分支。代码可执行整段时间线；当前时间窗是人工口播参考，没有配音对齐。云端已报告f694678的173.3秒私有PvZ视觉预览生成/验收、5199帧完整解码和与已验收媒体逐字节一致，影片与八层素材不在公开仓库。本轮修改后由生产验证重新绑定head；没有未知新hash或新head成片通过声明。公开占位CI与这项私有视觉证据分开。
 
 ## 统一入口
 
@@ -13,7 +13,7 @@ npm run setup:fonts -- --download
 npm run test:episode
 ```
 
-`test:episode` 包含语义/Schema、633 个布局采样和转场中间帧、SC 字符覆盖、变更案例回归、5 个原创 SVG、文本导出和 5 张原生1080p帧。公开 checkout 一律使用显式 `--placeholder-cast`，使用原创中性人物；普通生产模式缺少八个私有 RGBA 层时以 `PRIVATE_ASSET_MISSING` 失败，不静默换角色。CI 只使用原创占位角色。
+`test:episode` 包含语义/Schema、633个布局采样和转场中间帧、26个乱序得分事件等价帧、共享卡色像素和非占位模式显示名、SC 字符覆盖、变更案例回归、5 个原创 SVG、文本导出和 5 张原生1080p帧。公开 checkout 一律使用显式 `--placeholder-cast`，使用原创中性人物；普通生产模式缺少八个私有 RGBA 层时以 `PRIVATE_ASSET_MISSING` 失败，不静默换角色。CI 只使用原创占位角色。
 
 ## 制作与验收命令
 
@@ -47,6 +47,7 @@ npm run pack:source
 - `../chapters/01-four-elements/narration/timeline.json` 是唯一第一集时间轴；没有独立 production timeline 副本。
 - `../design/tokens.json` 提供 B 色板、字幕38–48px和标题sans/serif。静帧正文配置只作用于静帧；整集布局合同固定正文33px、次要页眉最小27px、标题72px/复盘65px、得分64px。修改固定布局须更新 Schema、代码和验证，不能把常量当成可随意改的排版引擎。
 - `cast.json` 1.1 只绑定 A/B身份、资源和外部角色类型；显示名/策略名不再重复存储。`content.json` 2.1 描述固定六节教学合同与共享来源；`tokens.json` 1.0 声明固定布局/编码合同。三者由 draft2020-12、Ajv strict 验证，未知字段和不支持的布局变更报错。
+- timeline Schema2.1要求每个 `reveal_scores` 有A/B各一个事件，位置按player映射，汇总数对在所有事件的最晚offset后出现。零/单项/重复owner属于不支持输入，先在模型验证拒绝。
 - `src/model.mjs` 验证这些来源并生成运行模型；`src/scenes.mjs` 使用显式时间绘制；`src/choreography.mjs` 共享选牌/手位相位。
 - `src/rgba_character_rig.mjs` / `character_adapter.mjs` 只有分层位图坐标、旋转与蒙版代码；`assets/` 的五个原创 SVG 含真实路径。PNG 套 SVG 仍是位图。
 

@@ -126,9 +126,9 @@ function strategy(c,t){
 const cells={RR:[0,0],RB:[0,1],BR:[1,0],BB:[1,1]};
 function scoreValues(c,t,key,cx,cy,size=64){
  const s=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key);if(!s||t<s.start)return;
- const vals=s.visual_cue.scores,reveals=s.visual_cue.score_reveals;
+ const reveals=s.visual_cue.score_reveals;
  tx(c,'(',cx-126*size/64,cy+21*size/64,size,400,C.ink,'center');tx(c,',',cx,cy+21*size/64,size,400,C.ink,'center');tx(c,')',cx+126*size/64,cy+21*size/64,size,400,C.ink,'center');
- reveals.forEach((r,i)=>reveal(c,t,s.start+r.offset,()=>tx(c,String(r.value),cx+(i===0?-64:64)*size/64,cy+21*size/64,size,700,C.ink,'center'),{d:.38,dy:6}));
+ reveals.forEach(r=>reveal(c,t,s.start+r.offset,()=>tx(c,String(r.value),cx+(r.player==='A'?-64:64)*size/64,cy+21*size/64,size,700,C.ink,'center'),{d:.38,dy:6}));
 }
 function currentCell(t){return timeline.segments.filter(s=>s.start<=t&&s.visual_cue.matrix_cell).at(-1)?.visual_cue.matrix_cell||null}
 function matrix(c,t,{progress=1,geometry={x:780,y:503,cw:480,ch:170},fontSize=64}={}){
@@ -169,7 +169,7 @@ function payoffs(c,t){
   group(c,order*(1-ramp(t,T('s33_beyond_money')-.3,.25)),0,0,()=>{
    tx(c,'每格的读法',100,400,31,400,C.muted);tx(c,'先{{A}}，再{{B}}',100,465,39,700);
    if(key&&!summary){const s=timeline.segments.find(s=>s.visual_cue.action==='highlight_choices'&&s.visual_cue.matrix_cell===key);reveal(c,t,s.start,()=>tx(c,'{{A}}选'+(key[0]==='R'?'{{red}}':'{{blue}}'),100,580,36,700));reveal(c,t,s.start+1.6,()=>tx(c,'{{B}}选'+(key[1]==='R'?'{{red}}':'{{blue}}'),100,642,36,700));
-   const rs=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key);if(t>=rs.start+rs.visual_cue.score_reveals[1].offset)reveal(c,t,rs.start+rs.visual_cue.score_reveals[1].offset,()=>{tx(c,'得分',100,739,30,400,C.muted);tx(c,`(${rs.visual_cue.scores[0]}, ${rs.visual_cue.scores[1]})`,208,744,52,700)});
+   const rs=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key),lastReveal=rs.start+Math.max(...rs.visual_cue.score_reveals.map(event=>event.offset));if(t>=lastReveal)reveal(c,t,lastReveal,()=>{tx(c,'得分',100,739,30,400,C.muted);tx(c,`(${rs.visual_cue.scores[0]}, ${rs.visual_cue.scores[1]})`,208,744,52,700)});
    } else if(summary){tx(c,'两个人的选择',100,583,35,700);tx(c,'共同决定收益',100,646,35,700);}
   });
   group(c,beyond*(1-ramp(t,SEC('payoffs').end-.3,.25)),0,(1-beyond)*10,()=>{tx(c,'收益可以表示',100,418,37,700);[['时间',519],['声誉',625],['对结果的偏好',731]].forEach(([a,y],i)=>{const pp=ramp(t,T('s33_beyond_money')+1.1+i*1.15,.4);group(c,pp,0,0,()=>{circle(c,124,y-12,17,C.paper,C.ink,2.5);if(i===0){line(c,124,y-12,124,y-23,C.ink,2);line(c,124,y-12,134,y-7,C.ink,2)}else if(i===1){line(c,116,y-11,122,y-5,C.ink,2);line(c,122,y-5,132,y-20,C.ink,2)}else{circle(c,124,y-12,6,C.ink,null)}tx(c,a,164,y,34,400)})})});

@@ -4,7 +4,7 @@ Default: extract/copy installed Noto CJK. --download opts into official download
 Requires Python 3 and fontTools (python -m pip install fonttools).
 """
 from pathlib import Path
-import argparse, hashlib, json, os, shutil, sys, urllib.request
+import argparse, hashlib, json, os, shutil, sys, tempfile, urllib.request
 try:
     from fontTools.ttLib import TTFont, TTCollection
 except ImportError:
@@ -51,6 +51,7 @@ def verify(file, kind, weight):
 def prepare(source, target, kind, weight):
     temp = target.with_suffix('.tmp.otf')
     face_index = None
+    source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     if source.suffix.lower() == '.ttc':
         collection = TTCollection(str(source), lazy=True)
         wanted = f'Noto {kind} CJK SC'
@@ -65,14 +66,41 @@ def prepare(source, target, kind, weight):
         face.save(str(temp))  # Complete face; no subsetting; preserve source timestamp.
         collection.close()
     else:
+        if source_hash != OFFICIAL_SHA256[(kind, weight)]:
+            raise ValueError('Individual SC OTF must match the pinned official checksum; unknown OTF is not accepted')
         shutil.copyfile(source, temp)
     try:
         result = verify(temp, kind, weight)
+        if hashlib.sha256(source.read_bytes()).hexdigest() != source_hash:
+            raise ValueError('Font source changed during preparation')
         os.replace(temp, target)
     finally:
         temp.unlink(missing_ok=True)
-    result.update({'source':str(source),'face_index':face_index})
+    result.update({'source':str(source),'face_index':face_index,'source_sha256':source_hash,
+                   'source_kind':'local_ttc_extraction' if face_index is not None else 'official_pinned_otf'})
     return result
+
+def verify_cached(target, kind, weight, previous):
+    actual = hashlib.sha256(target.read_bytes()).hexdigest()
+    pinned = OFFICIAL_SHA256[(kind, weight)]
+    if actual == pinned:
+        result = verify(target, kind, weight)
+        result.update({'source_kind':'official_pinned_otf','source_sha256':pinned,'face_index':None,
+                       'source':f'{BASE}/{COMMITS[kind]}/{kind}/OTF/SimplifiedChinese/Noto{kind}CJKsc-{weight}.otf'})
+        return result
+    if previous.get('source_kind') != 'local_ttc_extraction':
+        raise ValueError('Prepared OTF checksum differs from the pinned official file; unknown modifications cannot be re-certified')
+    source = Path(previous.get('source', ''))
+    if source.suffix.lower() != '.ttc' or not source.is_file():
+        raise ValueError('Original TTC source is required to verify a locally extracted face')
+    if actual != previous.get('sha256') or hashlib.sha256(source.read_bytes()).hexdigest() != previous.get('source_sha256'):
+        raise ValueError('Local TTC source or prepared checksum changed; run explicit preparation after reviewing the source')
+    # A manifest's self-reported target hash is insufficient: independently re-extract the source.
+    with tempfile.TemporaryDirectory(prefix='noto-sc-verify-') as temporary:
+        derived = prepare(source, Path(temporary)/target.name, kind, weight)
+    if actual != derived['sha256'] or previous.get('face_index') != derived['face_index']:
+        raise ValueError('Prepared font does not match the complete SC face re-extracted from its recorded TTC source')
+    return derived
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
@@ -97,15 +125,15 @@ def main():
             target=a.output_dir/f'Noto{kind}CJKSC-{weight}.otf'
             if target.exists():
                 try:
-                    verified = verify(target,kind,weight)
+                    verified = verify_cached(target,kind,weight,previous.get(target.name,{}))
                 except Exception as error:
-                    if not a.download:
+                    if not a.download and (a.verify_only or not a.source_dir):
                         missing.append(f'{target.name}: {error}'); continue
-                    print('Invalid prepared target; will replace only after verified download:',target.name)
+                    print('Invalid prepared target; will replace only after verified source preparation:',target.name)
                 else:
-                    old = previous.get(target.name, {})
-                    provenance = {k: old[k] for k in ['source', 'face_index'] if k in old and old.get('sha256') == verified['sha256']}
-                    report[target.name] = {**provenance, **verified}
+                    if a.verify_only and previous.get(target.name,{}).get('sha256') != verified['sha256']:
+                        missing.append(f'{target.name}: manifest does not match independently verified font bytes'); continue
+                    report[target.name] = verified
                     print('Verified',target.name); continue
             if a.verify_only:
                 missing.append(target.name); continue
@@ -132,6 +160,12 @@ def main():
         print('\nFonts are NOT ready. Missing/failed:\n'+'\n'.join(missing),file=sys.stderr)
         print('Use --source-dir /path/to/fonts or explicitly add --download. Do not render with fallback fonts.',file=sys.stderr)
         return 1
+    if a.verify_only:
+        if not manifest_path.exists():
+            print('Prepared manifest is missing; run setup:fonts to record provenance before QA.',file=sys.stderr)
+            return 1
+        print('All four complete SC fonts verified against pinned OTFs or reproduced TTC sources; manifest unchanged.')
+        return 0
     temporary_manifest=manifest_path.with_suffix('.tmp.json')
     temporary_manifest.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     os.replace(temporary_manifest,manifest_path)

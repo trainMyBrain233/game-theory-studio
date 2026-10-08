@@ -36,7 +36,7 @@ for key, text, spoken, pause, cue in rows:
                      'display_duration': round(end-time, 3), 'speech_plan_note': '人工口播参考，录音后再对齐。'})
     time = end
 timeline = {
-    'schema_version': '2.0', 'title': config['title'], 'language': 'zh-CN',
+    'schema_version': '2.1', 'title': config['title'], 'language': 'zh-CN',
     'duration': time, 'fps_reference': 30,
     'timing_status': 'manual_voiceover_reference_not_audio_aligned',
     'timing_notice': '原创几何占位测试内容，没有音轨，尚未音频对齐。',
