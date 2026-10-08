@@ -48,4 +48,6 @@ npm test
 
 PR 描述包含触发问题、结果行为、实际验证、已知限制与相关审查链接。CI 必须属于当前 head commit。基础建设阶段的叠加 PR 以 `setup/studio-foundation` 为 base；不要自行合并或直接写 main。GitHub/Codex Auto review 的连接和配置由独立任务管理。
 
+复发问题记入[质量回归记录](docs/quality-regressions.md)：写触发输入、可见影响、修复契约和能失败的负样本。桌牌支撑、腕点/手姿、真实接触与自然动作保持 OPEN，直到对应真实素材和中间帧完成验收；公共 fixture 或零 IK 误差不能关闭它们。
+
 创作内容复核见[教学内容检查单](docs/teaching-content-checklist.md)；通用元素、角色层坐标与支持范围见[可复用绘制接口](docs/render-elements.md)。
