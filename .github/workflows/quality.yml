@@ -55,6 +55,8 @@ jobs:
         run: npm run test:render
       - name: Non-IP rendering and deterministic time smoke
         run: npm run render:smoke
+      - name: Full-episode original placeholder smoke and intermediate layouts
+        run: npm run test:episode
       - name: Public source boundary and read-only validation
         run: |
           npm run qa:source

@@ -12,6 +12,9 @@
 | Schema 报 unknown field/错玩家 | 查对应 Schema 与工程契约。角色 id 只有 A/B；得分 offset 相对段 start，须在发声参考窗内；不能写 C 或把 A/B 收益交换。 |
 | 不同 OS 像素不一致 | 先核对字体 manifest、Node、Canvas、CPU/OS；逐像素重复只在同一环境比较。不同平台不要求相同全图 SHA。 |
 | 中文 locale/CRLF | 源码与派生文本统一 UTF-8/LF；生成器先校验、暂存，再替换。非 UTF-8 locale 已有回归测试。不要靠手改成 GBK 或去掉字幕中文解决。 |
+| `PRIVATE_ASSET_MISSING` | 公开checkout用 `--placeholder-cast`；真实角色层在仓库外。不能把EA素材加进Git或静默换人来让生产模式通过。 |
+| FFmpeg/ffprobe 缺失 | 静帧/默认CI不需要编码器；视频与完整解码需要已有PATH上的FFmpeg/libx264和ffprobe。无效窗口/非原生宽度被明确拒绝。 |
+| 联系图缺少PNG/NumPy/Pillow | `setup:media` 安装固定可选包，先执行 `render:episode:stills -- --placeholder-cast` 默认全部时间点；五帧CI烟测不足以制作全部联系图。 |
 | GitHub CI 红灯 | 打开当前 head 对应的 Quality run，先查看失败步骤。字体/安装错误与语义错误分开处理；复跑适用本机命令后提交修复。不要扩大 token 权限、增加秘密或改成 pull_request_target。 |
 
 macOS arm64 本机实际跑过完整链；Linux 与 macOS 远程结果以当前 commit 的 Actions 为准。Windows 的路径分支只经过代码检查，没有 Windows 实测或 CI，不能把它列为已验证环境。

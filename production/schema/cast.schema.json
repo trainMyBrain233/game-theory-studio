@@ -6,14 +6,15 @@
     "schema_version",
     "status",
     "actors",
-    "strategies"
+    "strategies",
+    "renderer_module"
   ],
   "properties": {
     "schema_version": {
-      "type": "string"
+      "const": "1.1"
     },
     "status": {
-      "type": "string"
+      "const": "public_source_private_layers_required"
     },
     "actors": {
       "type": "object",
@@ -23,12 +24,37 @@
       ],
       "properties": {
         "A": {
-          "$ref": "#/$defs/actor"
+          "allOf": [
+            {
+              "$ref": "#/$defs/actor"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "identity_shape": {
+                  "const": "circle"
+                }
+              }
+            }
+          ]
         },
         "B": {
-          "$ref": "#/$defs/actor"
+          "allOf": [
+            {
+              "$ref": "#/$defs/actor"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "identity_shape": {
+                  "const": "square"
+                }
+              }
+            }
+          ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "strategies": {
       "type": "object",
@@ -36,26 +62,77 @@
         "red",
         "blue",
         "back"
-      ]
+      ],
+      "properties": {
+        "red": {
+          "type": "object",
+          "properties": {
+            "asset": {
+              "type": "string",
+              "pattern": "^assets/[a-z_]+\\.svg$"
+            }
+          },
+          "required": [
+            "asset"
+          ],
+          "additionalProperties": false
+        },
+        "blue": {
+          "type": "object",
+          "properties": {
+            "asset": {
+              "type": "string",
+              "pattern": "^assets/[a-z_]+\\.svg$"
+            }
+          },
+          "required": [
+            "asset"
+          ],
+          "additionalProperties": false
+        },
+        "back": {
+          "type": "object",
+          "properties": {
+            "asset": {
+              "type": "string",
+              "pattern": "^assets/[a-z_]+\\.svg$"
+            },
+            "label": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "asset"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "note": {
+      "type": "string"
+    },
+    "character_library": {
+      "type": "object"
+    },
+    "renderer_module": {
+      "const": "src/character_adapter.mjs"
     }
   },
   "$defs": {
     "actor": {
       "type": "object",
       "required": [
-        "display_name",
         "asset",
         "identity_shape",
-        "badge_anchor"
+        "badge_anchor",
+        "fallback_asset",
+        "asset_type"
       ],
       "properties": {
-        "display_name": {
-          "type": "string",
-          "minLength": 1
-        },
         "asset": {
           "type": "string",
-          "pattern": "\\.(svg|png|webp)$"
+          "pattern": "^(private_characters/pvz/assets/[ab]_head\\.png|assets/[a-z_]+\\.svg)$"
         },
         "identity_shape": {
           "enum": [
@@ -84,8 +161,17 @@
             "raster",
             "layered_raster"
           ]
+        },
+        "type_name": {
+          "type": "string"
+        },
+        "fallback_asset": {
+          "type": "string",
+          "pattern": "^assets/[a-z_]+\\.svg$"
         }
-      }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "additionalProperties": false
 }

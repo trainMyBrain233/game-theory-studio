@@ -42,6 +42,21 @@ class PublicationTests(unittest.TestCase):
         self.assertTrue(self.scan('bad.txt', b'abc\x00def'))
         self.assertTrue(self.scan('bad.otf', b'font'))
 
+    def test_private_text_source_never_published(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'private_characters').mkdir()
+            (root / 'private_characters/note.txt').write_text('private', encoding='utf-8')
+            self.assertTrue(scan_sources(root, ['private_characters/note.txt'])[0])
+
+    def test_private_archive_mode_is_disabled(self):
+        destination = ROOT / 'production/output/game_theory_studio_public_source.zip'
+        before = destination.read_bytes() if destination.exists() else None
+        run = subprocess.run([sys.executable, str(ROOT / 'production/pack_source.py')], capture_output=True)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn(b'--public', run.stderr)
+        self.assertEqual(destination.read_bytes() if destination.exists() else None, before)
+
     def test_symlink_never_followed(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

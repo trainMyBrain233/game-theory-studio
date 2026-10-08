@@ -1,8 +1,7 @@
-import fs from 'node:fs';
+export {timeline,content} from './model.mjs';
+import {timeline,content,sceneData} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
 import {TOKENS,C,clamp,ease,mix,ramp,span,tx,line,round,circle,arrow,group,reveal,person,badge,card,cardFlip,tag,desk,eye,resetRecords,setSceneTime,finishActorLayers} from './primitives.mjs';
-export const timeline=JSON.parse(fs.readFileSync(new URL('../narration/timeline.json',import.meta.url),'utf8'));
-export const content=JSON.parse(fs.readFileSync(new URL('../content.json',import.meta.url),'utf8'));
 export const W=TOKENS.canvas.width,H=TOKENS.canvas.height,FPS=TOKENS.canvas.fps,DURATION=timeline.duration;
 const S=id=>timeline.segments.find(s=>s.id===id);
 const T=id=>S(id).start;
@@ -17,7 +16,7 @@ function chapter(c,t){
  const fadeOut=sec.id==='recap'?1:1-ramp(t,sec.end-.3,.25), fadeIn=ramp(t,sec.start+.06,.42),p=sec.id==='intro'?ramp(t,0,.55):fadeIn;
  group(c,p*fadeOut,0,(1-p)*12,()=>{
   round(c,84,165,62,62,0,C.ink,null);tx(c,conf.no,115,209,30,700,C.white,'center');
-  tx(c,conf.title,178,226,sec.id==='recap'?65:72,700);tx(c,conf.lead,178,291,33,400,C.muted);
+  tx(c,conf.title,178,226,sec.id==='recap'?65:72,700,C.ink,'left',{serif:TOKENS.titleFamily==='serif'});tx(c,conf.lead,178,291,33,400,C.muted);
  });
  // Progress is a quiet reading aid; it does not change semantic color mappings.
  const filled=(t/DURATION)*1752;line(c,84,936,1836,936,C.light,1);line(c,84,936,84+filled,936,C.ink,2);
@@ -70,9 +69,9 @@ function information(c,t){
  duo(c,t,{cards:false});
  // One selected card per person; the unused option withdraws before the back flips.
  const choose=choreography.move,ca=choreography.cards.A,cb=choreography.cards.B;
- cardFlip(c,'red','back',ca.x,ca.y,105,hidden,{angle:-.035});
- cardFlip(c,'blue','back',cb.x,cb.y,105,hidden,{angle:.035});
- group(c,choreography.unused,0,choose*34,()=>{card(c,'blue',546,786,105);card(c,'red',1370,786,105)});
+ cardFlip(c,ca.kind,'back',ca.x,ca.y,105,hidden,{angle:-.035});
+ cardFlip(c,cb.kind,'back',cb.x,cb.y,105,hidden,{angle:.035});
+ group(c,choreography.unused,0,choose*34,()=>{card(c,sceneData.selected.row===0?'blue':'red',sceneData.selected.row===0?546:408,786,105);card(c,sceneData.selected.column===0?'blue':'red',sceneData.selected.column===0?1508:1370,786,105)});
  reveal(c,t,T('s08_known_unknown'),()=>tag(c,'计分规则：双方都知道',738,377,444,{size:30}));
  const dist=ramp(t,T('s10_distinction'),.5),summ=ramp(t,T('s11_timing'),.55);
  group(c,1-ramp(t,T('s10_distinction')-.3,.25),0,-dist*10,()=>{
@@ -113,14 +112,14 @@ function strategy(c,t){
  });
  group(c,compAlpha,0,0,()=>{
   tag(c,'如果改成多轮：概念对照',591,350,738,{size:33});
-  reveal(c,t,T('s17_comparison_example'),()=>{tx(c,'第一轮',532,513,35,700,C.ink,'center');tx(c,'选红',532,766,34,700,C.ink,'center')});
+  reveal(c,t,T('s17_comparison_example'),()=>{tx(c,'第一轮',532,513,35,700,C.ink,'center');tx(c,'选{{red}}',532,766,34,700,C.ink,'center')});
   const plan=ramp(t,T('s17_comparison_example')+1.55,.7);
   group(c,plan,0,0,()=>{
    arrow(c,632,632,795,632,plan);round(c,828,559,308,147,14,C.faint,C.light,2);tx(c,'从第二轮起',982,613,34,700,C.ink,'center');tx(c,'看对方上一轮',982,666,32,400,C.ink,'center');
    line(c,1136,632,1220,632,C.ink,3);line(c,1220,527,1220,732,C.ink,3);arrow(c,1220,527,1336,527);arrow(c,1220,732,1336,732);
   });
-  reveal(c,t,T('s17_comparison_example')+2.2,()=>{tx(c,'对方选红',1250,468,30,700,C.ink,'center');card(c,'red',1430,527,100);tx(c,'自己选红',1570,539,33,700)});
-  reveal(c,t,T('s17_comparison_example')+3.0,()=>{tx(c,'对方选蓝',1250,806,30,700,C.ink,'center');card(c,'blue',1430,732,100);tx(c,'自己选蓝',1570,744,33,700)});
+  reveal(c,t,T('s17_comparison_example')+2.2,()=>{tx(c,'对方选{{red}}',1250,468,30,700,C.ink,'center');card(c,'red',1430,527,100);tx(c,'自己选{{red}}',1570,539,33,700)});
+  reveal(c,t,T('s17_comparison_example')+3.0,()=>{tx(c,'对方选{{blue}}',1250,806,30,700,C.ink,'center');card(c,'blue',1430,732,100);tx(c,'自己选{{blue}}',1570,744,33,700)});
  });
  group(c,ramp(t,T('s18_return_single_round')+3.4,.4)*(1-ramp(t,SEC('strategy').end-.3,.25)),0,0,()=>{tx(c,'回到本片',960,483,33,400,C.muted,'center');tx(c,'仍然只玩一轮',960,570,43,700,C.ink,'center')});
 }
@@ -166,10 +165,10 @@ function payoffs(c,t){
  });
  if(t>=T('s21_rows')+1.5){
   const order=ramp(t,T('s23_score_order'),.5),key=currentCell(t),summary=ramp(t,T('s32_joint_choices'),.5),beyond=ramp(t,T('s33_beyond_money'),.6);
-  group(c,1-ramp(t,T('s23_score_order')-.3,.25),0,0,()=>{tx(c,t<T('s22_columns')?'先找{{A}}的行':'再找{{B}}的列',100,465,40,700);tx(c,t<T('s22_columns')?'红与蓝，两种选择':'红与蓝，两种选择',100,533,31,400,C.muted)});
+  group(c,1-ramp(t,T('s23_score_order')-.3,.25),0,0,()=>{tx(c,t<T('s22_columns')?'先找{{A}}的行':'再找{{B}}的列',100,465,40,700);tx(c,t<T('s22_columns')?'{{red}}与{{blue}}，两种选择':'{{red}}与{{blue}}，两种选择',100,533,31,400,C.muted)});
   group(c,order*(1-ramp(t,T('s33_beyond_money')-.3,.25)),0,0,()=>{
    tx(c,'每格的读法',100,400,31,400,C.muted);tx(c,'先{{A}}，再{{B}}',100,465,39,700);
-   if(key&&!summary){const s=timeline.segments.find(s=>s.visual_cue.action==='highlight_choices'&&s.visual_cue.matrix_cell===key);reveal(c,t,s.start,()=>tx(c,'{{A}}选'+(key[0]==='R'?'红':'蓝'),100,580,36,700));reveal(c,t,s.start+1.6,()=>tx(c,'{{B}}选'+(key[1]==='R'?'红':'蓝'),100,642,36,700));
+   if(key&&!summary){const s=timeline.segments.find(s=>s.visual_cue.action==='highlight_choices'&&s.visual_cue.matrix_cell===key);reveal(c,t,s.start,()=>tx(c,'{{A}}选'+(key[0]==='R'?'{{red}}':'{{blue}}'),100,580,36,700));reveal(c,t,s.start+1.6,()=>tx(c,'{{B}}选'+(key[1]==='R'?'{{red}}':'{{blue}}'),100,642,36,700));
    const rs=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key);if(t>=rs.start+rs.visual_cue.score_reveals[1].offset)reveal(c,t,rs.start+rs.visual_cue.score_reveals[1].offset,()=>{tx(c,'得分',100,739,30,400,C.muted);tx(c,`(${rs.visual_cue.scores[0]}, ${rs.visual_cue.scores[1]})`,208,744,52,700)});
    } else if(summary){tx(c,'两个人的选择',100,583,35,700);tx(c,'共同决定收益',100,646,35,700);}
   });
@@ -186,7 +185,7 @@ function recap(c,t){
  tx(c,'{{A}}',mix(565,1035,p),mix(699,723,p),30,700,C.ink,'center');tx(c,'{{B}}',mix(1263,1461,p),mix(361,441,p),30,700);
  const cardAlpha=1-ramp(p,.45,.3),wordAlpha=ramp(p,.98,.02);
  ['red','blue'].forEach((k,i)=>{card(c,k,mix(707,1136,p),mix(588+170*i,590.5+137*i,p),mix(82,70,p),{alpha:cardAlpha});card(c,k,mix(1020+480*i,1323.5+267*i,p),mix(426,462,p),73,{alpha:cardAlpha});
- group(c,wordAlpha,0,0,()=>{tx(c,k==='red'?'红':'蓝',1136,602+137*i,31,700,C.ink,'center');tx(c,k==='red'?'红':'蓝',1323.5+267*i,492,31,700,C.ink,'center')});});
+ group(c,wordAlpha,0,0,()=>{tx(c,k==='red'?'{{red}}':'{{blue}}',1136,602+137*i,31,700,C.ink,'center');tx(c,k==='red'?'{{red}}':'{{blue}}',1323.5+267*i,492,31,700,C.ink,'center')});});
  group(c,ramp(t,SEC('recap').start+1.1,.55),0,0,()=>{
   line(c,959,359,959,849,C.light,2);tx(c,'同一轮游戏',1448,381,31,400,C.muted,'center');
   tx(c,'（{{A}}得分，{{B}}得分）',1457,853,28,400,C.muted,'center');

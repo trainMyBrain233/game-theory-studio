@@ -14,12 +14,14 @@
 | `scripts/`、`tests/` | 跨平台运行、验证、脚手架、负向回归 | npm 命令入口 |
 | `typography/` | 完整 SC 字体准备/注册 | 字体二进制和 manifest 只存本地 |
 | `assets/characters/` | A/B 通用接口，原创历史提案归档 | 最终第三方角色图像由仓库外生产流程管理 |
+| `production/` | 六节时间线、动作、私有RGBA适配、原创占位SVG和整集QA | 根目录 `test:episode` / `render:episode:*`；共用根案例/时间轴/字体 |
+| `requirements-media.txt` | 可选原创音效/联系图工具 | `setup:media`；NumPy/Pillow精确版本 |
 | `project-status.json` | 当前原型/生产状态 | 人工核对状态，不能把 QA 通过当整片完成 |
 | `.github/workflows/quality.yml` | Linux/macOS 最小权限 CI | 当前源码验证；不发布任何内容 |
 
 ## Schema 与支持范围
 
-均为 JSON Schema draft-07，由 Ajv strict 模式验证；未知顶层字段报错。Schema 结构验证之外还有跨文件语义检查。
+根目录 Schema 为 JSON Schema draft-07；production 的 cast/content/tokens 为 draft2020-12，均由 Ajv strict 模式验证；未知顶层字段报错。Schema 结构验证之外还有跨文件语义检查。
 
 | Schema | 当前版本/范围 |
 | --- | --- |
@@ -27,6 +29,8 @@
 | `tokens.schema.json` | `schemaVersion: 1.0`；可改合法 RGB 颜色、字幕 38–48px、正文 36–42px、每风格标题 sans/serif；当前原生几何、角色形状和字重是固定合同，修改会明确报错 |
 | `chapter.schema.json` | `schemaVersion: 1.0`；`NN-slug` id、SemVer 内容版本、B 风格、当前案例；阶段字段保留后续阶段，但 Schema 2.0 的参考时间轴只能标为 prototype |
 | `timeline.schema.json` | `schema_version: 2.0`；人工口播参考；语义块、章节、选择/收益事件及玩家引用；当前不接受“已按音频对齐”声明 |
+
+production cast 1.1 不重复名字，content 2.1 不重复收益矩阵，tokens 1.0 固定六节布局；验证未知字段、身份形状、共享来源、六节顺序和固定布局。实际案例/时间轴/字体来自根目录，新增章节脚手架仅生成内容原型，不自动生成新整集动画。完整字段见 [生产模块](../production/README.md)。
 
 角色显示名最多 4 字符，策略名最多 2 字符；这是当前静帧的有限排版范围，不是任意长度文本支持。渲染进一步检查实际字形边界/碰撞。长标题或说明在可用位置最多两行；不能排下时明确失败，不偷偷缩小字号。场景文案可用 `{actorA}`、`{actorB}` 绑定显示名；收益场景字幕与读法按当前选择自动生成。
 
@@ -45,4 +49,4 @@
 
 ## 本地产物
 
-`design/frames/`、`design/boards/`、`design/qa/`、`typography/fonts/`、`typography/qa/`、章节 `narration/qa/` 与 `artifacts/smoke/` 均忽略。报告可记录当次时间，但渲染本身只依赖内容、字体、平台和显式时间输入；不要保存机器绝对路径到公开源码。
+`design/frames/`、`design/boards/`、`design/qa/`、`typography/fonts/`、`typography/qa/`、章节 `narration/qa/` 、`production/output/`、`production/qa/*.json`、`production/narration/exports/` 与 `artifacts/smoke/` 均忽略。报告可记录当次时间，但渲染本身只依赖内容、字体、平台和显式时间输入；不要保存机器绝对路径到公开源码。

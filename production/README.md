@@ -1,85 +1,61 @@
-# Full-episode renderer · public source
+# 第一集完整时间线渲染模块
 
-This module adds the 173.3-second first-episode renderer under `production/`. It extends the B / clean-textbook visual system without replacing the repository’s foundation, root package or MIT LICENSE.
+`production/` 提供 173.3 秒、六节、30fps 的 B 暖白/深蓝教材风渲染器：参与者、信息遮挡与亮牌、一轮/多轮策略对照、四格逐项读表和复盘。代码可执行整段时间线；当前时间窗是人工口播参考，没有配音对齐。源码验收和原创占位角色检查不等于私有角色正片验收。
 
-The renderer supports a separately managed layered-character production, but this public source contains only original neutral SVG people and original vector cards. No EA/PvZ images, redraws, character PNG layers or character previews are distributed here. See [PRIVATE_ASSETS.md](PRIVATE_ASSETS.md) for the explicit boundary.
+## 统一入口
 
-The 37-block timeline is a manual reference for future voiceover. It is not aligned to recorded speech. Historical checks on separately produced private media are not evidence that a public checkout has passed those checks.
-
-## Public-checkout quick start
-
-Run these commands from `production/`:
+所有命令从**仓库根目录**执行。这里只有一套 npm lockfile、Python `.venv`、SC 字体注册与字体准备；不要在 production 另装一套依赖。
 
 ```sh
 npm ci --ignore-scripts
-python3 -m venv .venv
-. .venv/bin/activate
-python3 -m pip install -r requirements.txt
-python3 setup_fonts.py
-node render.mjs --stills --placeholder-cast --times 27,38.2,83,126.3,172
-node qa/content.mjs --placeholder-cast
-node qa/validate.mjs --placeholder-cast
-python3 qa/check_fonts.py
+npm run setup:python
+npm run setup:fonts -- --download
+npm run test:episode
 ```
 
-Node.js 22+ is recommended. FFmpeg with libx264 is required for video encoding; it is not required for the still-frame smoke test. The font helper selects complete Simplified Chinese SC faces by internal family/weight. If local Noto CJK fonts are unavailable, supply `--source-dir /path/to/fonts` or explicitly use `--download` for the official Noto source. Keep the generated fonts and manifests local.
+`test:episode` 包含语义/Schema、633 个布局采样和转场中间帧、SC 字符覆盖、变更案例回归、5 个原创 SVG、文本导出和 5 张原生1080p帧。公开 checkout 一律使用显式 `--placeholder-cast`，使用原创中性人物；普通生产模式缺少八个私有 RGBA 层时以 `PRIVATE_ASSET_MISSING` 失败，不静默换角色。CI 只使用原创占位角色。
 
-Use `--placeholder-cast` for every public rendering/scene-QA command. Without it, missing private layers must fail with `PRIVATE_ASSET_MISSING`; the renderer must not silently substitute a different cast. A placeholder run verifies the public renderer, not the private character artwork.
-
-## Entry points
-
-- `cast.json`: stable A/B IDs, display names, private resource references and public SVG fallback references. Its production-cast status describes the separate production configuration, not assets included in Git.
-- `content.json`: one-round case, A=row/B=column, scores ordered A then B.
-- `tokens.json`: styling, spacing, type and motion rules.
-- `narration/timeline.json`: subtitle windows, voiceover text, pauses and visual cues; `{{A}}`/`{{B}}` resolve through the cast registry.
-- `src/scenes.mjs`: deterministic scene timing and choreography.
-- `src/primitives.mjs`: vector/text/identity drawing, layout checks and asset loading.
-- `src/rgba_character_rig.mjs` and `src/character_adapter.mjs`: reusable layered-image positioning code. These files contain transforms and pivots, not image pixels.
-- `assets/`: five original SVGs, placement metadata and a rerunnable asset verifier.
-- `schema/`: cast and timeline contracts for later pipeline integration.
-- `render.mjs`: native-size still/video rendering and FFmpeg encoding.
-- `qa/`: executable semantic, layout, font and media checks.
-
-## More commands
+## 制作与验收命令
 
 ```sh
-node render.mjs --stills --placeholder-cast --width 3840 --times 27,126.3,172
-node render.mjs --placeholder-cast --preview
-node render.mjs --placeholder-cast --width 1920
-node render.mjs --placeholder-cast --width 3840
-node qa/validate.mjs --placeholder-cast --all-frames
-node build_deliverables.mjs
-python3 make_sound.py
-node assets/verify-assets.mjs
-python3 pack_source.py --public
+# 默认关键帧和转场帧；随后可制作联系图
+npm run render:episode:stills -- --placeholder-cast
+npm run render:episode:stills -- --placeholder-cast --width 3840 --times 27,126.3,172
+# 编码需要 PATH 上的 FFmpeg/libx264，静帧不需要
+npm run render:episode:preview -- --placeholder-cast
+npm run render:episode -- --placeholder-cast
+npm run render:episode:4k -- --placeholder-cast
+# 全片或显式 13s 预览的完整解码
+npm run qa:episode:media -- production/output/game_theory_textbook_v2_clean_1920.mp4
+npm run qa:episode:media -- --duration 13 production/output/transition_preview_1920.mp4
+# 全帧布局检查（显式时间、原生1080p）
+npm run qa:episode:layout -- --all-frames
+npm run export:episode:text
+# 可选原创音效/联系图，只安装到同一个 .venv
+npm run setup:media
+npm run make:episode:sfx
+npm run make:episode:boards
+# 仅公开源码归档，先运行同一源码边界扫描，无私有模式
+npm run pack:source
 ```
 
-The clean video has subtitles but no audio track. `make_sound.py` synthesizes restrained original cues, not music or speech. Future voiceover requires updating subtitle, graphic and score-reveal timing to the actual recording.
+视频无音轨；SFX 是固定随机种子合成的原创轻音效，不包含语音或音乐，也不会自动混进视频。录音后须重新对齐字幕、图形和数字揭示。参数仅支持原生1920/3840宽；无效、重复、非有限参数和越界时窗明确报错。
 
-## Generated files
+## 配置来源
 
-The source import deliberately omits historical generated records and exports:
+- `../design/scenes.json` 是名字、策略名、四格得分和默认选择的唯一来源。修改后先运行 `build:narration`，再审查派生文本。
+- `../chapters/01-four-elements/narration/timeline.json` 是唯一第一集时间轴；没有独立 production timeline 副本。
+- `../design/tokens.json` 提供 B 色板、字幕38–48px和标题sans/serif。静帧正文配置只作用于静帧；整集布局合同固定正文33px、次要页眉最小27px、标题72px/复盘65px、得分64px。修改固定布局须更新 Schema、代码和验证，不能把常量当成可随意改的排版引擎。
+- `cast.json` 1.1 只绑定 A/B身份、资源和外部角色类型；显示名/策略名不再重复存储。`content.json` 2.1 描述固定六节教学合同与共享来源；`tokens.json` 1.0 声明固定布局/编码合同。三者由 draft2020-12、Ajv strict 验证，未知字段和不支持的布局变更报错。
+- `src/model.mjs` 验证这些来源并生成运行模型；`src/scenes.mjs` 使用显式时间绘制；`src/choreography.mjs` 共享选牌/手位相位。
+- `src/rgba_character_rig.mjs` / `character_adapter.mjs` 只有分层位图坐标、旋转与蒙版代码；`assets/` 的五个原创 SVG 含真实路径。PNG 套 SVG 仍是位图。
 
-- `qa/checks.json` / `checks_long_names.json`: produced by `qa/validate.mjs`; add `--stress-cast` for the latter.
-- `qa/semantic_checks.json`: produced by `qa/content.mjs`.
-- `qa/font_checks.json`: produced by `qa/check_fonts.py`, after layout QA supplies the text inventory.
-- `qa/sound_manifest.json`: produced by `make_sound.py`.
-- `qa/media_*.json`: run `python3 qa/verify_media.py output/game_theory_textbook_v2_clean_1920.mp4` after a full 173.3-second local render; the verifier checks the full-length episode, not a short preview.
-- `assets/asset-verification.json` and `assets/contact_sheet.png`: produced by `assets/verify-assets.mjs`.
-- `narration/exports/`, resolved timeline, SRT and recording-reference text: produced by `build_deliverables.mjs`.
-- `typography/fonts/prepared_font_manifest.json`: produced by `setup_fonts.py`; font binaries are excluded.
-- `SOURCE_MANIFEST.json`: included inside an archive produced by `pack_source.py`.
+## 本地产物与边界
 
-The old private-image `asset-manifest.json`, `qa/asset_manifest_checks.json`, historical `qa/QA_REPORT_zh.md` and prior machine-specific `font_manifest.json` are not part of this public module. No runtime module reads them. Private-image hashes and private-media pass claims are not copied into this public snapshot.
+`output/`、`qa/*.json`、`narration/exports/` 和资产校验联系图均忽略，不随 Git 发布。字体及 manifest 统一放根目录 `typography/fonts/`。打包收集整个统一仓库的公开源码候选文件，拒绝私有目录/二进制/检测到的秘密，附 SHA256 manifest 并校验 ZIP CRC；无参数私有归档已停用。
 
-## Checks performed for this source import
+占位布局检查覆盖实际文字边界、文字碰撞和连接线；占位模式没有私有角色 alpha mask，不能据此声称生产角色净空通过。私有模式可用 `--actor-alpha` 检查实际角色层。长名字、策略名、字幕字号变更仍需中间帧和缩小预览目视验证。
 
-On Linux, a clean `npm ci --ignore-scripts` install and local SC extraction succeeded. Five representative 1080p placeholder stills rendered; all six semantic checks passed; 633 layout samples produced 10,065 text draws and 4,997 paths with zero reported issues; both Sans weights covered 246 characters. The text-export and five-SVG asset-verification scripts also ran. Missing private assets without the placeholder flag failed with `PRIVATE_ASSET_MISSING` as intended. This import does not claim a newly rendered full video, encoded-video QA or GitHub CI pass. Workflow unification and the integration of duplicated foundation/production utilities are separate work.
+实际本机记录见 [验证记录](../docs/validation.md)。不保留来源包中的历史私有媒体通过声明。4K 原生绘制可提高文字/矩阵分辨率，不能补出位图角色原图缺失的细节。
 
-## Rendering and review boundaries
-
-Canvas and vectors are drawn at the target resolution. Separately supplied raster characters remain raster artwork; rendering 4K does not invent new painted detail. The optional encoder uses H.264, yuv420p and BT.709. Inspect decoded output before claiming production quality; bitrate alone is not a sharpness measure.
-
-New long names, payoff dimensions or diagrams can require layout changes. Run checks after edits and inspect transitions and small-display previews. Rectangles cannot replace visual review.
-
-The repository’s existing [MIT LICENSE](../LICENSE) applies to original code/SVGs. Noto fonts have their own [OFL text](typography/fonts/LICENSE-Noto.txt). Third-party characters are not relicensed under MIT. See the repository’s [third-party content boundary](../docs/third-party-content.md).
+原 MIT [LICENSE](../LICENSE) 覆盖原创代码/SVG；字体使用独立 OFL。EA/PvZ 图像、重绘、截图、视频和私有角色素材均不在公开仓库，见 [素材边界](PRIVATE_ASSETS.md) 和 [第三方说明](../docs/third-party-content.md)。

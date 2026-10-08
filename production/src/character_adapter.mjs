@@ -3,13 +3,12 @@
  * scale the rig draws at .6 in 1080p for clear facial/hand action; 4K character layers use 1.2× scaling.
  */
 import {prepareCharacterAssets,drawCharacter,getRigPose} from './rgba_character_rig.mjs';
-import fs from 'node:fs';
+import {timeline} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
 import {createCanvas} from '@napi-rs/canvas';
 let actorMask=null,armQueue=[];
 export function getMask(){return actorMask}
 export function beginFrame(canvas){armQueue=[];if(!process.argv.includes('--actor-alpha'))return;if(!actorMask||actorMask.width!==canvas.width)actorMask=createCanvas(canvas.width,canvas.height);const c=actorMask.getContext('2d');c.resetTransform();c.clearRect(0,0,canvas.width,canvas.height)}
-const timeline=JSON.parse(fs.readFileSync(new URL('../narration/timeline.json',import.meta.url),'utf8'));
 const T=id=>timeline.segments.find(s=>s.id===id).start;
 const clamp=x=>Math.min(1,Math.max(0,x));
 const smooth=x=>{x=clamp(x);return x*x*x*(10+x*(-15+6*x))};

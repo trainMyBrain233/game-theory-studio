@@ -16,6 +16,6 @@ for(const t of [...ts].sort((a,b)=>a-b)){if(t<0||t>=DURATION)continue;drawFrame(
  for(let i=0;i<visible.length;i++)for(let j=i+1;j<visible.length;j++){const a=visible[i],b=visible[j];if(overlaps(a,b,2))issues.push({kind:'text_overlap',t,a:a.text,b:b.text});}
  for(const route of routes.filter(r=>r.alpha>.15))for(const r of visible){if(hits(route.from,route.to,r,8+route.width/2))issues.push({kind:'line_text_clearance',t,text:r.text,line:route});}
 }
-const report={status:issues.length?'needs_revision':'passed',samples,text_draws:textCount,paths:routeCount,main_text_min_size:minSize,text_inventory:[...uniqueTexts].sort(),issues};fs.writeFileSync(new URL(process.argv.includes('--stress-cast')?'checks_long_names.json':'checks.json',import.meta.url),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,issues:issues.slice(0,30)},null,2));
+const report={status:issues.length?'needs_revision':'passed',samples,text_draws:textCount,paths:routeCount,main_text_min_size:minSize,text_inventory:[...uniqueTexts].sort(),issues};fs.writeFileSync(new URL(process.argv.includes('--stress-cast')?'checks_long_names.json':'checks.json',import.meta.url),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,text_inventory:undefined,issues:issues.slice(0,30)},null,2));
 
 if(issues.length)process.exitCode=1;

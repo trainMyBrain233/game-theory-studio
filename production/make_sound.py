@@ -4,7 +4,7 @@ import json, math, wave
 from pathlib import Path
 import numpy as np
 ROOT=Path(__file__).resolve().parent
-T=json.loads((ROOT/'narration/timeline.json').read_text())
+T=json.loads((ROOT.parent/'chapters/01-four-elements/narration/timeline.json').read_text(encoding='utf-8'))
 SR=48000
 out=np.zeros((round(T['duration']*SR),2),dtype=np.float64)
 rng=np.random.default_rng(20261008)
@@ -28,5 +28,5 @@ for s in T['segments']:
 peak=float(np.max(np.abs(out)));pcm=(np.clip(out,-1,1)*32767).astype('<i2')
 (ROOT/'output').mkdir(exist_ok=True)
 with wave.open(str(ROOT/'output/original_sparse_sfx.wav'),'wb') as w:w.setnchannels(2);w.setsampwidth(2);w.setframerate(SR);w.writeframes(pcm.tobytes())
-(ROOT/'qa/sound_manifest.json').write_text(json.dumps({'source':'original synthesis in make_sound.py','speech':False,'music':False,'sample_rate':SR,'channels':2,'duration':T['duration'],'peak_dbfs':20*math.log10(peak),'events':events},indent=2))
+(ROOT/'qa/sound_manifest.json').write_text(json.dumps({'source':'original synthesis in make_sound.py','speech':False,'music':False,'sample_rate':SR,'channels':2,'duration':T['duration'],'peak_dbfs':20*math.log10(peak),'events':events},indent=2),encoding='utf-8')
 print(f'Original SFX complete, peak={20*math.log10(peak):.2f} dBFS, {len(events)} sparse cues.')

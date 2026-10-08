@@ -1,15 +1,24 @@
 {
-  "schema_version":"2.0",
-  "series":"Game Theory Studio",
-  "episode":"01_four_questions",
-  "case_id":"one_round_red_blue",
-  "language":"zh-CN",
-  "case_title":"一轮积分游戏",
-  "fictional":true,
-  "rounds":1,
-  "matrix":{"row_actor":"A","column_actor":"B","score_order":["A","B"],"strategy_order":["red","blue"],"values":[[[3,3],[0,5]],[[5,0],[1,1]]]},
-  "chapter_order":["intro","players","information","strategy","payoffs","recap"],
-  "cast_source":"cast.json",
-  "narration_source":"narration/timeline.json",
-  "notes":["Four questions are an introductory framework, not a unique canonical classification.","Public rules with hidden current actions must not be mislabeled incomplete information.","The multi-round example illustrates a complete plan; the main payoff matrix remains a one-round game."]
+  "schema_version": "2.1",
+  "series": "Game Theory Studio",
+  "episode": "01_four_questions",
+  "language": "zh-CN",
+  "fictional": true,
+  "rounds": 1,
+  "chapter_order": [
+    "intro",
+    "players",
+    "information",
+    "strategy",
+    "payoffs",
+    "recap"
+  ],
+  "cast_source": "cast.json",
+  "narration_source": "../chapters/01-four-elements/narration/timeline.json",
+  "notes": [
+    "Four questions are an introductory framework, not a unique canonical classification.",
+    "Public rules with hidden current actions must not be mislabeled incomplete information.",
+    "The multi-round example illustrates a complete plan; the main payoff matrix remains a one-round game."
+  ],
+  "case_source": "../design/scenes.json"
 }

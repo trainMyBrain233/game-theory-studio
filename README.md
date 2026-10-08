@@ -1,14 +1,14 @@
 # Game Theory Studio
 
-中文博弈论视频制作基础工程：可检查的案例配置、人工口播时间轴、明确 SC 字体和可复用静帧模板。
+中文博弈论视频制作基础工程：可检查的案例配置、人工口播时间轴、明确 SC 字体、可复用静帧模板和整集时间线渲染器。
 
 ## 当前状态
 
 - **视觉方向 B「清爽教材」**：暖白底、深蓝字线、固定收益矩阵。A/C 保留为同内容回归样例。
-- 已实现两参与者/两策略/2×2 收益矩阵、显示名和选择驱动的说明、两类静帧模板、字幕/口播生成与检查、原创章节脚手架和双平台 CI。
+- 已实现两参与者/两策略/2×2 收益矩阵、显示名和选择驱动的说明、两类静帧模板、字幕/口播生成与检查、原创章节脚手架、六节整集渲染器和双平台 CI。
 - 第一章是 **173.3 秒、37 个语义块的人工口播参考**，没有实际音轨，尚未按音频对齐。`00-original-example` 是 9 秒、两段原创测试例，不计入正片。
 - 生产角色方向为 **PvZ 高清分层位图 + 独立绘制的文字/矩阵**；具体角色外观和动作由生产任务完成。EA 图像、重绘角色、截图、字体二进制和视频不放此公开 MIT 仓库。PNG 包进 SVG 仍是位图，不能称为矢量。
-- 当前仓库的模板检查与原创几何烟测**不是完整 V2 影片验收**。机器状态见 [project-status.json](project-status.json)，实际范围见 [验证记录](docs/validation.md)。
+- 完整时间线代码可执行，公开模式使用原创人物，`test:episode` 验证中间布局与关键帧；当前仓库的模板检查、占位角色与原创几何烟测**不是完整 V2 影片验收**。机器状态见 [project-status.json](project-status.json)，实际范围见 [验证记录](docs/validation.md)。
 
 ## 开始使用
 
@@ -44,10 +44,15 @@ npm run qa:fonts
 | `npm run qa:fonts` | 明确 SC 家族/字重、实际应用字号/字形范围、所有章节和模板字符覆盖 |
 | `npm run test:render` | 重建 6 静帧/3 对照板、53 基础检查、15 状态文字边界/碰撞、原创归档角色净空 |
 | `npm run render:smoke` | 12 个变异矩阵、4 选牌状态、48px/宋体实际像素、原创几何 0/0.5/1s 确定性 |
+| `npm run test:episode` | 整集Schema/语义、633布局采样、4格变更案例实际像素/字形、字体与5 SVG、导出文本与5张1080p占位帧 |
+| `npm run render:episode:preview -- --placeholder-cast` | 13秒原创占位视频预览，需FFmpeg；整片/4K/音效/联系图命令见生产模块 |
+| `npm run pack:source` | 公开源码归档，带边界扫描、SHA256 manifest与CRC校验，不包含私有素材 |
 | `npm run qa:source` | 候选源码中的常见秘密、私有路径、二进制、嵌入图片 SVG 和过大文件 |
-| `npm test` | 上述全部验收；需先准备字体 |
+| `npm test` | 上述自动检查；需先准备字体，编码/音效不属于默认CI |
 | `npm run build:narration -- <id>` | 只重建指定章节；省略 id 重建全部 |
 | `npm run chapter:new -- 02-example "章节标题"` | 创建原创两段原型章节，不覆盖已有章节 |
+
+整集制作/配置与素材模式见 [production/README](production/README.md)。视频编码需要外部 FFmpeg/libx264；可选 `setup:media` 安装固定 NumPy/Pillow，用于原创音效和联系图。
 
 单独渲染可用 `render:proposals` / `qa:design` / `qa:layout` / `render:cast` / `qa:cast`。输出位于 `design/frames/`、`design/boards/`、`typography/qa/`、原创归档提案本地产物目录及 `artifacts/smoke/`。
 
@@ -57,7 +62,7 @@ npm run qa:fonts
 
 A 为行、B 为列，每格顺序始终为 (A,B)。当前原例 RR(3,3)、RB(0,5)、BR(5,0)、BB(1,1)。策略红/蓝身份不代表参与者。当前章解释参与者、信息、策略、收益，不把选中格称为最优/均衡；“看不到本轮选择”不等于“不完全信息”。
 
-目前只支持两参与者、两策略、0–99 整数收益和有限长度文案。显示名最多 4 字符、策略名最多 2 字符；实际溢出/碰撞会失败，不缩小字号掩盖问题。字幕 38–48px、正文 36–42px、sans/serif 标题和颜色是支持的视觉配置；固定几何的更改需要更新 Schema 和布局合同。
+目前只支持两参与者、两策略、0–99 整数收益和有限长度文案。显示名最多 4 字符、策略名最多 2 字符；实际溢出/碰撞会失败，不缩小字号掩盖问题。字幕 38–48px、正文 36–42px、sans/serif 标题和颜色是支持的视觉配置；固定几何的更改需要更新 Schema 和布局合同。整集共用字幕、标题字体和B色板；其正文33px/次要页眉27px等固定合同见生产模块，不受静帧正文 token 控制。
 
 `pause_after` 已包含在 start/end 字幕窗中：`end = voiceover_end + pause_after`。实际录音后按自然呼吸和语义重新对齐，不能重复追加尾停或把人工参考当同步验收。
 
@@ -67,7 +72,7 @@ A 为行、B 为列，每格顺序始终为 (A,B)。当前原例 RR(3,3)、RB(0,
 
 [Quality 工作流](.github/workflows/quality.yml) 在 PR/普通分支 push 上执行 Ubuntu/macOS 检查：只读 contents、官方 Actions 固定 SHA、不保留 checkout 凭证、不引用 secrets、不发布内容，也不使用 pull_request_target。实际 CI 结果必须对应最终 commit。GitHub/Codex Auto review 的账号连接与设置由独立任务管理。
 
-保留已工作的 `design/`、`typography/` 相对导入。后续生产资产/完整影片接入时，单独核对角色来源、音轨、中间帧、编码和播放端，不能把本基础工程通过扩写成正片完成。
+保留已工作的 `design/`、`typography/` 相对导入。production 统一使用根案例、字体和第一章时间轴，保留生产渲染函数。后续生产资产/完整影片验收时，单独核对角色来源、音轨、中间帧、编码和播放端，不能把本基础工程通过扩写成正片完成。
 
 ## 许可证
 

@@ -10,12 +10,15 @@
     "selectedDirection": "Plants vs. Zombies zombies",
     "selectedAppearance": null,
     "assetsInRepository": false,
-    "note": "Generic A/B interfaces and original historical proposals only. EA character images and redraws are excluded from this MIT source repository."
+    "note": "Public source contains generic interfaces, original archived proposals and five original production placeholder SVGs. EA images/redraws remain external."
   },
   "chapter01": {
     "durationSeconds": 173.3,
     "timingStatus": "manual_voiceover_reference_not_audio_aligned",
-    "fullV2Export": "not_in_repository"
+    "fullV2Export": "not_in_repository",
+    "renderer": "six_section_explicit_time_renderer_available",
+    "publicSmoke": "original_placeholder_only",
+    "audio": "no_recorded_voiceover"
   },
   "implementedSceneTemplates": [
     "participants",

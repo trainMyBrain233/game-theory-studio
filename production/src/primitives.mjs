@@ -4,8 +4,9 @@ import {fileURLToPath} from 'node:url';
 import {loadImage} from '@napi-rs/canvas';
 import {CAST,resolveCastText} from './cast.mjs';
 import {registerFonts,canvasFont} from '../typography/fonts.mjs';
-registerFonts();
-export const TOKENS=JSON.parse(fs.readFileSync(new URL('../tokens.json',import.meta.url),'utf8'));
+registerFonts({serif:true});
+export {TOKENS} from './model.mjs';
+import {TOKENS} from './model.mjs';
 const tc=TOKENS.colors;
 export const C={paper:tc.paper,ink:tc.ink,muted:tc.secondary,light:tc.line,faint:tc.focus_fill,blue:tc.blue_strategy,red:tc.red_strategy,beige:'#F2E7CE',white:'#FFFFFF'};
 export const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
@@ -48,9 +49,11 @@ export let records=[];
 export let routes=[];
 export function resetRecords(){records=[];routes=[]}
 export function tx(c,str,x,y,size=36,weight=400,color=C.ink,align='left',opts={}){
- str=resolveCastText(str); c.save(); c.font=canvasFont(size,weight);c.fillStyle=color;c.textAlign=align;c.textBaseline='alphabetic';
+ str=resolveCastText(str); c.save(); c.font=canvasFont(size,weight,{serif:opts.serif??false});
+ const appliedSize=Number(c.font.match(/([0-9.]+)px/)?.[1]);if(appliedSize!==size)throw Error(`Applied production font ${c.font} does not match ${size}px`);
+ c.fillStyle=color;c.textAlign=align;c.textBaseline='alphabetic';
  const m=c.measureText(str);c.fillText(str,x,y);
- if(opts.record!==false && c.globalAlpha>.02){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size,weight,alpha:c.globalAlpha});}
+ if(opts.record!==false && c.globalAlpha>.02){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size,weight,appliedFont:c.font,alpha:c.globalAlpha});}
  c.restore();
 }
 export function line(c,x1,y1,x2,y2,color=C.ink,w=3,p=1,dashed=false){if(p<=0)return;c.save();c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';if(dashed)c.setLineDash([10,10]);c.beginPath();c.moveTo(x1,y1);c.lineTo(mix(x1,x2,p),mix(y1,y2,p));c.stroke();if(c.globalAlpha>.02){const tr=c.getTransform(),s=c.canvas.width/1920;const point=(x,y)=>[(tr.a*x+tr.c*y+tr.e)/s,(tr.b*x+tr.d*y+tr.f)/s];routes.push({from:point(x1,y1),to:point(mix(x1,x2,p),mix(y1,y2,p)),width:w,alpha:c.globalAlpha});}c.restore()}
@@ -66,7 +69,7 @@ export function badge(c,id,x,y,r=25,{name=false}={}){if(id==='A')circle(c,x,y,r,
 export function card(c,kind,x,y,w=112,{angle=0,flip=1,alpha=1,label=true}={}){
  const h=w*190/140;c.save();c.globalAlpha*=alpha;c.translate(x,y);c.rotate(angle);c.scale(Math.max(Math.abs(flip),.012),1);
  const image=assets['card-'+kind];if(image)c.drawImage(image,-w/2,-h/2,w,h);else round(c,-w/2,-h/2,w,h,8,C.paper,C.ink,3);
- if(label&&kind!=='back')tx(c,kind==='red'?'红':'蓝',0,h*.31,Math.max(28,w*.29),700,C.white,'center',{record:false});c.restore();
+ if(label&&kind!=='back')tx(c,CAST.strategies[kind].label,0,h*.31,Math.max(28,w*.29),700,C.white,'center',{record:false});c.restore();
 }
 export function cardFlip(c,from,to,x,y,w,p,opts={}){const kind=p<.5?from:to;card(c,kind,x,y,w,{...opts,flip:Math.cos(Math.PI*p)})}
 export function tag(c,text,x,y,w,{fill=C.faint,size=30,stroke=null}={}){round(c,x,y,w,54,10,fill,stroke,2);tx(c,text,x+w/2,y+38,size,700,C.ink,'center')}

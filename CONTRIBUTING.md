@@ -32,7 +32,9 @@ npm test
 
 - Node 使用 ESM 和内置测试器；Python 保留明确 UTF-8 I/O 和项目虚拟环境。优先复用现有 Canvas 渲染器与字体注册模块。
 - 必要新依赖来自官方/常见包仓库，固定精确版本并更新 lockfile；说明用途、许可证和替代方案。不要使用 `npm audit fix --force` 自动改变范围。
-- `@napi-rs/canvas` 1.0.10 用于本机 Skia/Canvas，Ajv 8.20.0 用于 draft-07 Schema，fontTools 4.61.1 用于完整 SC face 提取/字形检查。Ajv 从 8.17.1 升级以避开 [已公开的 `$data` ReDoS 问题](https://github.com/advisories/GHSA-2g4f-4pwh-qvx6)；本项目没有启用 `$data`。
+- `@napi-rs/canvas` 1.0.10 用于本机 Skia/Canvas，Ajv 8.20.0 用于 draft-07/2020-12 Schema，fontTools 4.61.1 用于完整 SC face 提取/字形检查。Ajv 从 8.17.1 升级以避开 [已公开的 `$data` ReDoS 问题](https://github.com/advisories/GHSA-2g4f-4pwh-qvx6)；本项目没有启用 `$data`。
+- 可选 NumPy 2.3.5（BSD）用于固定种子的原创SFX，Pillow12.3.0（HPND）用于联系图；默认CI和静帧不用它们，使用 `setup:media` 安装同一虚拟环境。编码依赖外部FFmpeg/libx264，不自动下载安装。
+- 整集修改保留根案例/时间轴/字体唯一来源，运行 `test:episode`，查看受影响转场；新章节内容脚手架不自动创建动画。
 - 字体从官方固定 commit 下载并核验 SHA256；Actions 也固定 commit。升级时逐项复跑，不能只更新注释中的版本号。
 
 ## 提交与审查

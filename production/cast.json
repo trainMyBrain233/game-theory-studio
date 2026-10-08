@@ -1,9 +1,8 @@
 {
-  "schema_version": "1.0",
-  "status": "complete_hybrid_v2",
+  "schema_version": "1.1",
+  "status": "public_source_private_layers_required",
   "actors": {
     "A": {
-      "display_name": "小A",
       "asset": "private_characters/pvz/assets/a_head.png",
       "identity_shape": "circle",
       "badge_anchor": null,
@@ -12,7 +11,6 @@
       "fallback_asset": "assets/person_a.svg"
     },
     "B": {
-      "display_name": "小B",
       "asset": "private_characters/pvz/assets/b_head.png",
       "identity_shape": "square",
       "badge_anchor": null,
@@ -23,11 +21,9 @@
   },
   "strategies": {
     "red": {
-      "label": "红",
       "asset": "assets/card_red.svg"
     },
     "blue": {
-      "label": "蓝",
       "asset": "assets/card_blue.svg"
     },
     "back": {
@@ -35,7 +31,7 @@
       "asset": "assets/card_back.svg"
     }
   },
-  "note": "User approved high-resolution layered zombie artwork with vector labels, cards and diagrams. Character artwork is private and excluded from public-repository source exports.",
+  "note": "A/B display names and strategy labels come from root design/scenes.json. Private RGBA layers are external and excluded; use explicit original placeholder mode for a public checkout.",
   "character_library": {
     "source": "Plants vs. Zombies",
     "rotation_supported": true,
@@ -45,7 +41,7 @@
       "buckethead_zombie",
       "newspaper_zombie"
     ],
-    "art_status": "normal_and_conehead_layers_approved",
+    "art_status": "external_private_reference_not_in_repository",
     "actual_svg_assets_ready": false,
     "source_format": "RGBA PNG layers; original vector cards and chart"
   },

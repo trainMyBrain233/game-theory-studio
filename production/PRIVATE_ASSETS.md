@@ -8,6 +8,6 @@ For public use, pass `--placeholder-cast` to rendering and scene-QA commands. It
 
 `src/rgba_character_rig.mjs` contains transform/pivot mathematics; `src/character_adapter.mjs` maps a layered rig into scene slots. Neither contains embedded image pixels. Any independently supplied artwork must be appropriate for the intended use, and the existing raster-size limits still apply.
 
-Use `python3 pack_source.py --public` for a renderer-only source archive. The script’s no-flag mode is for a deliberately private archive; do not publish its output. Generated media, dependencies, fonts, logs and private artwork stay outside Git. Public packaging needs an explicit file-list review before upload.
+Use `npm run pack:source` from the repository root for a unified public source archive. The script requires `--public` and has no private archive mode. It uses the Git source candidate list and the same publication guard as CI, excluding ignored media, dependencies, fonts and private artwork. Inspect the file-list manifest before any separately authorized upload.
 
 See the repository’s [third-party content boundary](../docs/third-party-content.md) and [EA content policy](https://help.ea.com/en/articles/security-and-rules/ea-content-policy/). The project does not provide a legal-permission guarantee. Its MIT license covers original source and original SVGs, not third-party characters or fonts.

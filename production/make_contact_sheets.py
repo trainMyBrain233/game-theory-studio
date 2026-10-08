@@ -2,7 +2,7 @@
 from pathlib import Path
 from PIL import Image,ImageDraw,ImageFont
 ROOT=Path(__file__).resolve().parent;OUT=ROOT/'output'
-FONT=ROOT/'typography/fonts/NotoSansCJKSC-Regular.otf'
+FONT=ROOT.parent/'typography/fonts/NotoSansCJKSC-Regular.otf'
 font=ImageFont.truetype(str(FONT),30);titlefont=ImageFont.truetype(str(FONT),38)
 groups={
  'keyframes':[(3,'开场'),(8.3,'四问'),(27,'参与者'),(38.2,'信息遮挡'),(48.5,'规则与行动'),(68,'单次纯策略'),(83,'跨轮计划'),(108.5,'读表顺序'),(117.9,'红红'),(126.3,'红蓝'),(142.8,'蓝蓝'),(172,'复盘')],
