@@ -8,19 +8,20 @@ import {presentationModel} from '../design/experiments/tabletop/presentation.mjs
 import {headAlphaBounds,avatarPlacement,drawAvatar} from '../design/experiments/tabletop/avatar.mjs';
 const read=file=>JSON.parse(fs.readFileSync(new URL(file,import.meta.url),'utf8'));
 const scene=read('../design/scenes.json'),timeline=read('../chapters/01-four-elements/narration/timeline.json'),presentation=read('../design/experiments/tabletop/presentation.json');
-const context={scene,timeline};
+const context={scene,timeline},schedule=interactionSchedule(timeline);
+const idle=Math.max(0,schedule.idleEnd-1),grasp=schedule.reachEnd+.85,place=(schedule.placeStart+schedule.contact)/2,release=(schedule.releaseStart+schedule.releaseEnd)/2;
 
 test('planned interaction has a supported contact interval before release',()=>{
  const s=interactionSchedule(timeline);
  assert.ok(s.idleEnd<s.reachEnd&&s.reachEnd<s.placeStart&&s.placeStart<s.contact&&s.contact<s.releaseStart&&s.releaseStart<s.releaseEnd);
- for(const [time,phase] of [[27,'idle'],[s.idleEnd+.1,'reach'],[37.2,'grasp'],[43.6,'place'],[(s.contact+s.releaseStart)/2,'place'],[44.8,'release']])assert.equal(tabletopState('shared-rail',time,context).phase,phase);
+ for(const [time,phase] of [[idle,'idle'],[(s.idleEnd+s.reachEnd)/2,'reach'],[grasp,'grasp'],[place,'place'],[(s.contact+s.releaseStart)/2,'place'],[release,'release']])assert.equal(tabletopState('shared-rail',time,context).phase,phase);
  const state=tabletopState('shared-rail',(s.contact+s.releaseStart)/2,context);
  assert.equal(state.raised,0,'Card must reach support before planned release.');
 });
 test('resting support and owner survive all four choices in all three variants',()=>{
  for(const variant of VARIANTS)for(let row=0;row<2;row++)for(let column=0;column<2;column++){
   const input=structuredClone(scene);input.selected={row,column,actorA:input.strategies[row].id,actorB:input.strategies[column].id};
-  for(const time of [27,44.8]){
+  for(const time of [idle,release]){
    const state=tabletopState(variant.id,time,{scene:input,timeline});
    for(const card of state.cards.filter(c=>c.alpha>.01)){
     assert.equal(card.bottom,card.supportY);assert.ok(card.bottom<=TABLE.frontY&&card.bottom-card.visibleHeight>=TABLE.backY);
@@ -29,12 +30,12 @@ test('resting support and owner survive all four choices in all three variants',
    }
    assert.equal(state.cards.find(c=>c.actor==='A'&&c.chosen).kind,input.strategies[row].id);
    assert.equal(state.cards.find(c=>c.actor==='B'&&c.chosen).kind,input.strategies[column].id);
-   if(time===44.8)assert.equal(state.cards.filter(c=>c.alpha>.01).length,2);
+   if(time===release)assert.equal(state.cards.filter(c=>c.alpha>.01).length,2);
   }
  }
 });
 test('proposed grip corner is nearest each actor and never asserts linked hand art',()=>{
- const state=tabletopState('shared-rail',37.2,context);
+ const state=tabletopState('shared-rail',grasp,context);
  for(const card of state.cards.filter(c=>c.chosen)){
   assert.ok(card.actor==='A'?card.proposedCardContact[0]<card.x:card.proposedCardContact[0]>card.x);
   assert.ok(card.proposedCardContact[1]>=card.y-card.height/2&&card.proposedCardContact[1]<card.y);
@@ -44,13 +45,13 @@ test('proposed grip corner is nearest each actor and never asserts linked hand a
  assert.throws(()=>tabletopState('shared-rail',Infinity,context),/Invalid/);
 });
 test('fading unselected flat cards keep their supported pose throughout pickup',()=>{
- for(const time of [36.5,36.6,36.7,36.8,36.9]){
+ for(const time of [0,.25,.5,.75,1].map(f=>schedule.reachEnd+.7*f)){
   const state=tabletopState('flat-rest',time,context);
   for(const card of state.cards.filter(c=>!c.chosen)){
    assert.equal(card.flat,1);assert.equal(card.visibleHeight,98*190/140*.28);assert.equal(card.bottom,846);
   }
  }
- const state=tabletopState('flat-rest',36.7,context);assert.ok(state.cards.some(c=>!c.chosen&&c.alpha>.1&&c.alpha<.9));
+ const state=tabletopState('flat-rest',schedule.reachEnd+.35,context);assert.ok(state.cards.some(c=>!c.chosen&&c.alpha>.1&&c.alpha<.9));
  assert.ok(state.cards.some(c=>c.chosen&&c.flat<1),'Chosen card actually rotates while the other stays flat.');
 });
 test('pose crop translation preserves wrist target; mirror and rotation use registered offset',()=>{

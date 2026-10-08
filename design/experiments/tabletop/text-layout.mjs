@@ -1,5 +1,5 @@
 // Geometry support is narrower than the data schema; reject ink overflow before drawing.
-export const IDENTITY = {x:1136,y:512,column:286,row:164,avatarX:854,labelX:936,labelRight:1112};
+export const IDENTITY = {x:1136,y:512,column:286,row:164,avatarX:840,labelX:936,labelRight:1112};
 export function identityTextPlan(view) {
  const {x,y,column,row,labelX,labelRight}=IDENTITY;
  return [

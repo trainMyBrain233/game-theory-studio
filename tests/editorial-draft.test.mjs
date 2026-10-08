@@ -23,23 +23,123 @@ test('r2 resolves complete 40-block speech and 37-ID coverage without inventing 
  assert.equal(draft.blocks.some(b=>b.voiceover.includes('支付')),false);
  for(const row of mapping.mapping)assert.deepEqual(row.draft_voiceovers,row.draft_block_ids.map(id=>draft.blocks.find(b=>b.id===id).voiceover));
 });
-test('explicit draft builds read current identity and asymmetric case; stale check is read-only',()=>{
+const productNames=['第一集_语义块草稿_无音频时间码.json','原段ID映射.json','第一集_提词器净稿_r2.txt'];
+const readJSON=file=>JSON.parse(fs.readFileSync(file,'utf8'));
+const runBuild=(root,args=[])=>spawnSync(process.execPath,[`${relative}/build.mjs`,...args],{cwd:root,encoding:'utf8'});
+const block=(draft,number)=>draft.blocks.find(item=>item.id===`zk01_b${number}`);
+// Independent expected words intentionally do not call the production spokenScore
+// helper. Every cell and every owner's score is unique in this fixture.
+const cases=[
+ {cell:'RR',row:0,column:0,select:24,score:25,words:['十一','十二']},
+ {cell:'RB',row:0,column:1,select:26,score:27,words:['二十一','二十二']},
+ {cell:'BR',row:1,column:0,select:28,score:29,words:['三十一','三十二']},
+ {cell:'BB',row:1,column:1,select:30,score:31,words:['四十一','四十二']}
+];
+function asymmetricFixture(root){
+ const sceneFile=path.join(root,'design/scenes.json'),scene=readJSON(sceneFile);
+ scene.actors[0].label='甲方同学';scene.actors[1].label='乙方同学';
+ scene.strategies[0].label='合作';scene.strategies[1].label='退出';scene.payoffs=[[[11,12],[21,22]],[[31,32],[41,42]]];
+ scene.selected={row:1,column:0,actorA:'blue',actorB:'red'};fs.writeFileSync(sceneFile,JSON.stringify(scene));
+ const identityFile=path.join(root,'design/experiments/tabletop/presentation.json'),identity=readJSON(identityFile);
+ identity.actors.A.name='明月同学';identity.actors.B.name='青禾同学';fs.writeFileSync(identityFile,JSON.stringify(identity));
+ const result=spawnSync(process.execPath,['scripts/build-narration.mjs'],{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()}});
+ assert.equal(result.status,0,result.stderr);
+ return {scene,identity,timeline:readJSON(path.join(root,'chapters/01-four-elements/narration/timeline.json'))};
+}
+function assertAsymmetricPayoffs(draft,{scene,identity,timeline}){
+ const A=identity.actors.A.name,B=identity.actors.B.name;
+ assert.deepEqual(draft.model_contract.matrix_values,Object.fromEntries(cases.map(({cell,row,column})=>[cell,scene.payoffs[row][column]])));
+ assert.deepEqual(draft.model_contract.matrix_reveal_order,['RR','RB','BR','BB']);
+ assert.deepEqual(draft.model_contract.payoff_read_order,[A,B]);
+ assert.deepEqual(draft.model_contract.players,{A:{display_name:A,matrix_axis:'row',payoff_index:0,avatar:identity.actors.A.avatar},B:{display_name:B,matrix_axis:'column',payoff_index:1,avatar:identity.actors.B.avatar}});
+ assert.equal(block(draft,21).voiceover,`${A}选的牌，决定看哪一行。`);
+ assert.equal(block(draft,22).voiceover,`${B}选的牌，决定看哪一列。`);
+ assert.equal(block(draft,23).voiceover,`每个格子里，先读${A}的分数，再读${B}的分数。`);
+ assert.ok(block(draft,21).visual_intent.includes(`左侧放${A}小头像和全名`));
+ assert.ok(block(draft,22).visual_intent.includes(`上方放${B}小头像和全名`));
+ assert.ok(block(draft,23).visual_intent.includes(`${A}头像在前、${B}头像在后`));
+ for(const {cell,row,column,select,score,words} of cases){
+  const pair=scene.payoffs[row][column],choices=[scene.strategies[row].label,scene.strategies[column].label];
+  const selection=block(draft,select),reveal=block(draft,score);
+  assert.equal(selection.voiceover,row===column?`两位都选${choices[0]}牌。`:`${A}选${choices[0]}，${B}选${choices[1]}。`,`${cell} choice ownership`);
+  assert.ok(selection.visual_intent.includes(row===column?`双${choices[0]}`:`${A}${choices[0]}行与${B}${choices[1]}列`),`${cell} visual choice ownership`);
+  assert.equal(reveal.voiceover,`${A}得${words[0]}分，${B}得${words[1]}分。`,`${cell} narrated payoff ownership`);
+  assert.deepEqual(reveal.spoken_emphasis,[`${A}${words[0]}分`,`${B}${words[1]}分`],`${cell} emphasis must name both unequal payoffs`);
+  assert.deepEqual(reveal.visual_intent.match(/（[0-9]+，[0-9]+）/g),[`（${pair[0]}，${pair[1]}）`],`${cell} visual pair must match its own matrix cell`);
+  const sourceSelection=timeline.segments.find(segment=>segment.visual_cue.matrix_cell===cell&&segment.visual_cue.action==='highlight_choices');
+  const sourceReveal=timeline.segments.find(segment=>segment.visual_cue.matrix_cell===cell&&segment.visual_cue.action==='reveal_scores');
+  assert.deepEqual(selection.original_segment_ids,[sourceSelection.id]);assert.deepEqual(reveal.original_segment_ids,[sourceReveal.id]);
+  assert.deepEqual(sourceSelection.visual_cue.choices,{A:choices[0],B:choices[1]});
+  assert.deepEqual(sourceReveal.visual_cue.scores,pair);
+  assert.deepEqual(Object.fromEntries(sourceReveal.visual_cue.score_reveals.map(event=>[event.player,event.value])),{A:pair[0],B:pair[1]});
+  assert.equal(sourceReveal.voiceover,`${scene.actors[0].label}得${words[0]}分，${scene.actors[1].label}得${words[1]}分。`);
+  assert.equal(sourceReveal.lines.join(''),sourceReveal.voiceover,`${cell} subtitle ownership`);
+ }
+ assert.equal(block(draft,32).voiceover,`盯住${A}选合作的这一行：对方选合作，他得十一分；对方选退出，他得二十一分。`);
+ assert.deepEqual(block(draft,32).spoken_emphasis,[`${A}选合作`,'十一分','二十一分']);
+}
+test('explicit draft builds independently verify all four asymmetric cells and owners; stale check is read-only',()=>{
  withSourceFixture(root=>{
-  const sceneFile=path.join(root,'design/scenes.json'),scene=JSON.parse(fs.readFileSync(sceneFile,'utf8'));
-  scene.strategies[0].label='合作';scene.strategies[1].label='退出';scene.payoffs=[[[11,12],[21,22]],[[31,32],[41,42]]];fs.writeFileSync(sceneFile,JSON.stringify(scene));
-  const identityFile=path.join(root,'design/experiments/tabletop/presentation.json'),identity=JSON.parse(fs.readFileSync(identityFile,'utf8'));identity.actors.A.name='明月';identity.actors.B.name='青禾';fs.writeFileSync(identityFile,JSON.stringify(identity));
-  const build=spawnSync(process.execPath,['scripts/build-narration.mjs'],{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()}});assert.equal(build.status,0,build.stderr);
-  const run=args=>spawnSync(process.execPath,[`${relative}/build.mjs`,...args],{cwd:root,encoding:'utf8'});
-  assert.equal(run([]).status,0);const target=path.join(root,relative,'第一集_提词器净稿_r2.txt'),text=fs.readFileSync(target,'utf8');
-  assert.ok(text.includes('明月和青禾准备玩一轮合作退出牌局。'));
-  assert.ok(text.includes('明月得十一分，青禾得十二分。'));
-  assert.ok(text.includes('明月得二十一分，青禾得二十二分。'));
-  assert.ok(text.includes('对方选合作，他得十一分；对方选退出，他得二十一分。'));
-  const draft=JSON.parse(fs.readFileSync(path.join(root,relative,'第一集_语义块草稿_无音频时间码.json'),'utf8'));
-  assert.ok(draft.blocks.find(b=>b.id==='zk01_b27').visual_intent.includes('（21，22）'));
-  assert.deepEqual(draft.blocks.find(b=>b.id==='zk01_b32').spoken_emphasis,['明月选合作','十一分','二十一分']);
-  assert.ok(!/小A|小B|普通僵尸|路障僵尸|各得三分/.test(text));assert.equal(run(['--check']).status,0);
-  const changed=text+'过期派生内容\n';fs.writeFileSync(target,changed);assert.notEqual(run(['--check']).status,0);assert.equal(fs.readFileSync(target,'utf8'),changed,'QA must not repair/overwrite authored edits.');
+  const context=asymmetricFixture(root),result=runBuild(root);assert.equal(result.status,0,result.stderr);
+  const directory=path.join(root,relative),target=path.join(directory,productNames[2]),text=fs.readFileSync(target,'utf8');
+  const draft=readJSON(path.join(directory,productNames[0]));assertAsymmetricPayoffs(draft,context);
+  assert.ok(text.includes('明月同学和青禾同学准备玩一轮合作退出牌局。'));
+  assert.equal(text,draft.blocks.map(item=>item.voiceover).join('\n\n')+'\n');
+  assert.ok(!/小A|小B|普通僵尸|路障僵尸|各得三分|各得一分/.test(text));
+  const mapping=readJSON(path.join(directory,productNames[1]));
+  for(const row of mapping.mapping)assert.deepEqual(row.draft_voiceovers,row.draft_block_ids.map(id=>draft.blocks.find(item=>item.id===id).voiceover));
+  assert.equal(runBuild(root,['--check']).status,0);
+  const changed=text+'过期派生内容\n';fs.writeFileSync(target,changed);
+  const before=productNames.map(name=>fs.readFileSync(path.join(directory,name)));
+  const stale=runBuild(root,['--check']);assert.notEqual(stale.status,0);assert.match(stale.stderr,/Stale editorial product/);
+  assert.deepEqual(productNames.map(name=>fs.readFileSync(path.join(directory,name))),before,'QA must not repair/overwrite any authored edits.');
+ });
+});
+test('editorial builds reject contradictory cell, choice and owner references before writing products',()=>{
+ withSourceFixture(root=>{
+  asymmetricFixture(root);const initial=runBuild(root);assert.equal(initial.status,0,initial.stderr);
+  const directory=path.join(root,relative),file=path.join(directory,'blocks.template.json'),original=readJSON(file);
+  const before=productNames.map(name=>fs.readFileSync(path.join(directory,name)));
+  const mutations=[];
+  for(const {cell,select,score} of cases){
+   const other=cell==='RB'?'BR':'RB';
+   mutations.push([`${cell} visual pair`,draft=>{const item=block(draft,score);item.visual_intent=item.visual_intent.replace(`pair.${cell}`,`pair.${other}`)}]);
+   mutations.push([`${cell} narration`,draft=>{const item=block(draft,score);item.voiceover=item.voiceover.replace(cell=== 'RR'||cell==='BB'?`joint.${cell}`:`score.${cell}.A`,cell==='RR'||cell==='BB'?`joint.${other}`:`score.${cell}.B`)}]);
+   mutations.push([`${cell} choices`,draft=>{const item=block(draft,select);item.voiceover=item.voiceover.replace(/\{\{(red|blue)\}\}/,(_,strategy)=>`{{${strategy==='red'?'blue':'red'}}}`)}]);
+   mutations.push([`${cell} emphasis`,draft=>{const item=block(draft,score);item.spoken_emphasis=item.spoken_emphasis.map(text=>text.replace(cell==='RR'||cell==='BB'?`emphasis.${cell}`:`score.${cell}.A`,cell==='RR'||cell==='BB'?`emphasis.${other}`:`score.${cell}.B`))}]);
+   mutations.push([`${cell} source mapping`,draft=>{block(draft,score).original_segment_ids=block(draft,cases.find(item=>item.cell===other).score).original_segment_ids}]);
+  }
+  mutations.push(
+   ['row owner',draft=>{block(draft,21).voiceover=block(draft,21).voiceover.replace('{{A}}','{{B}}')}],
+   ['column owner',draft=>{block(draft,22).visual_intent=block(draft,22).visual_intent.replace('{{B}}','{{A}}')}],
+   ['payoff read order',draft=>{block(draft,23).voiceover=block(draft,23).voiceover.replace(/\{\{([AB])\}\}/g,(_,id)=>`{{${id==='A'?'B':'A'}}}`)}],
+   ['focused comparison owner',draft=>{block(draft,32).voiceover=block(draft,32).voiceover.replace('score.RR.A','score.RR.B')}],
+   ['BR breath payoff owner',draft=>{block(draft,29).optional_breath_after[0]=block(draft,29).optional_breath_after[0].replace('score.BR.A','score.BR.B')}]
+  );
+  for(const [name,mutate] of mutations){
+   const changed=structuredClone(original);mutate(changed);assert.notDeepEqual(changed,original,`${name}: mutation must contradict the current template`);fs.writeFileSync(file,JSON.stringify(changed));
+   for(const args of [[],['--check']]){
+    const result=runBuild(root,args);assert.notEqual(result.status,0,`${name}: ${args[0]??'build'} unexpectedly passed`);
+    assert.match(result.stderr,/Editorial semantic contract/,`${name}: must fail semantics, not freshness`);
+    assert.deepEqual(productNames.map(name=>fs.readFileSync(path.join(directory,name))),before,`${name}: failed validation must not write products`);
+   }
+  }
+ });
+});
+test('fresh rebuilt BR visual-token mutation still fails semantic QA and independent asymmetric assertions',()=>{
+ withSourceFixture(root=>{
+  const context=asymmetricFixture(root),directory=path.join(root,relative),templateFile=path.join(directory,'blocks.template.json');
+  const draft=readJSON(templateFile);block(draft,29).visual_intent=block(draft,29).visual_intent.replace('pair.BR','pair.RB');fs.writeFileSync(templateFile,JSON.stringify(draft));
+  // Reproduce the old blind-expansion behavior in this disposable source copy,
+  // producing internally fresh files instead of relying on a stale-file failure.
+  const buildFile=path.join(directory,'build.mjs'),guarded=fs.readFileSync(buildFile,'utf8'),unchecked=guarded.replace(' validateEditorialReferences(timeline);',' // Mutation: omit semantic validation.');
+  assert.notEqual(unchecked,guarded);fs.writeFileSync(buildFile,unchecked);
+  const rebuild=runBuild(root);assert.equal(rebuild.status,0,rebuild.stderr);assert.equal(runBuild(root,['--check']).status,0);
+  const wrong=readJSON(path.join(directory,productNames[0]));assert.ok(block(wrong,29).visual_intent.includes('（21，22）'));
+  assert.throws(()=>assertAsymmetricPayoffs(wrong,context),/BR visual pair/);
+  fs.writeFileSync(buildFile,guarded);const before=productNames.map(name=>fs.readFileSync(path.join(directory,name)));
+  const checked=runBuild(root,['--check']);assert.notEqual(checked.status,0);assert.match(checked.stderr,/Editorial semantic contract: zk01_b29.visual_intent/);assert.doesNotMatch(checked.stderr,/Stale editorial product/);
+  assert.deepEqual(productNames.map(name=>fs.readFileSync(path.join(directory,name))),before);
  });
 });
 test('spoken score conversion rejects unsupported data rather than baking old numbers',()=>{

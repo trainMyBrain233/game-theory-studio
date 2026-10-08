@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {presentationModel} from '../../../../design/experiments/tabletop/presentation.mjs';
@@ -12,17 +13,61 @@ export function spokenScore(value){
  const digits='零一二三四五六七八九';if(value<10)return digits[value];
  return (value>=20?digits[Math.floor(value/10)]:'')+'十'+(value%10?digits[value%10]:'');
 }
+// Check semantic references before expansion: byte freshness alone cannot catch a
+// known but incorrect cell/owner token that was rebuilt into every product.
+function validateEditorialReferences(timeline){
+ const blocks=new Map(template.blocks.map(block=>[block.id,block]));
+ assert.equal(blocks.size,template.blocks.length,'Editorial block IDs must be unique.');
+ const tokens=value=>(typeof value==='string'?[value]:value).flatMap(text=>[...text.matchAll(/\{\{([^}]+)\}\}/g)].map(match=>match[1]));
+ const check=(id,field,expected)=>{
+  const block=blocks.get(id);assert.ok(block,`Editorial semantic contract: missing ${id}.`);
+  assert.deepEqual(tokens(block[field]),expected,`Editorial semantic contract: ${id}.${field} has wrong cell or owner references.`);
+ };
+ for(const [id,fields] of Object.entries({
+  zk01_b21:{voiceover:['A'],spoken_emphasis:['A'],optional_breath_after:['A'],visual_intent:['A','red','blue']},
+  zk01_b22:{voiceover:['B'],spoken_emphasis:['B'],optional_breath_after:['B'],visual_intent:['B','red','blue']},
+  zk01_b23:{voiceover:['A','B'],spoken_emphasis:['A','B'],optional_breath_after:['A'],visual_intent:['A','B']},
+  zk01_b32:{voiceover:['A','red','red','score.RR.A','blue','score.RB.A'],spoken_emphasis:['A','red','score.RR.A','score.RB.A'],optional_breath_after:['A','red','score.RR.A'],visual_intent:['A','red','A','B']}
+ }))for(const [field,expected] of Object.entries(fields))check(id,field,expected);
+ for(const [index,cell] of ['RR','RB','BR','BB'].entries()){
+  const selectId=`zk01_b${24+index*2}`,scoreId=`zk01_b${25+index*2}`;
+  const [row,column]=[...cell].map(choice=>choice==='R'?'red':'blue'),same=row===column;
+  for(const [id,action] of [[selectId,'highlight_choices'],[scoreId,'reveal_scores']]){
+   const source=timeline.segments.filter(segment=>segment.visual_cue.action===action&&segment.visual_cue.matrix_cell===cell);
+   assert.equal(source.length,1,`Editorial semantic contract: ${cell} requires exactly one ${action} source.`);
+   assert.deepEqual(blocks.get(id)?.original_segment_ids,source.map(segment=>segment.id),`Editorial semantic contract: ${id} must reference the ${cell} ${action} source.`);
+  }
+  const choices=same?[row]:['A',row,'B',column];
+  check(selectId,'voiceover',choices);check(selectId,'spoken_emphasis',choices);
+  check(selectId,'optional_breath_after',same?[]:['A',row]);check(selectId,'visual_intent',choices);
+  check(scoreId,'voiceover',same?[`joint.${cell}`]:['A',`score.${cell}.A`,'B',`score.${cell}.B`]);
+  check(scoreId,'spoken_emphasis',same?[`emphasis.${cell}`]:['A',`score.${cell}.A`,'B',`score.${cell}.B`]);
+  check(scoreId,'optional_breath_after',same?[]:['A',`score.${cell}.A`]);
+  check(scoreId,'visual_intent',same?[row,`pair.${cell}`]:[`pair.${cell}`]);
+ }
+}
 export function resolveDraft({scene,presentation,timeline,sourceHash}){
  validateScenes(scene);validateTimeline(timeline,scene);const view=presentationModel(presentation,scene);
+ validateEditorialReferences(timeline);
  const words={A:view.actors.A.name,B:view.actors.B.name,series:presentation.series,red:scene.strategies[0].label,blue:scene.strategies[1].label};words.gameLabel=words.red+words.blue+'牌局';
  const values=Object.fromEntries(['RR','RB','BR','BB'].map((key,i)=>[key,scene.payoffs[Math.floor(i/2)][i%2]]));
  for(const [cell,pair] of Object.entries(values)){
   words[`pair.${cell}`]=`（${pair.join('，')}）`;
   for(const [i,id] of ['A','B'].entries())words[`score.${cell}.${id}`]=spokenScore(pair[i]);
   words[`joint.${cell}`]=pair[0]===pair[1]?`各得${spokenScore(pair[0])}分。`:`${words.A}得${spokenScore(pair[0])}分，${words.B}得${spokenScore(pair[1])}分。`;
+  words[`emphasis.${cell}`]=pair[0]===pair[1]?['各',`${spokenScore(pair[0])}分`]:['A','B'].map((id,index)=>`${words[id]}${spokenScore(pair[index])}分`);
  }
  const resolve=text=>text.replace(/\{\{([^}]+)\}\}/g,(_,key)=>{if(!(key in words))throw Error(`Unknown editorial token ${key}`);return words[key]});
- const resolveDeep=value=>typeof value==='string'?resolve(value):Array.isArray(value)?value.map(resolveDeep):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([key,value])=>[key,resolveDeep(value)])):value;
+ const resolveDeep=value=>{
+  if(typeof value==='string'){
+   const key=value.match(/^\{\{([^}]+)\}\}$/)?.[1];
+   return key&&Array.isArray(words[key])?[...words[key]]:resolve(value);
+  }
+  // A whole emphasis token expands to list entries, while nested authored arrays
+  // remain arrays. This preserves the default symmetric recording notes exactly.
+  if(Array.isArray(value))return value.flatMap(item=>{const resolved=resolveDeep(item);return typeof item==='string'&&Array.isArray(resolved)?resolved:[resolved]});
+  return value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([key,value])=>[key,resolveDeep(value)])):value;
+ };
  const blocks=template.blocks.map(block=>({...resolveDeep(block),timing:null}));
  const oldIds=new Set(timeline.segments.map(s=>s.id)),mapped=new Set(blocks.flatMap(b=>b.original_segment_ids));
  if(oldIds.size!==mapped.size||[...mapped].some(id=>!oldIds.has(id)))throw Error('Draft must map all original segment IDs.');

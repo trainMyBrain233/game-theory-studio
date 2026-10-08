@@ -485,8 +485,7 @@
       ],
       "voiceover": "{{joint.RR}}",
       "spoken_emphasis": [
-        "各",
-        "{{score.RR.A}}分"
+        "{{emphasis.RR}}"
       ],
       "optional_breath_after": [],
       "visual_intent": "双{{red}}格显示{{pair.RR}}。",
@@ -583,8 +582,7 @@
       ],
       "voiceover": "{{joint.BB}}",
       "spoken_emphasis": [
-        "各",
-        "{{score.BB.A}}分"
+        "{{emphasis.BB}}"
       ],
       "optional_breath_after": [],
       "visual_intent": "双{{blue}}格显示{{pair.BB}}，此前三格仍可读。",

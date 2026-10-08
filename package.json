@@ -48,7 +48,7 @@
     "test:case-reuse": "node scripts/case-reuse-smoke.mjs",
     "qa:motion": "node --import ./scripts/isolated-fonts.mjs production/qa/motion-demo.mjs",
     "render:art-proof": "node --import ./scripts/isolated-fonts.mjs scripts/render-public-art-proof.mjs",
-    "qa:tabletop": "node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/qa-text.mjs && node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/render.mjs --placeholder-cast",
+    "qa:tabletop": "node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/qa-text.mjs && node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/qa-matrix.mjs && node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/render.mjs --placeholder-cast",
     "render:tabletop:interaction": "node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/render-interaction.mjs --placeholder-cast",
     "render:tabletop:flat-regression": "node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/render.mjs --placeholder-cast --flat-regression"
   },

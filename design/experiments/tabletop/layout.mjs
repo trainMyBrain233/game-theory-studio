@@ -12,6 +12,11 @@ export function interactionSchedule(timeline){
  const pick=at(timeline,'s08_known_unknown')+1.25,reveal=at(timeline,'s09_simultaneous');
  return {idleEnd:pick,reachEnd:pick+.5,placeStart:reveal+2.3,contact:reveal+2.9,releaseStart:reveal+3.15,releaseEnd:reveal+3.8};
 }
+/** A fixed-length regression clip follows the rebuilt pickup anchor. */
+export function flatRegressionWindow(timeline){
+ const {reachEnd}=interactionSchedule(timeline);
+ return {start:reachEnd-.15,duration:2,fps:30,frames:60};
+}
 export function tabletopState(variant,time,{scene,timeline}){
  if(!VARIANTS.some(v=>v.id===variant))throw Error('Unknown tabletop variant.');
  if(!Number.isFinite(time)||time<0||time>=timeline.duration)throw Error('Invalid prototype time.');
