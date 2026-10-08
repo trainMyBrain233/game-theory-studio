@@ -3,6 +3,12 @@
  * transform can mirror again via side, which is separate from preparation.
  */
 export const CHARACTER_LAYERS=Object.freeze(['head','torso','upper','forearm']);
+// Each source atlas has its own orientation. Normalize before the scene mirror:
+// A's torso starts leftward; B's torso starts rightward, unlike B's other layers.
+export const STORED_FACING=Object.freeze({
+ a:Object.freeze({head:'right',torso:'left',upper:'right',forearm:'right'}),
+ b:Object.freeze({head:'left',torso:'right',upper:'left',forearm:'left'})
+});
 export const BONE_LENGTHS=Object.freeze({upper:164,forearm:218});
 // Prepared rig pixels: a chest-level rest, above the card recognition region.
 // Cloud RGBA candidate comparison selected y190 over y170/y150. This is a
@@ -19,8 +25,10 @@ export function layerContract(id,part){
  const parent={torso:null,head:'torso',upper:'torso',forearm:'upper'}[part];
  const pivot={torso:[0,0],head:r.headPivot,upper:r.upperPivot,forearm:r.forePivot}[part];
  const end={head:null,torso:null,upper:r.upperElbow,forearm:r.foreHand}[part];
- return {id:`${id}_${part}`,part,parent,storedSpace:'unmodified_source_pixels',preparedSpace:'pixels_after_prepare_flip_x',rigSpace:'prepared',worldSpace:'torso_anchor_then_uniform_scale_and_side',prepare_flip_x:part==='torso'||id==='b',pivot,end,cropHeight:part==='upper'?270:null,distribution:'external_private_not_in_MIT_repository'};
+ return {id:`${id}_${part}`,part,parent,storedSpace:'unmodified_source_pixels',preparedSpace:'pixels_after_prepare_flip_x',rigSpace:'prepared',worldSpace:'torso_anchor_then_uniform_scale_and_side',
+  storedFacing:STORED_FACING[id][part],preparedFacing:'right',sceneSide:id==='a'?1:-1,worldFacing:id==='a'?'right':'left',
+  prepare_flip_x:part==='torso'?id==='a':id==='b',pivot,end,cropHeight:part==='upper'?270:null,distribution:'external_private_not_in_MIT_repository'};
 }
 export function characterManifest(layers=[]){
- return {schemaVersion:'1.0',sourceKind:'layered_rgba_raster',capabilities:CHARACTER_CAPABILITIES,boneLengths:BONE_LENGTHS,idleHand:IDLE_HAND,worldTransformOrder:['translate_torso_anchor','scale_uniform_with_side','rig_local_pose'],layers};
+ return {schemaVersion:'1.1',sourceKind:'layered_rgba_raster',capabilities:CHARACTER_CAPABILITIES,boneLengths:BONE_LENGTHS,idleHand:IDLE_HAND,worldTransformOrder:['translate_torso_anchor','scale_uniform_with_side','rig_local_pose'],layers};
 }

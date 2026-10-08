@@ -34,3 +34,9 @@ stored是原PNG像素；prepared是prepare_flip_x后的像素；rig的pivot全�
 `tx`将当前配置中的独立姓名记录为actor-name。`--actor-alpha`按`TOKENS.spacing.figure_name_gap`检验姓名（32px），其余文字按`graphic_text_gap_target`（24px）；连接线仍用8px合同。检测透明像素及到文字测量框的欧氏距离，报告实际最近距离，9–31px姓名负例必须失败。
 
 闲置手与信息章节退手共用`IDLE_HAND`，在prepared rig像素[250,190]回到胸前；不更改骨长/pivot/抓牌点，退手向上离开识别区。单元检查覆盖四种选择从开场到信息章节末的每个30fps帧、空闲腕点到符号中心至少65px、握牌目标不变与向上退手。腕点几何合同不等于整只位图手的净空；真实RGBA需要逐帧alpha/符号内核检验及裁图审阅。
+
+## 逐层方向合同
+
+`characterManifest` 1.1记录每层storedFacing、preparedFacing、sceneSide与worldFacing。先把每个原始图层归一至朝右，再在场景中令A取+1朝右、B取−1朝左。源图方向不能按角色身份一概假定：A躯干原本朝左，要预翻；B躯干原本朝右，不预翻。A其它层保持，B其它层预翻。对应规则为`part === 'torso' ? id === 'a' : id === 'b'`；原PNG像素不改，骨长、头/颈/肩及手臂pivot不改。
+
+回归使用临时原创不对称箭头，检验实际loader的prepared像素、场景镜像和实际head/body绘制；旧B躯干的额外预翻会破坏朝右的canonical像素。真实图层仍须另查整体朝向、领口/肩袖接缝与动作中间帧。
