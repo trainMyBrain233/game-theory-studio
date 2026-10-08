@@ -12,7 +12,7 @@ Five original SVG assets for the selected B visual style. All art was constructe
 - `asset-hotspots.json`: positioning, label anchors, palette and notes.
 - `contact_sheet.png`: locally generated 1440 × 820 proof; letters and English labels are preview overlays only.
 - `verify-assets.mjs`: rerunnable load/render check using @napi-rs/canvas.
-- `asset-verification.json`: locally generated verification result. Run `node assets/verify-assets.mjs` from the production directory to create both generated files; neither is committed.
+- `asset-verification.json`: locally generated verification result. Run `npm run qa:episode:assets` from the repository root after preparing SC fonts to create both generated files; neither is committed.
 
 ## Placement
 
@@ -24,4 +24,4 @@ Draw strategies separately so they can move or turn without deforming the restin
 
 ## Visual verification
 
-All five SVGs successfully loaded with @napi-rs/canvas and were rendered together for inspection. The proof was inspected at full resolution for face/collar collisions, cuff-to-hand continuity, edge clipping, badge contrast, card symbol differentiation and readable hatching. The silhouette stays within the viewBox. Bottom desk anchor is consistent for both figures. Renderer files were not modified.
+All five SVGs successfully loaded with @napi-rs/canvas and were rendered together for inspection. The proof was inspected at full resolution for face/collar collisions, cuff-to-hand continuity, edge clipping, badge contrast, card symbol differentiation and readable hatching. The silhouette stays within the viewBox. Bottom desk anchor is consistent for both figures. Run the verifier again for the current checkout; historical proof alone does not establish current renderer acceptance.
