@@ -7,6 +7,7 @@ import {canvasFont,FONT_FAMILY} from '../../../typography/fonts.mjs';
 import {assertAppliedFont} from '../../../typography/font-contract.mjs';
 import {compilePlan,resolveFrame,CELLS,deepFreeze} from './semantic-state.mjs';
 import {prepareVerifiedAnimaticFonts,registerVerifiedAnimaticFonts} from './font-resources.mjs';
+import {assertAvatarTrackInFrame,assertAvatarSampleInFrame,assertAvatarTextClearance} from './geometry.mjs';
 import {validateAvatarAdapter,alphaInkBounds,createAvatarTransition,sampleAvatarTransition,drawAvatarSample} from './avatar.mjs';
 
 export const PUBLIC_GEOMETRY=deepFreeze({width:1920,height:1080,matrix:{x:740,y:430,width:940,height:340},subtitle:{singleY:1018,twoY:988,lineHeight:52,size:40}});
@@ -72,10 +73,30 @@ function snapshotAdapter(adapter,id) {
   const actual=alphaInkBounds(image);assert.deepEqual(actual,adapter.alphaBounds,'Adapter alphaBounds must match every nonzero source pixel');
   const bytes=image.getContext('2d').getImageData(0,0,width,height).data;
   const captured=Object.freeze({id,width,height,alphaBounds:actual,draw:ctx=>ctx.drawImage(image,0,0)});
-  return {adapter:captured,fingerprint:{id,width,height,alphaBounds:actual,rgbaSha256:hash(bytes)}};
+  return {adapter:captured,fingerprint:{id,width,height,alphaBounds:actual,rgbaSha256:hash(bytes)},dispose:()=>{image.width=1;image.height=1;}};
  }catch(error){if(image){image.width=1;image.height=1;}throw error;}
  finally{exposed.width=1;exposed.height=1;}
 }
+/** Check only internally proven avatar support neighborhoods; no user ROI. */
+function assertCapturedTextClearance(avatarMask,textMask,avatarRecords,gap=32) {
+ const {width,height}=avatarMask;
+ for(const {sample,supportBounds} of avatarRecords){
+  if(sample.alpha===0)continue;
+  // The filtered support contains every painted avatar pixel. Expanding by
+  // gap plus a raster-edge pixel contains every possible failing text pixel.
+  const x0=Math.max(0,Math.floor(supportBounds.x)-gap-1),y0=Math.max(0,Math.floor(supportBounds.y)-gap-1);
+  const x1=Math.min(width,Math.ceil(supportBounds.x+supportBounds.width)+gap+1),y1=Math.min(height,Math.ceil(supportBounds.y+supportBounds.height)+gap+1);
+  const view=mask=>({width:x1-x0,height:y1-y0,getContext:()=>({getImageData:(x,y,w,h)=>mask.getContext('2d').getImageData(x0+x,y0+y,w,h)})});
+  try{assertAvatarTextClearance(view(avatarMask),view(textMask),gap);}catch(error){
+   if(!error.details)throw error;
+   const details=error.details,shift=point=>Object.freeze({x:point.x+x0,y:point.y+y0});
+   const translated=Object.freeze({...details,textPixel:shift(details.textPixel),avatarPixel:shift(details.avatarPixel)});
+   const failure=new RangeError(`Avatar lacks ${gap}px clearance from visible text ink at (${translated.textPixel.x}, ${translated.textPixel.y}); actual pixel gap ${translated.actualGap}px.`,{cause:error});
+   Object.defineProperty(failure,'details',{value:translated,enumerable:true});throw failure;
+  }
+ }
+}
+
 /**
  * Capture plan/case, geometry, exact font bytes and actual provider pixels once.
  * Mutating a caller's plan/provider later cannot alter this session. For any
@@ -90,9 +111,15 @@ export function createRenderSession({plan,adapters,title='公共动画组件测�
   ...Object.values(compiled.plan.caseData.players).map(player=>player.name),...Object.values(compiled.plan.caseData.strategies),
   ...compiled.plan.blocks.map(block=>block.voiceover),...compiled.phases.flatMap(phase=>phase.lines)];
  const fontResources=registerVerifiedAnimaticFonts(prepareVerifiedAnimaticFonts(displayed)),fontFamily=fontResources.family;
- const captures=Object.fromEntries(['A','B'].map(id=>[id,snapshotAdapter(adapters[id],id)]));
  const transitions=Object.fromEntries(['A','B'].map(id=>[id,createAvatarTransition(tracks[id])]));
  for(const track of Object.values(transitions))assert(track.endFrame<compiled.plan.durationFrames,'Avatar transition must complete inside the render range');
+ const captures={};
+ try{
+  for(const id of ['A','B']){
+   captures[id]=snapshotAdapter(adapters[id],id);
+   assertAvatarTrackInFrame(captures[id].adapter,transitions[id],PUBLIC_GEOMETRY);
+  }
+ }catch(error){for(const capture of Object.values(captures))capture.dispose();throw error;}
  const fonts=fontResources.fonts;
  const fingerprint=hash(JSON.stringify({version:'public-components-v1',plan:compiled.plan,geometry:PUBLIC_GEOMETRY,textSlots:TEXT_SLOTS,title,tracks:transitions,fonts,fontResourceFingerprint:fontResources.fingerprint,family:fontFamily,assets:Object.values(captures).map(value=>value.fingerprint)}));
  function render(frame){
@@ -111,12 +138,26 @@ export function createRenderSession({plan,adapters,title='公共动画组件测�
   }
   drawResolvedMatrix(ctx,textContext,textRecords,state,compiled.plan.caseData,fontFamily);
   const avatarRecords=[];
+  // Geometry uses this existing low/bilinear sampling support explicitly.
+  for(const context of [ctx,avatarContext]){context.imageSmoothingEnabled=true;context.imageSmoothingQuality='low';}
   for(const id of ['A','B']){
    const sample=sampleAvatarTransition(transitions[id],frame),adapter=captures[id].adapter;
-   const bounds=drawAvatarSample(ctx,adapter,sample);drawAvatarSample(avatarContext,adapter,sample);avatarRecords.push({id,sample,bounds});
+   const supportBounds=assertAvatarSampleInFrame(adapter,sample,PUBLIC_GEOMETRY);
+   const bounds=drawAvatarSample(ctx,adapter,sample);drawAvatarSample(avatarContext,adapter,sample);avatarRecords.push({id,sample,bounds,supportBounds});
   }
   // Captions are outside every scene/transition opacity group, including tails.
   drawResolvedSubtitle(ctx,textContext,textRecords,state,fontFamily);
+  try{assertCapturedTextClearance(avatarMask,textMask,avatarRecords,32);}catch(error){
+   const details=error.details;
+   if(!details?.textPixel)throw error;
+   const {x,y}=details.textPixel;
+   // Collision and distance come from actual mask pixels. Measured glyph boxes
+   // only attribute that already-proven text pixel to its diagnostic role(s).
+   const roles=[...new Set(textRecords.filter(record=>x>=Math.floor(record.x)-1 && x<=Math.ceil(record.x+record.width)+1 && y>=Math.floor(record.y)-1 && y<=Math.ceil(record.y+record.height)+1).map(record=>record.role))];
+   const failure=new RangeError(`${error.message} Text role: ${roles.join(', ')||'unmapped visible text'}.`,{cause:error});
+   Object.defineProperty(failure,'details',{value:Object.freeze({...details,roles:Object.freeze(roles)}),enumerable:true});
+   throw failure;
+  }
   return {canvas,state,textMask,avatarMask,textRecords,avatarRecords,dispose:()=>{for(const surface of [canvas,textMask,avatarMask]){surface.width=1;surface.height=1;}}};
   }catch(error){for(const surface of [canvas,textMask,avatarMask]){surface.width=1;surface.height=1;}throw error;}
  }

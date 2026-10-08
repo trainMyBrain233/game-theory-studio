@@ -129,6 +129,46 @@ smoothstep or smootherstep. The sampler clamps before/after and exposes raw
 and eased progress. `avatarTransitionFrames` includes before/start, rounded
 quarter points, end/after. A short track deduplicates coincident integer samples.
 
+The real session validates custom tracks against independently captured alpha
+before returning a session. It uses the existing low/bilinear image smoothing
+explicitly on both avatar drawing contexts. Bilinear filtering can extend ink
+half a native pixel beyond a measured alpha edge, so the containment envelope
+includes that support (clamped to the source image). Transparent padding may
+lie outside the canvas, but the filtered alpha footprint must remain inside
+1920×1080. Opacity zero does not authorize an offscreen entrance/exit.
+
+Containment of the full supported interpolation has a bounded proof. Mirror
+side is fixed and scale remains positive. Every footprint edge is position +
+a constant times scale; all coordinates and scale use the same easing fraction
+q in [0,1]. Each intermediate edge is therefore the convex combination of its
+two endpoint edges. Both valid endpoints prove all intermediate/adjacent
+clamped frames. The actual requested sample is checked again defensively. Exact edge contact
+can acquire an outward floating-point residue during interpolation. Only an
+8×machine-epsilon expression-scaled error budget (capped below 1.5e-8 pixels)
+is snapped back to the boundary; larger offsets still fail. This numerical
+correction does not change the pixel-based 32px clearance rule.
+Overscan regressions cover mirrors, fractional scales, all four corners and
+all integer transition frames, including the filter-spill counterexample.
+
+Each actual render also rejects avatars within 32px of any visible text ink,
+including headers, names, matrix values and subtitles. The real renderer supplies only the internally proven filtered-support
+neighborhood of each captured avatar, expanded by 32px plus a raster-edge
+pixel; users cannot provide or shrink this region. Within it the check reads
+actual masks in small bands, retains one bit per avatar pixel and a bounded
+sliding window. The generic mask helper additionally scans its entire input
+and skips only regions already proven too far from every measured pixel. No role-filter or combined bounding rectangle substitutes for
+the pixel evidence. It uses a conservative square (Chebyshev) gap, stricter
+than Euclidean distance at diagonals. Errors identify the offending text role,
+actual text/avatar pixel witnesses, measured gap and required gap; glyph boxes
+attribute the role only after the pixel collision has been established.
+
+Session creation proves containment, not future text clearance. Per-frame
+checks also catch paths whose endpoints are clear but middle frames cross text,
+and positions that become unsafe when a score first appears. Failed frames
+are disposed and never returned or inserted into the raster cache. This fixed
+harness rejects unsupported custom geometry rather than automatically avoiding
+text or adding offscreen entrance effects.
+
 The harness uses a simple fixed move with stationary text and no opacity
 staging. It does not claim to port a complete identity-to-matrix choreography.
 Extending layout, staged layer opacities or production providers needs its own

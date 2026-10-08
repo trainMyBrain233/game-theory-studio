@@ -21,6 +21,9 @@ const pixel=(rendered,x,y)=>Array.from(rendered.canvas.getContext('2d').getImage
 const rgb=color=>[...color.slice(1).matchAll(/../g)].map(match=>parseInt(match[0],16)).concat(255);
 const crop=(rendered,x,y,w,h)=>createHash('sha256').update(rendered.canvas.getContext('2d').getImageData(x,y,w,h).data).digest('hex');
 const session=createRenderSession({plan:fixture(),adapters:syntheticCast()});
+const withFrame=(current,frame,inspect)=>{const rendered=current.render(frame);try{return inspect(rendered);}finally{rendered.dispose();}};
+const framePixel=(current,frame,x,y)=>withFrame(current,frame,rendered=>pixel(rendered,x,y));
+const frameCrop=(current,frame,x,y,w,h)=>withFrame(current,frame,rendered=>crop(rendered,x,y,w,h));
 // A source fixture deliberately has no .venv. Bind the parent's configured
 // interpreter explicitly instead of accidentally relying on runner-global pip.
 const pythonProbe=spawnSync(pythonCommand(),['-c','import sys; print(sys.executable)'],{encoding:'utf8'});
@@ -53,10 +56,11 @@ test('resolved matrix renders each active cell from current phase and only event
    const x=740+(index%2)*470,y=430+Math.floor(index/2)*170;
    assert.deepEqual(pixel(rendered,x+5,y+35),rgb(key===cell?COLORS.ink:((frame>=200&&frame<280&&index<2)?COLORS.faint:COLORS.paper)),`actual cell border ${key} at ${frame}`);
   }
+  rendered.dispose();
  }
- assert.equal(session.render(89).textRecords.filter(record=>record.role.startsWith('score:')).length,0);
- assert.deepEqual(session.render(90).textRecords.filter(record=>record.role.startsWith('score:')).map(record=>record.text),['2']);
- assert.deepEqual(session.render(170).textRecords.filter(record=>record.role.startsWith('score:')).map(record=>record.text),['2','7','1','9']);
+ assert.equal(withFrame(session,89,rendered=>rendered.textRecords).filter(record=>record.role.startsWith('score:')).length,0);
+ assert.deepEqual(withFrame(session,90,rendered=>rendered.textRecords).filter(record=>record.role.startsWith('score:')).map(record=>record.text),['2']);
+ assert.deepEqual(withFrame(session,170,rendered=>rendered.textRecords).filter(record=>record.role.startsWith('score:')).map(record=>record.text),['2','7','1','9']);
 });
 test('all four cells and asymmetric owner slots render for a replaced numeric case',()=>{
  const plan=fixture();const first=plan.blocks[1],second=plan.blocks[2];
@@ -68,7 +72,7 @@ test('all four cells and asymmetric owner slots render for a replaced numeric ca
  rebuildNarration(plan);
  const changed=createRenderSession({plan,adapters:syntheticCast()});
  const state=changed.render(170);assert.deepEqual(state.textRecords.filter(record=>record.role.startsWith('score:')).map(record=>[record.role,record.text]),[['score:BR:0','8'],['score:BR:1','0'],['score:BB:0','4'],['score:BB:1','6']]);
- assert.deepEqual(pixel(changed.render(70),745,635),rgb(COLORS.ink));assert.deepEqual(pixel(changed.render(140),1215,635),rgb(COLORS.ink));
+ assert.deepEqual(framePixel(changed,70,745,635),rgb(COLORS.ink));assert.deepEqual(framePixel(changed,140,1215,635),rgb(COLORS.ink));state.dispose();
 });
 test('joint reveal card pixels and information labels agree before/during/after opening',()=>{
  const before=session.render(19),middle=session.render(30),after=session.render(40),hidden=session.render(50);
@@ -79,8 +83,8 @@ test('joint reveal card pixels and information labels agree before/during/after 
  assert.equal(after.textRecords.find(record=>record.role==='information').text,'亮牌后：双方可见');
 });
 test('full one/two-line subtitle raster persists through transitions and tail frames',()=>{
- const expected=crop(session.render(0),0,936,1920,144);
- for(const frame of [1,19,20,30,40,49,50,59])assert.equal(crop(session.render(frame),0,936,1920,144),expected);
+ const expected=frameCrop(session,0,0,936,1920,144);
+ for(const frame of [1,19,20,30,40,49,50,59])assert.equal(frameCrop(session,frame,0,936,1920,144),expected);
  const plan=fixture();plan.blocks[0].subtitles[0].lines=['甲方和乙方各自选牌，','一起亮牌。'];
  const two=createRenderSession({plan,adapters:syntheticCast()});
  const first=two.render(0),last=two.render(59);assert.equal(crop(first,0,936,1920,144),crop(last,0,936,1920,144));
@@ -92,7 +96,7 @@ test('actual avatar alpha and every visible text role have clearance on all moti
  for(let frame=0;frame<=51;frame++){const rendered=current.render(frame);assertRasterClearance(rendered,adapters);rendered.dispose();}
  const bad=structuredClone(PUBLIC_AVATAR_TRACKS);bad.A.to.x=345;
  const colliding=createRenderSession({plan:fixture(),adapters,tracks:bad});
- assert.throws(()=>assertRasterClearance(colliding.render(50),adapters),/clearance/);
+ assert.throws(()=>colliding.render(50),/clearance/,'The real renderer must reject colliding custom geometry before returning a frame');
 });
 test('replacement names/strategies are used in actual fonts, labels and fingerprints',()=>{
  const plan=fixture();plan.caseData.players.A.name='参与甲';plan.caseData.players.B.name='参与乙';plan.caseData.strategies={red:'合作',blue:'退出'};
@@ -101,7 +105,7 @@ test('replacement names/strategies are used in actual fonts, labels and fingerpr
  const next=createRenderSession({plan,adapters:syntheticCast()}),rendered=next.render(100);
  assert.notEqual(next.fingerprint,session.fingerprint);assert(rendered.textRecords.some(record=>record.role==='name:A'&&record.text==='参与甲'));
  assert(rendered.textRecords.some(record=>record.role==='column:red'&&record.text==='合作'));
- assertRasterClearance(rendered,syntheticCast());
+ assertRasterClearance(rendered,syntheticCast());rendered.dispose();
 });
 test('provider identity, truthful full alpha bounds and complete resources are mandatory',()=>{
  const adapters=syntheticCast();adapters.A.id='B';assert.throws(()=>createRenderSession({plan:fixture(),adapters}),/identity/);
