@@ -1,0 +1,30 @@
+node_modules/
+output/
+*.mp4
+*.wav
+*.zip
+*.otf
+*.ttc
+*.ttf
+__pycache__/
+.DS_Store
+.npm-cache/
+qa/qa-log.txt
+
+# Private character artwork is never included in public repository commits.
+private_characters/
+
+# Generated records; recreate locally rather than publishing stale production results.
+qa/*.json
+assets/asset-verification.json
+assets/contact_sheet.png
+narration/exports/
+typography/fonts/*.json
+asset-manifest.json
+SOURCE_MANIFEST.json
+.venv/
+.env
+.env.*
+.cache/
+*.png
+*.log

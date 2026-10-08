@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 500" width="420" height="500" role="img" aria-labelledby="title desc">
+  <title id="title">Participant A, glasses and pale blue shirt</title>
+  <desc id="desc">Original editable textbook illustration. Relaxed participant with both forearms and hands resting at table height. Blank round identity badge.</desc>
+  <g id="figure-a" stroke="#243E66" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+    <g id="arms" fill="#E5EDF4">
+      <path id="left-sleeve" d="M132 284 C104 289 91 312 81 345 L60 415 C54 435 62 454 79 465 C94 473 125 474 150 474 L160 444 L113 432 C110 430 109 427 111 422 L133 363 Z"/>
+      <path id="right-sleeve" d="M288 284 C316 289 329 312 339 345 L360 415 C366 435 358 454 341 465 C326 473 295 474 270 474 L260 444 L307 432 C310 430 311 427 309 422 L287 363 Z"/>
+    </g>
+    <path id="shirt-body" fill="#E5EDF4" d="M132 284 L177 273 L243 273 L288 284 C303 291 308 311 309 333 L319 480 L101 480 L111 333 C112 311 117 291 132 284 Z"/>
+    <g id="neck" fill="#FFFEF8">
+      <path d="M184 231 L184 274 Q182 285 174 288 L210 320 L246 288 Q238 285 236 274 L236 231 Z"/>
+      <path d="M185 253 Q210 265 235 253" stroke-width="2.5"/>
+    </g>
+    <g id="collar" fill="#FFFEF8">
+      <path d="M180 273 L210 307 L193 328 L163 291 Z"/>
+      <path d="M240 273 L210 307 L227 328 L257 291 Z"/>
+    </g>
+    <g id="shirt-details" fill="none" stroke-width="2.5">
+      <path d="M210 311 L210 472"/>
+      <path d="M220 326 L220 472"/>
+      <path d="M124 349 L116 407 M296 349 L304 407"/>
+      <path d="M91 411 L103 417 M329 411 L317 417"/>
+      <path d="M114 431 Q129 432 143 438 M306 431 Q291 432 277 438"/>
+      <path d="M137 464 L138 471 M283 464 L282 471"/>
+      <path d="M234 344 L278 344 L276 381 Q256 394 236 381 Z"/>
+      <path d="M237 351 L275 351"/>
+    </g>
+    <g id="buttons" fill="#243E66" stroke="none">
+      <circle cx="215" cy="345" r="2.4"/><circle cx="215" cy="388" r="2.4"/><circle cx="215" cy="430" r="2.4"/>
+    </g>
+    <g id="ears" fill="#FFFEF8">
+      <path d="M143 150 C128 143 126 158 129 173 C131 185 138 191 146 188 Z"/>
+      <path d="M277 150 C292 143 294 158 291 173 C289 185 282 191 274 188 Z"/>
+      <path d="M135 158 Q141 158 140 174 M285 158 Q279 158 280 174" fill="none" stroke-width="2.3"/>
+    </g>
+    <path id="face" fill="#FFFEF8" d="M143 127 C140 90 162 67 210 67 C258 67 280 90 277 127 L275 182 C273 218 248 251 210 253 C172 251 147 218 145 182 Z"/>
+    <path id="hair" fill="#243E66" d="M140 155 C126 121 130 86 151 67 C169 50 194 48 213 54 C230 47 252 54 267 67 C290 76 298 103 286 129 L277 158 L273 119 C247 119 221 107 204 86 C188 105 166 115 147 113 Z"/>
+    <g id="hair-strands" fill="none" stroke="#FFFEF8" stroke-width="2.2" opacity=".5">
+      <path d="M156 88 Q170 67 192 67 M228 68 Q249 68 260 82"/>
+    </g>
+    <g id="brows" fill="none" stroke-width="3.1">
+      <path d="M159 134 Q173 127 189 133 M231 133 Q247 127 261 134"/>
+    </g>
+    <g id="glasses" fill="none">
+      <rect x="150" y="143" width="51" height="41" rx="16"/><rect x="219" y="143" width="51" height="41" rx="16"/>
+      <path d="M201 154 Q210 149 219 154 M150 153 L137 147 M270 153 L283 147"/>
+    </g>
+    <g id="eyes" fill="#243E66" stroke="none"><ellipse cx="177" cy="163" rx="3.3" ry="4.7"/><ellipse cx="243" cy="163" rx="3.3" ry="4.7"/></g>
+    <g id="face-details" fill="none" stroke-width="2.7">
+      <path id="nose" d="M211 167 L205 187 Q209 191 216 188"/>
+      <path id="mouth" d="M192 207 Q210 222 228 207"/>
+      <path id="lip" d="M204 222 Q210 224 216 222" stroke-width="1.8"/>
+    </g>
+    <g id="cuffs" fill="#FFFEF8">
+      <path d="M131 439 L151 443 L147 474 L128 471 Z"/>
+      <path d="M289 439 L269 443 L273 474 L292 471 Z"/>
+    </g>
+    <g id="hands" fill="#FFFEF8">
+      <path id="left-hand" d="M150 446 C159 438 168 437 179 441 L195 448 C199 450 202 453 200 456 C198 459 193 458 187 456 L174 452 C180 458 190 462 200 466 C204 468 204 472 201 474 C195 478 184 477 176 475 L163 473 C157 472 152 472 147 472 Z"/>
+      <path id="right-hand" d="M270 446 C261 438 252 437 241 441 L225 448 C221 450 218 453 220 456 C222 459 227 458 233 456 L246 452 C240 458 230 462 220 466 C216 468 216 472 219 474 C225 478 236 477 244 475 L257 473 C263 472 268 472 273 472 Z"/>
+      <path d="M170 459 Q181 467 195 469 M166 465 Q178 472 188 474 M250 459 Q239 467 225 469 M254 465 Q242 472 232 474" fill="none" stroke-width="2.1"/>
+    </g>
+    <circle id="identity-badge" cx="164" cy="374" r="21" fill="#243E66" stroke="none"/>
+  </g>
+</svg>
