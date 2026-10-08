@@ -5,6 +5,7 @@
 import {prepareCharacterAssets,drawCharacter,getRigPose,assetManifest} from './rgba_character_rig.mjs';
 import {timeline} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
+import {IDLE_HAND} from './character-layers.mjs';
 import {createCanvas} from '@napi-rs/canvas';
 import {pulse} from './motion.mjs';
 let actorMask=null,armQueue=[];
@@ -18,12 +19,12 @@ export const pixelBudget={normal_main_rig_scale_1080:.6,normal_main_rig_scale_4k
 /** Pose planning can be checked without opening the private PNG files.
  * World units refer to the 1920x1080 layout; they are not image-edge evidence.
  */
-export function actorPose(id,{x,y,scale=1,t=0}={}){
+export function actorPose(id,{x,y,scale=1,t=0,idleHand=IDLE_HAND,selected}={}){
  const k=id.toLowerCase(),factor=.6/.84,rigScale=scale*factor,side=id==='A'?1:-1;
  const ax=x+(id==='A'?80:340)*scale,ay=y+268*scale;
- let hand=[250,296],attachment=null,grip=0;
+ let hand=idleHand,attachment=null,grip=0;
  const info=timeline.sections.find(s=>s.id==='information');
- if(t>=info.start&&t<info.end){const q=informationChoreography(t),rest=[ax+250*rigScale*side,ay+296*rigScale],target=q.handTarget(id,rest);hand=[(target[0]-ax)/(rigScale*side),(target[1]-ay)/rigScale];attachment=q.cards[id].attachment;grip=q.grip;}
+ if(t>=info.start&&t<info.end){const q=informationChoreography(t,{selected}),rest=[ax+idleHand[0]*rigScale*side,ay+idleHand[1]*rigScale],target=q.handTarget(id,rest);hand=[(target[0]-ax)/(rigScale*side),(target[1]-ay)/rigScale];attachment=q.cards[id].attachment;grip=q.grip;}
  let angle=0;for(const at of [1.4,T('s05_goal')+.5,T('s08_known_unknown')+1.9,T('s09_simultaneous')+1.5,T('s13_options')+.6,T('s18_return_single_round')+3.5,T('s20_definition')+.4])angle+=.028*pulse(t,at,1.6)*(id==='A'?1:-1);
  const opts={x:ax,y:ay,scale:rigScale,t:13,side,handOverride:hand,headAngleOverride:angle};
  const pose=getRigPose(k,13,{handOverride:hand,headAngleOverride:angle});

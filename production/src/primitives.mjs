@@ -52,11 +52,11 @@ export let records=[];
 export let routes=[];
 export function resetRecords(){records=[];routes=[]}
 export function tx(c,str,x,y,size=36,weight=400,color=C.ink,align='left',opts={}){
- str=resolveCastText(str); c.save(); c.font=canvasFont(size,weight,{serif:opts.serif??false});
+ str=resolveCastText(str);const role=opts.role??(Object.values(CAST.actors).some(actor=>actor.display_name===str)?'actor-name':'body'); c.save(); c.font=canvasFont(size,weight,{serif:opts.serif??false});
  const applied=assertAppliedFont(c,{size,weight,family:opts.serif?SERIF_FAMILY:FONT_FAMILY});
- c.fillStyle=color;c.textAlign=align;c.textBaseline='alphabetic';
+ c.fillStyle=color;c.textAlign=align;c.textBaseline=opts.baseline??'alphabetic';
  const m=c.measureText(str);c.fillText(str,x,y);
- if(opts.record!==false && c.globalAlpha>.02){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size:applied.size,weight:applied.weight,family:applied.family,appliedFont:c.font,alpha:c.globalAlpha});}
+ if(opts.record!==false && c.globalAlpha>.02){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,role,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size:applied.size,weight:applied.weight,family:applied.family,appliedFont:c.font,alpha:c.globalAlpha});}
  c.restore();
 }
 export function line(c,x1,y1,x2,y2,color=C.ink,w=3,p=1,dashed=false){if(p<=0)return;c.save();c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';if(dashed)c.setLineDash([10,10]);c.beginPath();c.moveTo(x1,y1);c.lineTo(mix(x1,x2,p),mix(y1,y2,p));c.stroke();if(c.globalAlpha>.02){const tr=c.getTransform(),s=c.canvas.width/1920;const point=(x,y)=>[(tr.a*x+tr.c*y+tr.e)/s,(tr.b*x+tr.d*y+tr.f)/s];routes.push({from:point(x1,y1),to:point(mix(x1,x2,p),mix(y1,y2,p)),width:w,alpha:c.globalAlpha});}c.restore()}
@@ -73,7 +73,8 @@ export function card(c,kind,x,y,w=112,{angle=0,flip=1,alpha=1,label=true}={}){
  return cardElement.draw(c,{kind,x,y,width:w,angle,flip,alpha,label});
 }
 export function cardFlip(c,from,to,x,y,w,p,{angle=0,alpha=1,label=true}={}){return cardElement.drawFlip(c,{from,to,x,y,width:w,progress:p,angle,alpha,label})}
-export const cardElement=createCardElement({assets,palette:C,strategies:CAST.strategies,drawing:{tx,round}});
+const cardHotspots=JSON.parse(fs.readFileSync(new URL('../assets/asset-hotspots.json',import.meta.url),'utf8')).cards;
+export const cardElement=createCardElement({assets,palette:C,strategies:CAST.strategies,drawing:{tx,round},labelContract:{sourceViewBox:cardHotspots.viewBox,anchor:cardHotspots.labelCenter,style:cardHotspots.labelStyle}});
 export function tag(c,text,x,y,w,{fill=C.faint,size=30,stroke=null}={}){round(c,x,y,w,54,10,fill,stroke,2);tx(c,text,x+w/2,y+38,size,700,C.ink,'center')}
 export function desk(c,alpha=1,y=796,x1=235,x2=1685){group(c,alpha,0,0,()=>{line(c,x1,y,x2,y,C.ink,3.5);line(c,x1+50,y,x1+31,y+72,C.ink,3);line(c,x2-50,y,x2-31,y+72,C.ink,3)})}
 export function cross(c,x,y,size=10){line(c,x-size,y-size,x+size,y+size,C.muted,3);line(c,x-size,y+size,x+size,y-size,C.muted,3)}

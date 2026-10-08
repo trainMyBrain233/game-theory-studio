@@ -26,7 +26,7 @@ Draw strategies separately so they can move or turn without deforming the restin
 
 The upper sleeves are behind the torso. The torso fill retains its original bounds but uses a separate open outline, avoiding a closed hem under the palms. Forearms and their folds are in front of the torso/details, followed by cuffs and hands. Their shared wrist seams are `(151,443)–(147,474)` and `(269,443)–(273,474)`. No masks, clips or reduced figure scale hide the former intersection. Figure viewBoxes, desk y480 and badge `(164,374)` remain fixed.
 
-The red circle and blue bar now share symbol center `(70,73)`: red `cy=73`, blue `y=64`. Card size, label region/coordinates and render stacking are unchanged. Hands still render in front of the cards in the private RGBA mode; a lower symbol must be checked in real production frames, never drawn above the hand to conceal overlap.
+The red circle and blue bar now share symbol center `(70,73)`: red `cy=73`, blue `y=64`. Card size, label region/coordinates and render stacking are unchanged. The main renderer consumes this exact recorded anchor/style: at 105px card width it draws 33px text at transformed (70,130), center/middle. Hands still render in front of the cards in the private RGBA mode; a lower symbol must be checked in real production frames, never drawn above the hand to conceal overlap.
 
 After an intentional SVG edit, review its visible paths and update that file's `sourceHashes` entry in `asset-hotspots.json`. The verifier compares actual source bytes with the authored hash and checks rendered contour/occlusion/wrist/hem/symbol pixels; QA never rewrites these hashes. Negative regressions reject rear-layer forearms, a penetrating side line, old symbol positions and altered bytes.
 

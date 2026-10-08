@@ -51,5 +51,6 @@ assert(placeholderIndex>=0);process.argv.splice(placeholderIndex,1);
 try{
  resetRecords();badge(paint,'A',100,270,25,{name:true});badge(paint,'B',350,270,25,{name:true});
  assert.deepEqual(records.map(record=>record.text),['甲','乙'],'Production badge names must agree with narration');
+ assert(records.every(record=>record.role==='actor-name'),'Configured production names must reach the 32px actor-name QA path.');
 }finally{process.argv.splice(placeholderIndex,0,'--placeholder-cast');}
 console.log('Production palette: strategy fills, paper and ink pixels follow tokens; production badges use configured display names.');
