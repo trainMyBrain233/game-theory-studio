@@ -43,6 +43,16 @@ test('proposed grip corner is nearest each actor and never asserts linked hand a
  assert.throws(()=>tabletopState('invented',27,context),/Unknown/);
  assert.throws(()=>tabletopState('shared-rail',Infinity,context),/Invalid/);
 });
+test('fading unselected flat cards keep their supported pose throughout pickup',()=>{
+ for(const time of [36.5,36.6,36.7,36.8,36.9]){
+  const state=tabletopState('flat-rest',time,context);
+  for(const card of state.cards.filter(c=>!c.chosen)){
+   assert.equal(card.flat,1);assert.equal(card.visibleHeight,98*190/140*.28);assert.equal(card.bottom,846);
+  }
+ }
+ const state=tabletopState('flat-rest',36.7,context);assert.ok(state.cards.some(c=>!c.chosen&&c.alpha>.1&&c.alpha<.9));
+ assert.ok(state.cards.some(c=>c.chosen&&c.flat<1),'Chosen card actually rotates while the other stays flat.');
+});
 test('pose crop translation preserves wrist target; mirror and rotation use registered offset',()=>{
  const pose={registered:true,wrist:[30,40],contact:[50,60]},cropped={registered:true,wrist:[5,10],contact:[25,30]};
  assert.deepEqual(registeredWristTarget([100,200],pose),[80,180]);

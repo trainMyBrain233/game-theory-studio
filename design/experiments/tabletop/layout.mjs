@@ -21,7 +21,7 @@ export function tabletopState(variant,time,{scene,timeline}){
  for(const [id,initial,final,selected] of [['A',[430,560],495,scene.selected.actorA],['B',[1354,1484],1420,scene.selected.actorB]])for(const [index,strategy] of scene.strategies.entries()){
   const chosen=strategy.id===selected,alpha=chosen?1:1-withdraw;
   const x=chosen&&variant!=='separate-stands'?mix(initial[index],final,move):initial[index];
-  const width=98,height=width*190/140,supportY=variant==='flat-rest'?846:906,flat=variant==='flat-rest'?1-raised:0;
+  const width=98,height=width*190/140,supportY=variant==='flat-rest'?846:906,flat=variant==='flat-rest'?(chosen?1-raised:1):0;
   const visibleHeight=height*mix(1,.28,flat),bottom=supportY-(chosen?raised*34:0),y=bottom-visibleHeight/2;
   // The upper corner nearest the actor, rather than a fixed far-side corner.
   const nearSide=id==='A'?-1:1;

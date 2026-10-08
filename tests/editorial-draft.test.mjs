@@ -13,6 +13,8 @@ test('r2 resolves complete 40-block speech and 37-ID coverage without inventing 
  assert.deepEqual(draft.blocks.map(b=>b.id),Array.from({length:40},(_,i)=>`zk01_b${String(i+1).padStart(2,'0')}`));
  assert.equal(products['第一集_提词器净稿_r2.txt'],draft.blocks.map(b=>b.voiceover).join('\n\n')+'\n');
  assert.ok(draft.blocks.every(b=>b.timing===null));assert.equal(draft.user_final_approval,false);assert.equal(draft.production_timeline_update_authorized,false);assert.equal(draft.human_audio_available,false);
+ assert.equal(draft.source_metadata_status,'complete_block_notes_received_r2_followup');assert.ok(draft.source_metadata_history.includes('partial_block_notes_truncated_in_delegation_message'));
+ assert.ok(draft.blocks.every(b=>Array.isArray(b.spoken_emphasis)&&Array.isArray(b.optional_breath_after)&&b.visual_intent&&b.recording_note));
  assert.equal(draft.source.source_reference_duration_is_recording_target,false);assert.equal('duration' in draft,false);assert.equal(draft.model_contract.multi_round_example.return_to_one_round_block,'zk01_b17');
  assert.equal(draft.model_contract.players.A.payoff_index,0);assert.equal(draft.model_contract.players.B.payoff_index,1);
  const chunks=draft.blocks.find(b=>b.id==='zk01_b14').subtitle_chunks;
@@ -33,6 +35,9 @@ test('explicit draft builds read current identity and asymmetric case; stale che
   assert.ok(text.includes('明月得十一分，青禾得十二分。'));
   assert.ok(text.includes('明月得二十一分，青禾得二十二分。'));
   assert.ok(text.includes('对方选合作，他得十一分；对方选退出，他得二十一分。'));
+  const draft=JSON.parse(fs.readFileSync(path.join(root,relative,'第一集_语义块草稿_无音频时间码.json'),'utf8'));
+  assert.ok(draft.blocks.find(b=>b.id==='zk01_b27').visual_intent.includes('（21，22）'));
+  assert.deepEqual(draft.blocks.find(b=>b.id==='zk01_b32').spoken_emphasis,['明月选合作','十一分','二十一分']);
   assert.ok(!/小A|小B|普通僵尸|路障僵尸|各得三分/.test(text));assert.equal(run(['--check']).status,0);
   const changed=text+'过期派生内容\n';fs.writeFileSync(target,changed);assert.notEqual(run(['--check']).status,0);assert.equal(fs.readFileSync(target,'utf8'),changed,'QA must not repair/overwrite authored edits.');
  });

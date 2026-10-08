@@ -1,49 +1,754 @@
 {
   "draft_version": "zk01-narration-draft-2026-10-08-r2",
   "status": "editorial_draft_pending_review",
-  "source_metadata_status": "partial_block_notes_truncated_in_delegation_message",
+  "source_metadata_status": "complete_block_notes_received_r2_followup",
   "reference_commit": "0b93331bcaa79abd834951c95e0352c7c10536b3",
   "reference_timeline_sha256": "7f969307dcd159feaf71431a0683417930fb7ec43ba80cd565e08110a1954b67",
   "blocks": [
-    {"id":"zk01_b01","section":"intro","original_segment_ids":["s04_setup"],"voiceover":"{{series}}里，{{A}}和{{B}}准备玩一轮{{gameLabel}}。"},
-    {"id":"zk01_b02","section":"intro","original_segment_ids":["s01_hook"],"voiceover":"两位都想多拿分，为什么还得琢磨对方怎么选？"},
-    {"id":"zk01_b03","section":"intro","original_segment_ids":["s02_four_questions"],"voiceover":"看懂这场博弈，我们先问四个问题。"},
-    {"id":"zk01_b04","section":"players","original_segment_ids":["s03_question"],"voiceover":"第一，谁在做决定？"},
-    {"id":"zk01_b05","section":"players","original_segment_ids":["s04_setup","s06_definition"],"voiceover":"{{A}}和{{B}}各自选牌，他们就是这场博弈的参与者。"},
-    {"id":"zk01_b06","section":"players","original_segment_ids":["s05_goal","s06_definition"],"voiceover":"这一局，我们设定双方都希望自己的得分更高。"},
-    {"id":"zk01_b07","section":"information","original_segment_ids":["s07_question"],"voiceover":"第二，做决定时，知道什么？"},
-    {"id":"zk01_b08","section":"information","original_segment_ids":["s08_known_unknown","s10_distinction"],"voiceover":"双方都知道计分规则，但选牌时，看不到对方这一轮选了什么。"},
-    {"id":"zk01_b09","section":"information","original_segment_ids":["s09_simultaneous"],"voiceover":"他们各自选好，再一起亮牌。"},
-    {"id":"zk01_b10","section":"information","original_segment_ids":["s10_distinction","s11_timing"],"voiceover":"这叫同时行动：做决定时，不能先看见对方的选择，再决定自己出什么。"},
-    {"id":"zk01_b11","section":"strategy","original_segment_ids":["s12_question"],"voiceover":"第三，能怎样选择？"},
-    {"id":"zk01_b12","section":"strategy","original_segment_ids":["s13_options"],"voiceover":"这一轮，每位都可以选{{red}}牌，或者{{blue}}牌。"},
-    {"id":"zk01_b13","section":"strategy","original_segment_ids":["s14_simple_case"],"voiceover":"这里只做一次决定，固定选{{red}}或固定选{{blue}}，就是两种纯策略。"},
-    {"id":"zk01_b14","section":"strategy","original_segment_ids":["s15_definition"],"voiceover":"一般来说，策略是一整套应对计划：每种可能遇到的情况，都根据当时能知道的信息，安排好怎么选。","subtitle_chunks":[{"id":"zk01_b14_c01","spoken_span":"一般来说，策略是一整套应对计划：","suggested_lines":["一般来说，","策略是一整套应对计划："],"timing":null},{"id":"zk01_b14_c02","spoken_span":"每种可能遇到的情况，","suggested_lines":["每种可能遇到的情况，"],"timing":null},{"id":"zk01_b14_c03","spoken_span":"都根据当时能知道的信息，安排好怎么选。","suggested_lines":["都根据当时能知道的信息，","安排好怎么选。"],"timing":null}]},
-    {"id":"zk01_b15","section":"strategy","original_segment_ids":["s16_comparison_intro"],"voiceover":"比如，假如改成多轮，每轮结束都能看到对方出的牌。"},
-    {"id":"zk01_b16","section":"strategy","original_segment_ids":["s17_comparison_example"],"voiceover":"就可以先定好：第一轮选{{red}}；以后每一轮，跟着对方上一轮的牌选。"},
-    {"id":"zk01_b17","section":"strategy","original_segment_ids":["s18_return_single_round"],"voiceover":"这是一个跨轮次的计划。现在回到本集，只玩一轮。"},
-    {"id":"zk01_b18","section":"payoffs","original_segment_ids":["s19_question"],"voiceover":"第四，双方这样选，各会得到什么？"},
-    {"id":"zk01_b19","section":"payoffs","original_segment_ids":["s20_definition"],"voiceover":"这一局，用得分表示收益。分数越高，对自己越好。","editorial_note":"支付是 payoff 的可用译法；本集移至术语备考，正文只用收益。"},
-    {"id":"zk01_b20","section":"payoffs","original_segment_ids":["s21_rows","s22_columns"],"voiceover":"把四种选择组合放进表里，就得到了这张收益矩阵。"},
-    {"id":"zk01_b21","section":"payoffs","original_segment_ids":["s21_rows"],"voiceover":"{{A}}选的牌，决定看哪一行。"},
-    {"id":"zk01_b22","section":"payoffs","original_segment_ids":["s22_columns"],"voiceover":"{{B}}选的牌，决定看哪一列。"},
-    {"id":"zk01_b23","section":"payoffs","original_segment_ids":["s23_score_order"],"voiceover":"每个格子里，先读{{A}}的分数，再读{{B}}的分数。"},
-    {"id":"zk01_b24","section":"payoffs","original_segment_ids":["s24_rr_select"],"voiceover":"两位都选{{red}}牌。"},
-    {"id":"zk01_b25","section":"payoffs","original_segment_ids":["s25_rr_score"],"voiceover":"{{joint.RR}}"},
-    {"id":"zk01_b26","section":"payoffs","original_segment_ids":["s26_rb_select"],"voiceover":"{{A}}选{{red}}，{{B}}选{{blue}}。"},
-    {"id":"zk01_b27","section":"payoffs","original_segment_ids":["s27_rb_score"],"voiceover":"{{A}}得{{score.RB.A}}分，{{B}}得{{score.RB.B}}分。"},
-    {"id":"zk01_b28","section":"payoffs","original_segment_ids":["s28_br_select"],"voiceover":"{{A}}选{{blue}}，{{B}}选{{red}}。"},
-    {"id":"zk01_b29","section":"payoffs","original_segment_ids":["s29_br_score"],"voiceover":"{{A}}得{{score.BR.A}}分，{{B}}得{{score.BR.B}}分。"},
-    {"id":"zk01_b30","section":"payoffs","original_segment_ids":["s30_bb_select"],"voiceover":"两位都选{{blue}}牌。"},
-    {"id":"zk01_b31","section":"payoffs","original_segment_ids":["s31_bb_score"],"voiceover":"{{joint.BB}}"},
-    {"id":"zk01_b32","section":"payoffs","original_segment_ids":["s32_joint_choices"],"voiceover":"盯住{{A}}选{{red}}的这一行：对方选{{red}}，他得{{score.RR.A}}分；对方选{{blue}}，他得{{score.RB.A}}分。"},
-    {"id":"zk01_b33","section":"payoffs","original_segment_ids":["s32_joint_choices"],"voiceover":"所以，收益取决于双方的选择组合。"},
-    {"id":"zk01_b34","section":"payoffs","original_segment_ids":["s33_beyond_money"],"voiceover":"收益未必是钱，也可以表示省下的时间，或者对结果的偏好。"},
-    {"id":"zk01_b35","section":"payoffs","original_segment_ids":["s33_beyond_money"],"voiceover":"具体怎么计，要看参与者在乎什么。"},
-    {"id":"zk01_b36","section":"recap","original_segment_ids":["s34_intro"],"voiceover":"最后，记住这四问："},
-    {"id":"zk01_b37","section":"recap","original_segment_ids":["s35_first_pair"],"voiceover":"谁来决定？知道什么？"},
-    {"id":"zk01_b38","section":"recap","original_segment_ids":["s36_second_pair"],"voiceover":"怎么选择？各得什么？"},
-    {"id":"zk01_b39","section":"recap","original_segment_ids":["s35_first_pair","s36_second_pair"],"voiceover":"对应的概念，就是参与者、信息、策略和收益。"},
-    {"id":"zk01_b40","section":"recap","original_segment_ids":["s37_closing"],"voiceover":"先把这场博弈讲清楚，再分析他们会怎么选。"}
+    {
+      "id": "zk01_b01",
+      "section": "intro",
+      "original_segment_ids": [
+        "s04_setup"
+      ],
+      "voiceover": "{{series}}里，{{A}}和{{B}}准备玩一轮{{gameLabel}}。",
+      "spoken_emphasis": [
+        "{{series}}",
+        "{{A}}",
+        "{{B}}",
+        "一轮"
+      ],
+      "optional_breath_after": [
+        "{{series}}里，"
+      ],
+      "visual_intent": "两位角色与姓名首次同时出现；不增加第三位角色或战斗剧情。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b02",
+      "section": "intro",
+      "original_segment_ids": [
+        "s01_hook"
+      ],
+      "voiceover": "两位都想多拿分，为什么还得琢磨对方怎么选？",
+      "spoken_emphasis": [
+        "多拿分",
+        "对方怎么选"
+      ],
+      "optional_breath_after": [
+        "多拿分，"
+      ],
+      "visual_intent": "角色面向牌局；不预演任何确定结局。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b03",
+      "section": "intro",
+      "original_segment_ids": [
+        "s02_four_questions"
+      ],
+      "voiceover": "看懂这场博弈，我们先问四个问题。",
+      "spoken_emphasis": [
+        "四个问题"
+      ],
+      "optional_breath_after": [
+        "这场博弈，"
+      ],
+      "visual_intent": "四张问题卡出现，不塞入额外分类说明。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b04",
+      "section": "players",
+      "original_segment_ids": [
+        "s03_question"
+      ],
+      "voiceover": "第一，谁在做决定？",
+      "spoken_emphasis": [
+        "第一",
+        "谁"
+      ],
+      "optional_breath_after": [
+        "第一，"
+      ],
+      "visual_intent": "只突出当前问题。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b05",
+      "section": "players",
+      "original_segment_ids": [
+        "s04_setup",
+        "s06_definition"
+      ],
+      "voiceover": "{{A}}和{{B}}各自选牌，他们就是这场博弈的参与者。",
+      "spoken_emphasis": [
+        "{{A}}",
+        "{{B}}",
+        "参与者"
+      ],
+      "optional_breath_after": [
+        "各自选牌，"
+      ],
+      "visual_intent": "姓名与角色头像绑定；参与者术语出现。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b06",
+      "section": "players",
+      "original_segment_ids": [
+        "s05_goal",
+        "s06_definition"
+      ],
+      "voiceover": "这一局，我们设定双方都希望自己的得分更高。",
+      "spoken_emphasis": [
+        "这一局",
+        "设定",
+        "自己的得分"
+      ],
+      "optional_breath_after": [
+        "这一局，"
+      ],
+      "visual_intent": "目标小字：各自希望自己的得分更高。不得改写成角色天性。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b07",
+      "section": "information",
+      "original_segment_ids": [
+        "s07_question"
+      ],
+      "voiceover": "第二，做决定时，知道什么？",
+      "spoken_emphasis": [
+        "第二",
+        "做决定时",
+        "知道什么"
+      ],
+      "optional_breath_after": [
+        "第二，",
+        "做决定时，"
+      ],
+      "visual_intent": "显示信息问题卡。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b08",
+      "section": "information",
+      "original_segment_ids": [
+        "s08_known_unknown",
+        "s10_distinction"
+      ],
+      "voiceover": "双方都知道计分规则，但选牌时，看不到对方这一轮选了什么。",
+      "spoken_emphasis": [
+        "都知道计分规则",
+        "选牌时",
+        "看不到"
+      ],
+      "optional_breath_after": [
+        "计分规则，",
+        "但选牌时，"
+      ],
+      "visual_intent": "计分规则公开；双方当前选牌对彼此隐藏。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b09",
+      "section": "information",
+      "original_segment_ids": [
+        "s09_simultaneous"
+      ],
+      "voiceover": "他们各自选好，再一起亮牌。",
+      "spoken_emphasis": [
+        "各自选好",
+        "再",
+        "一起亮牌"
+      ],
+      "optional_breath_after": [
+        "各自选好，"
+      ],
+      "visual_intent": "先锁定双方选择，后揭示；不能演成一位看到对方选牌后再选。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b10",
+      "section": "information",
+      "original_segment_ids": [
+        "s10_distinction",
+        "s11_timing"
+      ],
+      "voiceover": "这叫同时行动：做决定时，不能先看见对方的选择，再决定自己出什么。",
+      "spoken_emphasis": [
+        "同时行动",
+        "做决定时"
+      ],
+      "optional_breath_after": [
+        "同时行动：",
+        "做决定时，",
+        "对方的选择，"
+      ],
+      "visual_intent": "术语卡：同时行动。依据未观察当前选择；不以动画是否同帧运动定义。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b11",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s12_question"
+      ],
+      "voiceover": "第三，能怎样选择？",
+      "spoken_emphasis": [
+        "第三",
+        "怎样选择"
+      ],
+      "optional_breath_after": [
+        "第三，"
+      ],
+      "visual_intent": "显示策略问题卡。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b12",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s13_options"
+      ],
+      "voiceover": "这一轮，每位都可以选{{red}}牌，或者{{blue}}牌。",
+      "spoken_emphasis": [
+        "这一轮",
+        "{{red}}牌",
+        "{{blue}}牌"
+      ],
+      "optional_breath_after": [
+        "这一轮，",
+        "{{red}}牌，"
+      ],
+      "visual_intent": "两位都有{{red}}{{blue}}两种选择；{{red}}{{blue}}是行动颜色，不是角色身份颜色。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b13",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s14_simple_case"
+      ],
+      "voiceover": "这里只做一次决定，固定选{{red}}或固定选{{blue}}，就是两种纯策略。",
+      "spoken_emphasis": [
+        "一次决定",
+        "固定选{{red}}",
+        "固定选{{blue}}",
+        "两种纯策略"
+      ],
+      "optional_breath_after": [
+        "一次决定，",
+        "固定选{{blue}}，"
+      ],
+      "visual_intent": "只在本轮单次决策条件下说明固定选{{red}}、固定选{{blue}}两种纯策略；不扩展混合策略。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b14",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s15_definition"
+      ],
+      "voiceover": "一般来说，策略是一整套应对计划：每种可能遇到的情况，都根据当时能知道的信息，安排好怎么选。",
+      "subtitle_chunks": [
+        {
+          "id": "zk01_b14_c01",
+          "spoken_span": "一般来说，策略是一整套应对计划：",
+          "suggested_lines": [
+            "一般来说，",
+            "策略是一整套应对计划："
+          ],
+          "timing": null
+        },
+        {
+          "id": "zk01_b14_c02",
+          "spoken_span": "每种可能遇到的情况，",
+          "suggested_lines": [
+            "每种可能遇到的情况，"
+          ],
+          "timing": null
+        },
+        {
+          "id": "zk01_b14_c03",
+          "spoken_span": "都根据当时能知道的信息，安排好怎么选。",
+          "suggested_lines": [
+            "都根据当时能知道的信息，",
+            "安排好怎么选。"
+          ],
+          "timing": null
+        }
+      ],
+      "spoken_emphasis": [
+        "一整套",
+        "每种",
+        "当时能知道的信息"
+      ],
+      "optional_breath_after": [
+        "一般来说，",
+        "一整套应对计划：",
+        "每种可能遇到的情况，",
+        "当时能知道的信息，"
+      ],
+      "visual_intent": "按三段语义依次展示字幕：完整计划／可能情况／依据可得信息怎么选。不要将完整长定义硬塞为两行字幕；小概念提示可以保持，但不与口播字幕堆叠抢读。",
+      "subtitle_note": "三段建议是阅读分组，不是强制录音切段。第2段接第3段自然讲完；最终入点、出点和停留长度等实录后决定，无秒数与帧号。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b15",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s16_comparison_intro"
+      ],
+      "voiceover": "比如，假如改成多轮，每轮结束都能看到对方出的牌。",
+      "spoken_emphasis": [
+        "假如",
+        "多轮",
+        "每轮结束"
+      ],
+      "optional_breath_after": [
+        "假如改成多轮，"
+      ],
+      "visual_intent": "临时标明“多轮对照”；主牌局停住，避免让观众以为本集已开始第二轮。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b16",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s17_comparison_example"
+      ],
+      "voiceover": "就可以先定好：第一轮选{{red}}；以后每一轮，跟着对方上一轮的牌选。",
+      "spoken_emphasis": [
+        "第一轮",
+        "以后每一轮",
+        "上一轮"
+      ],
+      "optional_breath_after": [
+        "先定好：",
+        "第一轮选{{red}}；",
+        "以后每一轮，"
+      ],
+      "visual_intent": "仅展示计划文字或简短示意；跟随上一轮可见牌，不偷看本轮。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b17",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s18_return_single_round"
+      ],
+      "voiceover": "这是一个跨轮次的计划。现在回到本集，只玩一轮。",
+      "spoken_emphasis": [
+        "现在回到本集",
+        "一轮"
+      ],
+      "optional_breath_after": [
+        "跨轮次的计划。",
+        "现在回到本集，"
+      ],
+      "visual_intent": "收起多轮对照，恢复“本局一轮”。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b18",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s19_question"
+      ],
+      "voiceover": "第四，双方这样选，各会得到什么？",
+      "spoken_emphasis": [
+        "第四",
+        "各会得到什么"
+      ],
+      "optional_breath_after": [
+        "第四，",
+        "双方这样选，"
+      ],
+      "visual_intent": "显示收益问题卡。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b19",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s20_definition"
+      ],
+      "voiceover": "这一局，用得分表示收益。分数越高，对自己越好。",
+      "editorial_note": "支付是payoff的可用译法，本集为减少近义术语负担而不口播；不是判定该译法错误。",
+      "spoken_emphasis": [
+        "收益",
+        "分数越高",
+        "对自己"
+      ],
+      "optional_breath_after": [
+        "这一局，",
+        "用得分表示收益。",
+        "分数越高，"
+      ],
+      "visual_intent": "本集术语卡只显示“收益”；分数代表本局自身偏好方向。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b20",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s21_rows",
+        "s22_columns"
+      ],
+      "voiceover": "把四种选择组合放进表里，就得到了这张收益矩阵。",
+      "spoken_emphasis": [
+        "四种选择组合",
+        "收益矩阵"
+      ],
+      "optional_breath_after": [
+        "放进表里，"
+      ],
+      "visual_intent": "矩阵框与行列标签出现；四格数值尚不出现。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b21",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s21_rows"
+      ],
+      "voiceover": "{{A}}选的牌，决定看哪一行。",
+      "spoken_emphasis": [
+        "{{A}}",
+        "行"
+      ],
+      "optional_breath_after": [
+        "{{A}}选的牌，"
+      ],
+      "visual_intent": "矩阵左侧放{{A}}小头像和全名；高亮{{red}}{{blue}}两行标签。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b22",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s22_columns"
+      ],
+      "voiceover": "{{B}}选的牌，决定看哪一列。",
+      "spoken_emphasis": [
+        "{{B}}",
+        "列"
+      ],
+      "optional_breath_after": [
+        "{{B}}选的牌，"
+      ],
+      "visual_intent": "矩阵上方放{{B}}小头像和全名；高亮{{red}}{{blue}}两列标签。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b23",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s23_score_order"
+      ],
+      "voiceover": "每个格子里，先读{{A}}的分数，再读{{B}}的分数。",
+      "spoken_emphasis": [
+        "先",
+        "{{A}}",
+        "再",
+        "{{B}}"
+      ],
+      "optional_breath_after": [
+        "每个格子里，",
+        "{{A}}的分数，"
+      ],
+      "visual_intent": "数对图例固定为{{A}}头像在前、{{B}}头像在后，仍保留姓名。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b24",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s24_rr_select"
+      ],
+      "voiceover": "两位都选{{red}}牌。",
+      "spoken_emphasis": [
+        "都",
+        "{{red}}牌"
+      ],
+      "optional_breath_after": [],
+      "visual_intent": "先高亮双{{red}}对应的格子，分数仍隐藏。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b25",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s25_rr_score"
+      ],
+      "voiceover": "{{joint.RR}}",
+      "spoken_emphasis": [
+        "各",
+        "{{score.RR.A}}分"
+      ],
+      "optional_breath_after": [],
+      "visual_intent": "双{{red}}格显示{{pair.RR}}。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b26",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s26_rb_select"
+      ],
+      "voiceover": "{{A}}选{{red}}，{{B}}选{{blue}}。",
+      "spoken_emphasis": [
+        "{{A}}选{{red}}",
+        "{{B}}选{{blue}}"
+      ],
+      "optional_breath_after": [
+        "{{A}}选{{red}}，"
+      ],
+      "visual_intent": "先高亮{{A}}{{red}}行与{{B}}{{blue}}列交点。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b27",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s27_rb_score"
+      ],
+      "voiceover": "{{A}}得{{score.RB.A}}分，{{B}}得{{score.RB.B}}分。",
+      "spoken_emphasis": [
+        "{{A}}{{score.RB.A}}分",
+        "{{B}}{{score.RB.B}}分"
+      ],
+      "optional_breath_after": [
+        "{{A}}得{{score.RB.A}}分，"
+      ],
+      "visual_intent": "按句中姓名与数值依次揭示{{pair.RB}}，不可交换。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b28",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s28_br_select"
+      ],
+      "voiceover": "{{A}}选{{blue}}，{{B}}选{{red}}。",
+      "spoken_emphasis": [
+        "{{A}}选{{blue}}",
+        "{{B}}选{{red}}"
+      ],
+      "optional_breath_after": [
+        "{{A}}选{{blue}}，"
+      ],
+      "visual_intent": "先高亮{{A}}{{blue}}行与{{B}}{{red}}列交点。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b29",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s29_br_score"
+      ],
+      "voiceover": "{{A}}得{{score.BR.A}}分，{{B}}得{{score.BR.B}}分。",
+      "spoken_emphasis": [
+        "{{A}}{{score.BR.A}}分",
+        "{{B}}{{score.BR.B}}分"
+      ],
+      "optional_breath_after": [
+        "{{A}}得{{score.BR.A}}分，"
+      ],
+      "visual_intent": "按句中姓名与数值依次揭示{{pair.BR}}，不可交换。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b30",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s30_bb_select"
+      ],
+      "voiceover": "两位都选{{blue}}牌。",
+      "spoken_emphasis": [
+        "都",
+        "{{blue}}牌"
+      ],
+      "optional_breath_after": [],
+      "visual_intent": "先高亮双{{blue}}对应格子。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b31",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s31_bb_score"
+      ],
+      "voiceover": "{{joint.BB}}",
+      "spoken_emphasis": [
+        "各",
+        "{{score.BB.A}}分"
+      ],
+      "optional_breath_after": [],
+      "visual_intent": "双{{blue}}格显示{{pair.BB}}，此前三格仍可读。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b32",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s32_joint_choices"
+      ],
+      "voiceover": "盯住{{A}}选{{red}}的这一行：对方选{{red}}，他得{{score.RR.A}}分；对方选{{blue}}，他得{{score.RB.A}}分。",
+      "spoken_emphasis": [
+        "{{A}}选{{red}}",
+        "{{score.RR.A}}分",
+        "{{score.RB.A}}分"
+      ],
+      "optional_breath_after": [
+        "{{A}}选{{red}}的这一行：",
+        "他得{{score.RR.A}}分；"
+      ],
+      "visual_intent": "只比较{{A}}{{red}}行内的第一个数；头像/姓名高亮保持{{A}}，避免“他”指向{{B}}。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b33",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s32_joint_choices"
+      ],
+      "voiceover": "所以，收益取决于双方的选择组合。",
+      "spoken_emphasis": [
+        "双方的选择组合"
+      ],
+      "optional_breath_after": [
+        "所以，"
+      ],
+      "visual_intent": "完整矩阵稳定停留；不宣布最优、预测或均衡。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b34",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s33_beyond_money"
+      ],
+      "voiceover": "收益未必是钱，也可以表示省下的时间，或者对结果的偏好。",
+      "spoken_emphasis": [
+        "省下的时间",
+        "对结果的偏好"
+      ],
+      "optional_breath_after": [
+        "收益未必是钱，",
+        "省下的时间，"
+      ],
+      "visual_intent": "文字使用“省下的时间”，不得缩成耗时；不把不同人效用直接相加。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b35",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s33_beyond_money"
+      ],
+      "voiceover": "具体怎么计，要看参与者在乎什么。",
+      "spoken_emphasis": [
+        "参与者在乎什么"
+      ],
+      "optional_breath_after": [
+        "具体怎么计，"
+      ],
+      "visual_intent": "回扣本局各自追求更高得分；不追加新故事或第三个解释案例。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b36",
+      "section": "recap",
+      "original_segment_ids": [
+        "s34_intro"
+      ],
+      "voiceover": "最后，记住这四问：",
+      "spoken_emphasis": [
+        "四问"
+      ],
+      "optional_breath_after": [
+        "最后，"
+      ],
+      "visual_intent": "四问重现。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b37",
+      "section": "recap",
+      "original_segment_ids": [
+        "s35_first_pair"
+      ],
+      "voiceover": "谁来决定？知道什么？",
+      "spoken_emphasis": [
+        "谁",
+        "知道什么"
+      ],
+      "optional_breath_after": [
+        "谁来决定？"
+      ],
+      "visual_intent": "参与者、信息卡依次高亮。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b38",
+      "section": "recap",
+      "original_segment_ids": [
+        "s36_second_pair"
+      ],
+      "voiceover": "怎么选择？各得什么？",
+      "spoken_emphasis": [
+        "怎么选择",
+        "各得什么"
+      ],
+      "optional_breath_after": [
+        "怎么选择？"
+      ],
+      "visual_intent": "策略、收益卡依次高亮。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b39",
+      "section": "recap",
+      "original_segment_ids": [
+        "s35_first_pair",
+        "s36_second_pair"
+      ],
+      "voiceover": "对应的概念，就是参与者、信息、策略和收益。",
+      "spoken_emphasis": [
+        "参与者",
+        "信息",
+        "策略",
+        "收益"
+      ],
+      "optional_breath_after": [
+        "对应的概念，"
+      ],
+      "visual_intent": "术语一一对应，不称为唯一正式分类。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    },
+    {
+      "id": "zk01_b40",
+      "section": "recap",
+      "original_segment_ids": [
+        "s37_closing"
+      ],
+      "voiceover": "先把这场博弈讲清楚，再分析他们会怎么选。",
+      "spoken_emphasis": [
+        "先讲清楚",
+        "再分析"
+      ],
+      "optional_breath_after": [
+        "讲清楚，"
+      ],
+      "visual_intent": "四问与完整矩阵稳定收尾；不预告田忌赛马或植物对战。",
+      "recording_note": "提示为可选轻停；完整角色名、术语与数字单位连续读，不逐逗号强行吸气。"
+    }
+  ],
+  "source_metadata_history": [
+    "partial_block_notes_truncated_in_delegation_message",
+    "complete_block_notes_received_r2_followup"
   ]
 }

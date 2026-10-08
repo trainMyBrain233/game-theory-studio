@@ -7,8 +7,10 @@ import {prepareAssets,card,C,tx,round,line} from '../../../production/src/primit
 import {VARIANTS,TABLE,CAMERA,tabletopState} from './layout.mjs';
 import {presentationModel} from './presentation.mjs';
 import {headAlphaBounds,drawAvatar} from './avatar.mjs';
+import {canvasFont} from '../../../typography/fonts.mjs';
+import {IDENTITY,identityTextPlan,assertTextInk} from './text-layout.mjs';
 const args=process.argv.slice(2);
-if(args.length!==1||args[0]!=='--placeholder-cast')throw Error('This prototype accepts only explicit --placeholder-cast; no external character layers are loaded.');
+if(args[0]!=='--placeholder-cast'||args.length>2||(args.length===2&&args[1]!=='--flat-regression'))throw Error('This prototype accepts only explicit --placeholder-cast; no external character layers are loaded.');
 await prepareAssets(2);
 const root=path.resolve(import.meta.dirname,'../../..'),output=path.join(root,'artifacts/tabletop-prototype');fs.mkdirSync(output,{recursive:true});
 const presentation=presentationModel(JSON.parse(fs.readFileSync(new URL('./presentation.json',import.meta.url),'utf8')),sceneData);
@@ -88,11 +90,12 @@ tx(c,'同一角色，从人物一直读到数对',84,218,62,700);tx(c,'公共预
 for(const [id,x] of [['A',110],['B',470]])figure(c,id,{x,y:370,scale:.72});
 polygon(c,[[70,716],[845,716],[886,807],[28,807]],C.faint);polygon(c,[[28,807],[886,807],[886,823],[28,823]],C.paper);
 for(const [id,x] of [['a',110],['b',470]])c.drawImage(arms[id],x,370,420*.72,500*.72);
-const mx=1136,my=512,cw=286,ch=164;
+const {x:mx,y:my,column:cw,row:ch}=IDENTITY;
+assertTextInk(c,identityTextPlan(presentation),canvasFont);
 avatar(c,'B',mx+cw-170,350,72);tx(c,`${presentation.actors.B.name}选哪张牌（列）`,mx+cw-82,399,34,700);
 for(const [column,strategy] of presentation.scene.strategies.entries())tx(c,strategy.label,mx+cw*(column+.5),487,40,700,C.ink,'center');
 for(const [row,strategy] of presentation.scene.strategies.entries()){
- const y=my+ch*(row+.5);avatar(c,'A',mx-250,y-65,64);tx(c,presentation.actors.A.name,mx-176,y-20,34,700);tx(c,`选${strategy.label}（行）`,mx-176,y+29,32,400,C.muted);
+ const y=my+ch*(row+.5);avatar(c,'A',IDENTITY.avatarX,y-65,64);tx(c,presentation.actors.A.name,IDENTITY.labelX,y-20,34,700);tx(c,`选${strategy.label}（行）`,IDENTITY.labelX,y+29,32,400,C.muted);
  for(let column=0;column<2;column++){
   const selected=row===presentation.scene.selected.row&&column===presentation.scene.selected.column;
   round(c,mx+column*cw,my+row*ch,cw,ch,0,selected?C.faint:C.paper,C.ink,selected?4:2.5);
@@ -104,3 +107,11 @@ line(c,84,969,1836,969,C.light,1.5);tx(c,'身份接口草稿 · 字号固定 · 
 fs.writeFileSync(path.join(output,'identity-matrix.png'),identity.toBuffer('image/png'));
 fs.writeFileSync(path.join(output,'prototype-manifest.json'),JSON.stringify({status:'prototype',sourceCommit:spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),workingTreeDirty:Boolean(spawnSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}).stdout.trim()),originalPublicOnly:true,timelineDuration:timeline.duration,times,handArtLinked:false,presentation:{header:presentation.header,headerLines:presentation.headerLines,narrationNames:presentation.narrationNames,status:presentation.status,timingRevision:presentation.timingRevision},reports},null,2)+'\n');
 console.log(`Wrote 3 comparison boards, 12 native 1080p original-placeholder frames and 1 identity/matrix proof to ${path.relative(root,output)}. Prototype only; no production render changed.`);
+
+if(args.includes('--flat-regression')){
+ const flatOut=path.join(root,'artifacts/tabletop-flat-regression'),frames=path.join(flatOut,'frames');fs.mkdirSync(frames,{recursive:true});
+ for(let frame=0;frame<60;frame++){const canvas=createCanvas(1920,1080);draw(canvas.getContext('2d'),tabletopState('flat-rest',36.2+frame/30,{scene:presentation.scene,timeline}));fs.writeFileSync(path.join(frames,`${String(frame).padStart(4,'0')}.png`),canvas.toBuffer('image/png'));}
+ const movie=path.join(flatOut,'flat-unselected-pose.mp4'),encoded=spawnSync('ffmpeg',['-v','error','-y','-framerate','30','-i',path.join(frames,'%04d.png'),'-c:v','libx264','-crf','18','-pix_fmt','yuv420p','-movflags','+faststart',movie],{encoding:'utf8'});if(encoded.status!==0)throw Error(encoded.stderr);
+ const decoded=spawnSync('ffmpeg',['-v','error','-i',movie,'-f','null','-'],{encoding:'utf8'});if(decoded.status!==0)throw Error(decoded.stderr);
+ console.log('Wrote 2s / 60-frame flat pickup regression excerpt; only the chosen card rotates, non-selected fading remains a prototype.');
+}
