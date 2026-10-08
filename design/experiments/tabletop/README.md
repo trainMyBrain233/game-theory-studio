@@ -41,6 +41,8 @@ The tabletop has a back edge, opaque surface and front face. It occludes the low
 
 Native adjacent frames and actual playback are separate review steps; encoding/decoding or numerical continuity alone cannot mark visual acceptance. Generated manifests initially mark playback pending, and real-art acceptance remains open.
 
+The new cycle uses a fixed upright trajectory in world coordinates. `controller` is a scheduled ownership label: table → hand → table, with stable card IDs and matching handoff poses. It is not a general parent-coordinate switch and does not preserve velocity for arbitrary moving parents. Tests check left/right hand, elbow and card velocities at all motion boundaries and reject both a linear-lift mutation and an always-hand ownership mutation. CI runs these core contracts and renders the static tabletop proofs; it does **not** generate or play the new videos, so a green CI result does not establish dynamic visual acceptance.
+
 ## Still OPEN
 
 - Register relaxed/reaching/grasping/releasing images against a shared wrist, then integrate rear/front finger layers.
