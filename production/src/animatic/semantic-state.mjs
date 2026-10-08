@@ -28,22 +28,28 @@ function spokenScore(value) {
   const digits='零一二三四五六七八九';
   return value<10?digits[value]:(value>=20?digits[Math.floor(value/10)]:'')+'十'+(value%10?digits[value%10]:'');
 }
-/** The deliberately limited v1.1 narration forms resolve only from the case. */
-export function narrationForPhase(caseData,phase) {
+/** Structured clauses retain whole conditions/results without parsing prose. */
+function narrationParts(caseData,phase) {
   const {A,B}=caseData.players,kind=phase.narration.kind,cell=phase.focus.expectedCell;
   if(kind==='participants' || kind==='summary') {
     assert.equal(phase.focus.kind,'none',`${kind} narration requires a no-focus phase`);
-    return kind==='participants'?`${A.name}和${B.name}各自选牌，一起亮牌。`:'收益取决于双方的选择组合。';
+    return kind==='participants'?{clauses:[`${A.name}和${B.name}各自选牌`,'一起亮牌'],endings:['，','。']}:{clauses:['收益取决于双方的选择组合'],endings:['。']};
   }
   assert(CELLS.includes(cell),'Case narration requires an explicit semantic cell');
   const choices=choicesForCell(cell),values=caseData.values[cell];
   if(kind==='comparison') {
     assert.equal(phase.focus.kind,'comparison','Comparison narration requires a comparison phase');
-    return `${B.name}选${caseData.strategies[choices.B]}，${A.name}得${spokenScore(values[0])}分${phase.narration.ending}`;
+    return {clauses:[`${B.name}选${caseData.strategies[choices.B]}`,`${A.name}得${spokenScore(values[0])}分`],endings:['，',phase.narration.ending]};
   }
   assert.equal(phase.focus.kind,'case','Choice/result narration requires a case phase');
   assert(['choices','payoffs'].includes(kind),'Unsupported narration kind');
-  return kind==='choices'?`${A.name}选${caseData.strategies[choices.A]}，${B.name}选${caseData.strategies[choices.B]}。`:`${A.name}得${spokenScore(values[0])}分，${B.name}得${spokenScore(values[1])}分。`;
+  return {clauses:kind==='choices'?[`${A.name}选${caseData.strategies[choices.A]}`,`${B.name}选${caseData.strategies[choices.B]}`]:[`${A.name}得${spokenScore(values[0])}分`,`${B.name}得${spokenScore(values[1])}分`],endings:['，','。']};
+}
+/** The deliberately limited v1.1 forms resolve text and clauses from one case. */
+export function narrationClausesForPhase(caseData,phase) {return narrationParts(caseData,phase).clauses;}
+export function narrationForPhase(caseData,phase) {
+  const {clauses,endings}=narrationParts(caseData,phase);
+  return clauses.map((clause,index)=>clause+endings[index]).join('');
 }
 function unique(items, label) {
   assert.equal(new Set(items.map(item=>item.id)).size,items.length,`${label}: duplicate ID`);
@@ -70,6 +76,10 @@ export function compilePlan(input) {
       assert(phase.lines.every(line=>readableCount(line)<=22),'Subtitle line exceeds 22 readable characters');
       assert(phase.lines.every(line=>line.isWellFormed() && line.trim()===line && !/[\p{C}\p{Zl}\p{Zp}]/u.test(line)),'Subtitle lines must be explicit well-formed single lines without controls');
       assert.equal(phase.lines.join(''),narrationForPhase(plan.caseData,phase),`Stale narration for ${phase.id}: rebuild from semantic case references`);
+      for(const clause of narrationClausesForPhase(plan.caseData,phase)) {
+        const occurrences=text=>text.split(clause).length-1;
+        assert.equal(phase.lines.reduce((sum,line)=>sum+occurrences(line),0),occurrences(phase.lines.join('')),`Subtitle splits protected clause in ${phase.id}: ${clause}`);
+      }
       const focus = phase.focus;
       if (focus.kind==='none') {
         assert.equal(focus.expectedCell,null,'No-focus phase cannot expect a cell');
@@ -114,15 +124,21 @@ export function compilePlan(input) {
         assert.equal(phase.focus.scope,phase.id,'Focus event must belong to the current phase');
         assert.equal(event.cell,phase.focus.expectedCell,'Focus event contradicts the current expected cell');
       }
-      if (event.type==='reveal_score') assert.equal(event.cell,phase.focus.expectedCell,'Score event must match its current case');
+      if (event.type==='reveal_score') {
+        assert.equal(event.cell,phase.focus.expectedCell,'Score event must match its current case');
+        assert.equal(phase.narration.kind,'payoffs','Score event must belong to a phase narrating that complete payoff pair');
+      }
     }
   }
   assert.equal(cursor,plan.durationFrames,'Blocks must cover the exact duration');
   for (const cell of CELLS) {
-    const owners=events.filter(event=>event.type==='reveal_score' && event.cell===cell).map(event=>event.owner).sort();
-    if(owners.length) assert.deepEqual(owners,['A','B'],`${cell}: a revealed pair requires exactly one event per owner`);
+    const reveals=events.filter(event=>event.type==='reveal_score' && event.cell===cell);
+    const narrated=phases.filter(phase=>['payoffs','comparison'].includes(phase.narration.kind) && phase.focus.expectedCell===cell);
+    if(reveals.length || narrated.length)assert.deepEqual(reveals.map(event=>event.owner).sort(),['A','B'],`${cell}: a narrated/revealed pair requires exactly one event per owner`);
+    for(const phase of narrated)assert(reveals.every(event=>event.frame<phase.endFrame),`${phase.id}: narrated scores must be revealed by the end of their current window`);
   }
-  for(const phase of phases) assert(events.filter(event=>event.phaseId===phase.id && event.type==='focus_cell').length<=1,'Only one focus activation per phase');
+  const scopes=new Set(phases.map(phase=>phase.focus.scope).filter(scope=>scope!==null));
+  for(const scope of scopes)assert.equal(events.filter(event=>event.phaseId===scope && event.type==='focus_cell').length,1,`Focused scope ${scope} requires exactly one activation`);
   const cardEvents=events.filter(event=>['joint_reveal','conceal_choices'].includes(event.type));
   for(let i=1;i<cardEvents.length;i++) {
     const previous=cardEvents[i-1];

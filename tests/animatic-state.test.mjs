@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {rebuildNarration} from './fixtures/animatic/rebuild-narration.mjs';
-import {compilePlan,resolveFrame} from '../production/src/animatic/semantic-state.mjs';
+import {compilePlan,resolveFrame,narrationClausesForPhase} from '../production/src/animatic/semantic-state.mjs';
 const fixture=()=>JSON.parse(fs.readFileSync(new URL('./fixtures/animatic/minimal-plan.json',import.meta.url),'utf8'));
 const compiled=compilePlan(fixture());
 
@@ -100,7 +100,7 @@ test('one semantic case rebuild drives changed names, strategies, asymmetric spo
  const changed=structuredClone(plan);changed.blocks[1].subtitles[1].lines=['参与甲得零分，参与乙得零分。'];changed.blocks[1].voiceover=changed.blocks[1].subtitles.flatMap(phase=>phase.lines).join('');assert.throws(()=>compilePlan(changed),/Stale narration/);
 });
 test('strategy words remain indivisible across both lines and subtitle groups',()=>{
- const plan=fixture(),phase=plan.blocks[1].subtitles[0];phase.lines=['甲方选红','牌，乙方选红牌。'];assert.throws(()=>compilePlan(plan),/splits protected token/);
+ const plan=fixture(),phase=plan.blocks[1].subtitles[0];phase.lines=['甲方选红','牌，乙方选红牌。'];assert.throws(()=>compilePlan(plan),/splits protected clause/);
  const grouped=fixture(),original=grouped.blocks[1].subtitles[0];const next=structuredClone(original);original.endFrame=65;original.lines=['甲方选红'];next.id='split_choice';next.startFrame=65;next.lines=['牌，乙方选红牌。'];grouped.blocks[1].subtitles.splice(1,0,next);assert.throws(()=>compilePlan(grouped),/Stale narration/);
 });
 for(const [label,A,B,red,blue] of [
@@ -138,4 +138,49 @@ test('glyph-bearing but invisible Unicode fillers cannot distinguish player or s
    rebuildNarration(plan);assert.throws(()=>compilePlan(plan),/default-ignorable/);
   }
  }
+});
+
+for(const [name,blockIndex,phaseIndex,lines] of [
+ ['choice condition',1,0,['甲方选','红牌，乙方选红牌。']],
+ ['payoff result',1,1,['甲方得','二分，乙方得七分。']],
+ ['comparison condition',3,0,['乙方选','红牌，甲方得二分；']],
+ ['comparison result',3,0,['乙方选红牌，甲方得','二分；']],
+])test(`complete generated ${name} cannot cross subtitle lines`,()=>{
+ const plan=fixture();plan.blocks[blockIndex].subtitles[phaseIndex].lines=lines;assert.throws(()=>compilePlan(plan),/splits protected clause/);
+});
+test('complete clauses may occupy two lines, including labels containing punctuation',()=>{
+ const plan=fixture();plan.caseData.players.A.name='甲，方';rebuildNarration(plan);
+ for(const phase of [plan.blocks[1].subtitles[0],plan.blocks[1].subtitles[1],plan.blocks[3].subtitles[0]]){
+  const clauses=narrationClausesForPhase(plan.caseData,phase),last=phase.narration.kind==='comparison'?'；':'。';phase.lines=[clauses[0]+'，',clauses[1]+last];
+ }
+ assert.deepEqual(narrationClausesForPhase(plan.caseData,plan.blocks[1].subtitles[0]),['甲，方选红牌','乙方选红牌']);compilePlan(plan);
+ plan.blocks[1].subtitles[0].lines=['甲，方选','红牌，乙方选红牌。'];assert.throws(()=>compilePlan(plan),/splits protected clause/);
+});
+test('narrated payoff cells require both owner reveals even when the complete pair was omitted',()=>{
+ const plan=fixture();plan.blocks[1].events=plan.blocks[1].events.filter(event=>event.type!=='reveal_score');
+ assert.throws(()=>compilePlan(plan),/RR: a narrated\/revealed pair requires exactly one event per owner/);
+ const comparison=fixture();comparison.blocks[3].subtitles[0].focus.expectedCell='BR';comparison.blocks[3].subtitles[0].focus.rowChoice='blue';comparison.blocks[3].events[0].cell='BR';rebuildNarration(comparison);
+ assert.throws(()=>compilePlan(comparison),/BR: a narrated\/revealed pair requires exactly one event per owner/);
+});
+test('a later payoff phase can reuse an already completed pair without revealing it twice',()=>{
+ const plan=fixture(),block=plan.blocks[4],phase=block.subtitles[0];phase.narration={kind:'payoffs'};phase.focus={kind:'case',expectedCell:'RR',scope:phase.id,rowChoice:null};
+ block.events=[{id:'repeat_rr_focus',frame:285,phaseId:phase.id,type:'focus_cell',cell:'RR'}];rebuildNarration(plan);
+ const compiled=compilePlan(plan);assert.deepEqual(resolveFrame(compiled,285).revealedScores.RR,[2,7]);assert.equal(resolveFrame(compiled,285).activeCell,'RR');
+ const late=structuredClone(plan),events=late.blocks[1].events.filter(event=>event.type==='reveal_score');late.blocks[1].events=late.blocks[1].events.filter(event=>event.type!=='reveal_score');
+ events.forEach((event,index)=>{event.phaseId=phase.id;event.frame=300+index*10;});late.blocks[4].events.push(...events);
+ assert.throws(()=>compilePlan(late),/rr_result: narrated scores must be revealed by the end/);
+});
+test('score events cannot appear during choice or existing-score comparison narration',()=>{
+ const early=fixture();for(const [index,event] of early.blocks[1].events.filter(event=>event.type==='reveal_score').entries()){event.phaseId='rr_choice';event.frame=71+index;}
+ assert.throws(()=>compilePlan(early),/phase narrating that complete payoff pair/);
+ const comparison=fixture(),event=comparison.blocks[1].events.find(event=>event.id==='rr_a');comparison.blocks[1].events=comparison.blocks[1].events.filter(item=>item!==event);event.phaseId='compare_red';event.frame=221;comparison.blocks[3].events.push(event);
+ assert.throws(()=>compilePlan(comparison),/phase narrating that complete payoff pair/);
+});
+test('every declared case/comparison focus scope needs exactly one activation',()=>{
+ for(const index of [1,2,3]){
+  const plan=fixture(),removed=plan.blocks[index].events.find(event=>event.type==='focus_cell');plan.blocks[index].events=plan.blocks[index].events.filter(event=>event!==removed);
+  assert.throws(()=>compilePlan(plan),new RegExp(`Focused scope ${removed.phaseId} requires exactly one activation`));
+ }
+ const duplicated=fixture();duplicated.blocks[1].events.push({...duplicated.blocks[1].events[0],id:'second_rr_focus',frame:71});assert.throws(()=>compilePlan(duplicated),/Focused scope rr_choice requires exactly one activation/);
+ const normal=compilePlan(fixture());assert.equal(resolveFrame(normal,119).activeCell,'RR','A result phase legitimately reuses the choice scope activation');
 });

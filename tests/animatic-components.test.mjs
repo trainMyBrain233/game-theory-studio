@@ -1,10 +1,12 @@
 import '../scripts/isolated-fonts.mjs';
-import test,{afterEach} from 'node:test';
+import test,{after,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {withSourceFixture} from '../scripts/source-fixture.mjs';
+import {pythonCommand} from '../scripts/python.mjs';
 import {createHash} from 'node:crypto';
 import {createCanvas} from '@napi-rs/canvas';
 import {rebuildNarration} from './fixtures/animatic/rebuild-narration.mjs';
@@ -19,6 +21,30 @@ const pixel=(rendered,x,y)=>Array.from(rendered.canvas.getContext('2d').getImage
 const rgb=color=>[...color.slice(1).matchAll(/../g)].map(match=>parseInt(match[0],16)).concat(255);
 const crop=(rendered,x,y,w,h)=>createHash('sha256').update(rendered.canvas.getContext('2d').getImageData(x,y,w,h).data).digest('hex');
 const session=createRenderSession({plan:fixture(),adapters:syntheticCast()});
+// A source fixture deliberately has no .venv. Bind the parent's configured
+// interpreter explicitly instead of accidentally relying on runner-global pip.
+const pythonProbe=spawnSync(pythonCommand(),['-c','import sys; print(sys.executable)'],{encoding:'utf8'});
+assert.equal(pythonProbe.status,0,pythonProbe.stderr);
+const projectPython=pythonProbe.stdout.trim();assert(path.isAbsolute(projectPython),'Project Python must resolve to an absolute executable');
+const compositorCode="import fs from 'node:fs'; import {createRenderSession} from './production/src/animatic/render-frame.mjs'; import {syntheticCast} from './tests/fixtures/animatic/synthetic-cast.mjs'; const result=createRenderSession({plan:JSON.parse(fs.readFileSync('tests/fixtures/animatic/minimal-plan.json')),adapters:syntheticCast()}).render(0);result.dispose();";
+const runFixture=(root,env)=>spawnSync(process.execPath,['--import','./scripts/isolated-fonts.mjs','--input-type=module','-e',compositorCode],{cwd:root,encoding:'utf8',maxBuffer:4*1024*1024,env});
+const runCompositorFixture=(root,env)=>runFixture(root,{...env,PYTHON:projectPython});
+let isolatedPythonDirectory,isolatedEnvironment;
+function noGlobalFontToolsEnvironment(){
+ if(isolatedEnvironment)return isolatedEnvironment;
+ isolatedPythonDirectory=fs.mkdtempSync(path.join(os.tmpdir(),'animatic-bare-python-'));
+ const created=spawnSync(projectPython,['-m','venv','--without-pip',isolatedPythonDirectory],{encoding:'utf8'});
+ assert.equal(created.status,0,created.stdout+created.stderr);
+ const bin=path.join(isolatedPythonDirectory,process.platform==='win32'?'Scripts':'bin');
+ isolatedEnvironment={...process.env,PATH:bin+path.delimiter+(process.env.PATH||''),PYTHONNOUSERSITE:'1'};
+ for(const key of ['PYTHON','PYTHONPATH','PYTHONHOME','VIRTUAL_ENV'])delete isolatedEnvironment[key];
+ const check=spawnSync('python3',['-c','import fontTools'],{encoding:'utf8',env:isolatedEnvironment});
+ assert.notEqual(check.status,0,'Fallback interpreter must genuinely lack global/user fontTools');
+ assert.match(check.stderr,/No module named ['"]fontTools['"]/);
+ return isolatedEnvironment;
+}
+after(()=>{if(isolatedPythonDirectory)fs.rmSync(isolatedPythonDirectory,{recursive:true,force:true});});
+
 
 test('resolved matrix renders each active cell from current phase and only event-revealed numbers',()=>{
  for(const [frame,cell] of [[69,null],[70,'RR'],[119,'RR'],[120,null],[140,'RB'],[200,null],[220,'RR'],[240,null],[260,'RB'],[280,null]]){
@@ -113,6 +139,17 @@ test('actual subtitle alpha ink has the expected 40px font-scale height',()=>{
  const record=rendered.textRecords.find(record=>record.role==='subtitle');assert(record.height>=35&&record.height<=44);rendered.dispose();
 });
 
+test('source fixtures bind project Python when the global fallback has no fontTools',()=>{
+ withSourceFixture(root=>{
+  assert(!fs.existsSync(path.join(root,'.venv')),'The fixture must not acquire its own virtual environment');
+  const environment=noGlobalFontToolsEnvironment();
+  const unbound=runFixture(root,environment);
+  assert.notEqual(unbound.status,0);assert.match(unbound.stdout+unbound.stderr,/Missing fontTools/,'Omitting PYTHON must reproduce the clean-runner failure');
+  const bound=runCompositorFixture(root,environment);
+  assert.equal(bound.status,0,bound.stdout+bound.stderr);
+ });
+});
+
 for(const [label,from,to,reason] of [
  ['tiny applied subtitle font','ctx.font=requestedFont;','ctx.font=`${weight} ${role==="subtitle"?8:size}px "${fontFamily}"`;',/Applied canvas font size must be 40px/],
  ['regular applied subtitle weight','ctx.font=requestedFont;','ctx.font=`${role==="subtitle"?400:weight} ${size}px "${fontFamily}"`;',/Applied canvas font weight must be 700/],
@@ -123,8 +160,8 @@ for(const [label,from,to,reason] of [
 ])test(`real compositor rejects ${label}`,()=>{
  withSourceFixture(root=>{
   const file=path.join(root,'production/src/animatic/render-frame.mjs'),source=fs.readFileSync(file,'utf8');assert(source.includes(from),`Mutation anchor missing: ${label}`);fs.writeFileSync(file,source.replace(from,to));
-  const code="import fs from 'node:fs'; import {createRenderSession} from './production/src/animatic/render-frame.mjs'; import {syntheticCast} from './tests/fixtures/animatic/synthetic-cast.mjs'; const result=createRenderSession({plan:JSON.parse(fs.readFileSync('tests/fixtures/animatic/minimal-plan.json')),adapters:syntheticCast()}).render(0);result.dispose();";
-  const result=spawnSync(process.execPath,['--import','./scripts/isolated-fonts.mjs','--input-type=module','-e',code],{cwd:root,encoding:'utf8',maxBuffer:4*1024*1024});
+  const result=runCompositorFixture(root,noGlobalFontToolsEnvironment());
+  assert.doesNotMatch(result.stdout+result.stderr,/Missing fontTools|font provenance failed/,`${label} must reach its intended compositor assertion`);
   assert.notEqual(result.status,0,`${label} unexpectedly passed`);assert.match(result.stdout+result.stderr,reason);
  });
 });

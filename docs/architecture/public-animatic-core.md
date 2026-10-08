@@ -40,14 +40,20 @@ alignment needs a separate explicit contract and future tests.
 
 The case defines A as row / payoff index 0 and B as column / index 1. Matrix
 values live only in `caseData.values`. A `reveal_score` event names its cell
-and owner and does not contain another copy of the value. Each cell that is
-revealed must eventually have exactly one A and one B event; partial reveal
-frames are supported. Scores accumulate only when those events occur.
+and owner and does not contain another copy of the value. Every cell narrated as payoffs/comparison or actually revealed requires
+exactly one A and one B reveal event. Both must have happened by the end of
+that narration window; a later reference may reuse an already-completed pair
+without duplicating events. New score events belong only to the complete
+`payoffs` narration form, never a choice or existing-score comparison phase.
+Partial reveal frames within a payoff phase remain supported. Scores
+accumulate only when those events occur.
 
 Every subtitle phase has an explicit focus kind, expected cell, and scope.
 A new combination or comparison phrase starts with no active border until its
 own `focus_cell` event. Consecutive case-result phases may explicitly share the
 same case-choice scope; a comparison cannot inherit another phrase's scope.
+Every distinct focused scope requires exactly one activation, including
+comparison scopes; inherited case-result phases reuse the same activation.
 A summary's `none` phase clears all current focus while keeping earned numbers.
 The renderer draws the border from `activeCell`, never from the last historical
 selection. Row focus is independently explicit.
@@ -62,7 +68,11 @@ card transitions are invalid.
 Subtitles are complete groups of one or two authored lines. Lines have at most
 22 readable Unicode letters/digits; their concatenation must equal the block's
 voiceover exactly, without whitespace normalization. Player names, both configured strategy labels and numeric-unit tokens cannot
-cross line or group boundaries. The group remains fully visible through the
+cross line or group boundaries. In addition, complete generated choice,
+condition and payoff-result clauses are indivisible. These clauses come from
+the same structured semantic formatter as the final narration, so punctuation
+inside a configured label cannot be mistaken for a clause separator. Breaking
+at the separator between complete clauses is allowed. The group remains fully visible through the
 entire window, including tail frames, outside avatar/scene alpha changes.
 The compositor reads actual `ctx.font` back after applying each font and checks
 size, weight and full family. Text records contain that applied state. Measured
@@ -101,6 +111,11 @@ an exact nonzero-alpha bounding rectangle, and `draw(ctx)` at native origin.
 No paths are read from plans and no private import or resource fallback exists.
 The render session requires both actors, captures their actual raster pixels,
 and independently checks declared bounds against every nonzero alpha pixel.
+Declared width and height are saved before invoking the provider. A callback
+that resizes its exposed canvas is rejected before any private allocation or
+pixel read; changing the adapter's declaration during drawing cannot change
+the saved dimensions. Capture always copies exactly the validated dimensions,
+and releases temporary surfaces on both success and error.
 Provider drawing uses a temporary exposed surface; its pixels are copied into
 a second private surface before hashing. Retaining the provider context or
 canvas cannot mutate the captured pixels, fingerprint or cached/uncached frames.
@@ -194,7 +209,12 @@ npm test
 
 New tests live under the existing `tests/*.test.mjs` glob. Core test-file
 concurrency is bounded to two so native Canvas allocations remain bounded;
-all files and test cases still run. The explicit
+all files and test cases still run. Temporary source-checkout compositor tests
+explicitly pass the project's selected Python executable. Their regression
+environment puts a real `--without-pip` virtual environment on the fallback
+PATH, proves that fallback has no fontTools, and keeps all six original font
+and layout mutation assertions strict. The fixture does not borrow a runner's
+global pip packages or acquire its own project `.venv`. The explicit
 `test:animatic` smoke also runs in `npm test` and in the Quality workflow, after
 font preparation/verification. No existing test stage is removed or skipped.
 

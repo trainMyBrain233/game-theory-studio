@@ -59,17 +59,22 @@ export function drawResolvedMatrix(ctx,textContext,records,state,caseData,fontFa
 }
 function snapshotAdapter(adapter,id) {
  validateAvatarAdapter(adapter);assert.equal(adapter.id,id,'Avatar adapter actor identity must match its requested role');
- assert(adapter.width<=4096 && adapter.height<=4096,'Avatar native dimensions exceed the supported test contract');
+ const {width,height}=adapter;
+ assert(width<=4096 && height<=4096,'Avatar native dimensions exceed the supported test contract');
  // Provider code may retain its context/canvas. Never use that exposed surface
  // as the session asset: copy pixels into a second, strictly private surface.
- const exposed=createCanvas(adapter.width,adapter.height);adapter.draw(exposed.getContext('2d'));
- const image=createCanvas(exposed.width,exposed.height);
- image.getContext('2d').putImageData(exposed.getContext('2d').getImageData(0,0,exposed.width,exposed.height),0,0);
- exposed.width=1;exposed.height=1;
- const actual=alphaInkBounds(image);assert.deepEqual(actual,adapter.alphaBounds,'Adapter alphaBounds must match every nonzero source pixel');
- const bytes=image.getContext('2d').getImageData(0,0,image.width,image.height).data;
- const captured=Object.freeze({id,width:image.width,height:image.height,alphaBounds:actual,draw:ctx=>ctx.drawImage(image,0,0)});
- return {adapter:captured,fingerprint:{id,width:image.width,height:image.height,alphaBounds:actual,rgbaSha256:hash(bytes)}};
+ const exposed=createCanvas(width,height);let image;
+ try{
+  adapter.draw(exposed.getContext('2d'));
+  assert(exposed.width===width && exposed.height===height,`Avatar provider draw must preserve declared canvas dimensions: expected ${width}x${height}, got ${exposed.width}x${exposed.height}`);
+  image=createCanvas(width,height);
+  image.getContext('2d').putImageData(exposed.getContext('2d').getImageData(0,0,width,height),0,0);
+  const actual=alphaInkBounds(image);assert.deepEqual(actual,adapter.alphaBounds,'Adapter alphaBounds must match every nonzero source pixel');
+  const bytes=image.getContext('2d').getImageData(0,0,width,height).data;
+  const captured=Object.freeze({id,width,height,alphaBounds:actual,draw:ctx=>ctx.drawImage(image,0,0)});
+  return {adapter:captured,fingerprint:{id,width,height,alphaBounds:actual,rgbaSha256:hash(bytes)}};
+ }catch(error){if(image){image.width=1;image.height=1;}throw error;}
+ finally{exposed.width=1;exposed.height=1;}
 }
 /**
  * Capture plan/case, geometry, exact font bytes and actual provider pixels once.
