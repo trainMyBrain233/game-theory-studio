@@ -1,0 +1,450 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:game-theory-studio:animatic-plan:1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "width": {
+      "const": 1920
+    },
+    "height": {
+      "const": 1080
+    },
+    "fps": {
+      "const": 30
+    },
+    "durationFrames": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "timingStatus": {
+      "enum": [
+        "synthetic_test_only",
+        "manual_reference_not_audio_aligned"
+      ]
+    },
+    "audioTiming": {
+      "type": "null"
+    },
+    "caseData": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "players": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "A": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "axis": {
+                  "const": "row"
+                },
+                "payoffIndex": {
+                  "const": 0
+                }
+              },
+              "required": [
+                "name",
+                "axis",
+                "payoffIndex"
+              ]
+            },
+            "B": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "axis": {
+                  "const": "column"
+                },
+                "payoffIndex": {
+                  "const": 1
+                }
+              },
+              "required": [
+                "name",
+                "axis",
+                "payoffIndex"
+              ]
+            }
+          },
+          "required": [
+            "A",
+            "B"
+          ]
+        },
+        "strategies": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "red": {
+              "type": "string",
+              "minLength": 1
+            },
+            "blue": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "red",
+            "blue"
+          ]
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "RR": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            },
+            "RB": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            },
+            "BR": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            },
+            "BB": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            }
+          },
+          "required": [
+            "RR",
+            "RB",
+            "BR",
+            "BB"
+          ]
+        }
+      },
+      "required": [
+        "players",
+        "strategies",
+        "values"
+      ]
+    },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "startFrame": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "endFrame": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "voiceover": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subtitles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                },
+                "startFrame": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "endFrame": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "lines": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "focus": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "none",
+                        "case",
+                        "comparison"
+                      ]
+                    },
+                    "expectedCell": {
+                      "enum": [
+                        "RR",
+                        "RB",
+                        "BR",
+                        "BB",
+                        null
+                      ]
+                    },
+                    "scope": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rowChoice": {
+                      "enum": [
+                        "red",
+                        "blue",
+                        null
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "expectedCell",
+                    "scope",
+                    "rowChoice"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "startFrame",
+                "endFrame",
+                "lines",
+                "focus"
+              ]
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                    },
+                    "frame": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "phaseId": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                    },
+                    "type": {
+                      "const": "joint_reveal"
+                    },
+                    "durationFrames": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "frame",
+                    "phaseId",
+                    "type",
+                    "durationFrames"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                    },
+                    "frame": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "phaseId": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                    },
+                    "type": {
+                      "const": "conceal_choices"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "frame",
+                    "phaseId",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                    },
+                    "frame": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "phaseId": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                    },
+                    "type": {
+                      "const": "focus_cell"
+                    },
+                    "cell": {
+                      "enum": [
+                        "RR",
+                        "RB",
+                        "BR",
+                        "BB"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "frame",
+                    "phaseId",
+                    "type",
+                    "cell"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                    },
+                    "frame": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "phaseId": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                    },
+                    "type": {
+                      "const": "reveal_score"
+                    },
+                    "cell": {
+                      "enum": [
+                        "RR",
+                        "RB",
+                        "BR",
+                        "BB"
+                      ]
+                    },
+                    "owner": {
+                      "enum": [
+                        "A",
+                        "B"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "frame",
+                    "phaseId",
+                    "type",
+                    "cell",
+                    "owner"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "startFrame",
+          "endFrame",
+          "voiceover",
+          "subtitles",
+          "events"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "width",
+    "height",
+    "fps",
+    "durationFrames",
+    "timingStatus",
+    "audioTiming",
+    "caseData",
+    "blocks"
+  ]
+}

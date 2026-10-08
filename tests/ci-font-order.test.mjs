@@ -8,7 +8,7 @@ import {ROOT,pythonCommand} from '../scripts/python.mjs';
 
 const workflow=fs.readFileSync(path.join(ROOT,'.github/workflows/quality.yml'),'utf8');
 const packageData=JSON.parse(fs.readFileSync(path.join(ROOT,'package.json'),'utf8'));
-const dependent=['test:core','test:render','render:smoke','test:episode'];
+const dependent=['test:core','test:animatic','test:render','render:smoke','test:episode'];
 function assertWorkflowFontOrder(source){
  const commands=[...source.matchAll(/\bnpm run ([\w:]+)([^\n]*)/g)].map(match=>({script:match[1],args:match[2].trim()}));
  const positions=script=>commands.flatMap((command,index)=>command.script===script?[index]:[]);
@@ -29,11 +29,11 @@ test('CI prepares and verifies official SC fonts before every font-dependent tes
  assert.throws(()=>assertWorkflowFontOrder(workflow.replace('-- --download','')),/official downloads/);
 });
 test('npm test verifies prepared fonts before core and retains every aggregate stage',()=>{
- const expected=['qa:data','qa:editorial','qa:fonts','test:core','test:render','render:smoke','test:episode','qa:source'];
+ const expected=['qa:data','qa:editorial','qa:fonts','test:core','test:animatic','test:render','render:smoke','test:episode','qa:source'];
  const commands=packageData.scripts.test.split(' && ').map(command=>command.replace(/^npm run /,''));
  assert.deepEqual(commands,expected);
  assert.ok(packageData.scripts['qa:fonts'].startsWith('node scripts/python.mjs scripts/setup_fonts.py --verify-only && '));
- assert.match(packageData.scripts['test:core'],/node --test tests\/\*\.test\.mjs/,'Core must retain all test files, including raster negatives.');
+ assert.match(packageData.scripts['test:core'],/node --test --test-concurrency=2 tests\/\*\.test\.mjs/,'Core must retain all test files, including raster negatives.');
 });
 test('empty-font source checkout rejects actual matrix rendering, then independently verified prepared fonts enable it',()=>{
  withSourceFixture(root=>{

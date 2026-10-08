@@ -98,3 +98,12 @@ timeline Schema 2.1 的 `reveal_scores` 是完整四格揭示合同：必须有�
 保留原 [MIT LICENSE](LICENSE)，适用于本仓库原创源码/原创 SVG。Noto 字体受 [SIL OFL 1.1](docs/licenses/OFL-Noto.txt) 约束；MIT 不替代字体或 EA 内容权利。外部参考只列来源和设计观察，不分发截图/素材；见 [第三方内容边界](docs/third-party-content.md) 与 [视觉参考](docs/visual-references.md)。
 
 创作内容复核见[教学内容检查单](docs/teaching-content-checklist.md)；通用元素、角色层坐标与支持范围见[可复用绘制接口](docs/render-elements.md)。
+
+### Public animatic components (stage one)
+
+The [public animatic core](docs/architecture/public-animatic-core.md) adds pure
+integer-frame semantic state, complete subtitle groups, explicit matrix focus,
+injected avatar transitions and session-owned raster caching. Run
+`npm run test:animatic` for the original synthetic-asset smoke; it is also part
+of `npm test` and CI after font QA. This component pass is not complete-episode,
+production-character or human-audio acceptance. Existing renderers are unchanged.

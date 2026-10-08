@@ -18,12 +18,12 @@
     "qa:editorial": "node chapters/01-four-elements/editorial/zombie-kingdom-r2/build.mjs --check",
     "qa:data": "node scripts/qa-data.mjs",
     "qa:source": "node scripts/python.mjs scripts/qa_source.py",
-    "test": "npm run qa:data && npm run qa:editorial && npm run qa:fonts && npm run test:core && npm run test:render && npm run render:smoke && npm run test:episode && npm run qa:source",
+    "test": "npm run qa:data && npm run qa:editorial && npm run qa:fonts && npm run test:core && npm run test:animatic && npm run test:render && npm run render:smoke && npm run test:episode && npm run qa:source",
     "render:cast": "npm run build:cast",
     "qa:cast": "node scripts/qa-cast-source.mjs && node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/check_clearance.mjs",
     "setup:python": "node scripts/setup-python.mjs",
     "qa:layout": "node --import ./scripts/isolated-fonts.mjs scripts/qa-layout.mjs",
-    "test:core": "node --test tests/*.test.mjs && node scripts/python.mjs -m unittest discover -s tests -p test_*.py",
+    "test:core": "node --test --test-concurrency=2 tests/*.test.mjs && node scripts/python.mjs -m unittest discover -s tests -p test_*.py",
     "test:render": "npm run render:proposals && npm run qa:design && npm run qa:layout && npm run qa:cast && npm run test:case-reuse && npm run qa:tabletop",
     "render:smoke": "node --import ./scripts/isolated-fonts.mjs scripts/render-smoke.mjs",
     "chapter:new": "node scripts/new-chapter.mjs",
@@ -50,7 +50,8 @@
     "render:art-proof": "node --import ./scripts/isolated-fonts.mjs scripts/render-public-art-proof.mjs",
     "qa:tabletop": "node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/qa-text.mjs && node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/qa-matrix.mjs && node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/render.mjs --placeholder-cast",
     "render:tabletop:interaction": "node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/render-interaction.mjs --placeholder-cast",
-    "render:tabletop:flat-regression": "node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/render.mjs --placeholder-cast --flat-regression"
+    "render:tabletop:flat-regression": "node --import ./scripts/isolated-fonts.mjs design/experiments/tabletop/render.mjs --placeholder-cast --flat-regression",
+    "test:animatic": "node --import ./scripts/isolated-fonts.mjs scripts/animatic-public-smoke.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.10"

@@ -1,0 +1,281 @@
+{
+  "schema_version": "1.0",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationFrames": 360,
+  "timingStatus": "synthetic_test_only",
+  "audioTiming": null,
+  "caseData": {
+    "players": {
+      "A": {
+        "name": "甲方",
+        "axis": "row",
+        "payoffIndex": 0
+      },
+      "B": {
+        "name": "乙方",
+        "axis": "column",
+        "payoffIndex": 1
+      }
+    },
+    "strategies": {
+      "red": "红牌",
+      "blue": "蓝牌"
+    },
+    "values": {
+      "RR": [
+        2,
+        7
+      ],
+      "RB": [
+        1,
+        9
+      ],
+      "BR": [
+        8,
+        0
+      ],
+      "BB": [
+        4,
+        6
+      ]
+    }
+  },
+  "blocks": [
+    {
+      "id": "intro",
+      "startFrame": 0,
+      "endFrame": 60,
+      "voiceover": "甲方和乙方各自选牌，一起亮牌。",
+      "subtitles": [
+        {
+          "id": "intro_caption",
+          "startFrame": 0,
+          "endFrame": 60,
+          "lines": [
+            "甲方和乙方各自选牌，一起亮牌。"
+          ],
+          "focus": {
+            "kind": "none",
+            "expectedCell": null,
+            "scope": null,
+            "rowChoice": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "id": "open",
+          "frame": 20,
+          "phaseId": "intro_caption",
+          "type": "joint_reveal",
+          "durationFrames": 20
+        },
+        {
+          "id": "hide",
+          "frame": 50,
+          "phaseId": "intro_caption",
+          "type": "conceal_choices"
+        }
+      ]
+    },
+    {
+      "id": "red_pair",
+      "startFrame": 60,
+      "endFrame": 120,
+      "voiceover": "两位都选红牌。甲方得二分，乙方得七分。",
+      "subtitles": [
+        {
+          "id": "rr_choice",
+          "startFrame": 60,
+          "endFrame": 80,
+          "lines": [
+            "两位都选红牌。"
+          ],
+          "focus": {
+            "kind": "case",
+            "expectedCell": "RR",
+            "scope": "rr_choice",
+            "rowChoice": null
+          }
+        },
+        {
+          "id": "rr_result",
+          "startFrame": 80,
+          "endFrame": 120,
+          "lines": [
+            "甲方得二分，乙方得七分。"
+          ],
+          "focus": {
+            "kind": "case",
+            "expectedCell": "RR",
+            "scope": "rr_choice",
+            "rowChoice": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "id": "rr_select",
+          "frame": 70,
+          "phaseId": "rr_choice",
+          "type": "focus_cell",
+          "cell": "RR"
+        },
+        {
+          "id": "rr_a",
+          "frame": 90,
+          "phaseId": "rr_result",
+          "type": "reveal_score",
+          "cell": "RR",
+          "owner": "A"
+        },
+        {
+          "id": "rr_b",
+          "frame": 100,
+          "phaseId": "rr_result",
+          "type": "reveal_score",
+          "cell": "RR",
+          "owner": "B"
+        }
+      ]
+    },
+    {
+      "id": "mixed_pair",
+      "startFrame": 120,
+      "endFrame": 200,
+      "voiceover": "甲方选红，乙方选蓝。甲方得一分，乙方得九分。",
+      "subtitles": [
+        {
+          "id": "rb_choice",
+          "startFrame": 120,
+          "endFrame": 150,
+          "lines": [
+            "甲方选红，乙方选蓝。"
+          ],
+          "focus": {
+            "kind": "case",
+            "expectedCell": "RB",
+            "scope": "rb_choice",
+            "rowChoice": null
+          }
+        },
+        {
+          "id": "rb_result",
+          "startFrame": 150,
+          "endFrame": 200,
+          "lines": [
+            "甲方得一分，乙方得九分。"
+          ],
+          "focus": {
+            "kind": "case",
+            "expectedCell": "RB",
+            "scope": "rb_choice",
+            "rowChoice": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "id": "rb_select",
+          "frame": 140,
+          "phaseId": "rb_choice",
+          "type": "focus_cell",
+          "cell": "RB"
+        },
+        {
+          "id": "rb_a",
+          "frame": 160,
+          "phaseId": "rb_result",
+          "type": "reveal_score",
+          "cell": "RB",
+          "owner": "A"
+        },
+        {
+          "id": "rb_b",
+          "frame": 170,
+          "phaseId": "rb_result",
+          "type": "reveal_score",
+          "cell": "RB",
+          "owner": "B"
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "startFrame": 200,
+      "endFrame": 280,
+      "voiceover": "对方选红，甲方得二分；对方选蓝，甲方得一分。",
+      "subtitles": [
+        {
+          "id": "compare_red",
+          "startFrame": 200,
+          "endFrame": 240,
+          "lines": [
+            "对方选红，甲方得二分；"
+          ],
+          "focus": {
+            "kind": "comparison",
+            "expectedCell": "RR",
+            "scope": "compare_red",
+            "rowChoice": "red"
+          }
+        },
+        {
+          "id": "compare_blue",
+          "startFrame": 240,
+          "endFrame": 280,
+          "lines": [
+            "对方选蓝，甲方得一分。"
+          ],
+          "focus": {
+            "kind": "comparison",
+            "expectedCell": "RB",
+            "scope": "compare_blue",
+            "rowChoice": "red"
+          }
+        }
+      ],
+      "events": [
+        {
+          "id": "compare_rr",
+          "frame": 220,
+          "phaseId": "compare_red",
+          "type": "focus_cell",
+          "cell": "RR"
+        },
+        {
+          "id": "compare_rb",
+          "frame": 260,
+          "phaseId": "compare_blue",
+          "type": "focus_cell",
+          "cell": "RB"
+        }
+      ]
+    },
+    {
+      "id": "summary",
+      "startFrame": 280,
+      "endFrame": 360,
+      "voiceover": "收益取决于双方的选择组合。",
+      "subtitles": [
+        {
+          "id": "summary_caption",
+          "startFrame": 280,
+          "endFrame": 360,
+          "lines": [
+            "收益取决于双方的选择组合。"
+          ],
+          "focus": {
+            "kind": "none",
+            "expectedCell": null,
+            "scope": null,
+            "rowChoice": null
+          }
+        }
+      ],
+      "events": []
+    }
+  ]
+}

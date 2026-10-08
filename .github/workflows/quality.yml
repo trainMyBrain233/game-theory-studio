@@ -53,6 +53,8 @@ jobs:
         run: npm run qa:fonts
       - name: Core and negative regression tests
         run: npm run test:core
+      - name: Public animatic components with synthetic assets
+        run: npm run test:animatic
       - name: Static templates, measured layout and original cast clearance
         run: npm run test:render
       - name: Non-IP rendering and deterministic time smoke

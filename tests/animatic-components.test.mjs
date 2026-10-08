@@ -1,0 +1,124 @@
+import '../scripts/isolated-fonts.mjs';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {withSourceFixture} from '../scripts/source-fixture.mjs';
+import {createHash} from 'node:crypto';
+import {createRenderSession,PUBLIC_AVATAR_TRACKS,COLORS} from '../production/src/animatic/render-frame.mjs';
+import {syntheticCast} from './fixtures/animatic/synthetic-cast.mjs';
+import {assertRasterClearance} from '../scripts/animatic-public-smoke.mjs';
+const fixture=()=>JSON.parse(fs.readFileSync(new URL('./fixtures/animatic/minimal-plan.json',import.meta.url),'utf8'));
+const pixel=(rendered,x,y)=>Array.from(rendered.canvas.getContext('2d').getImageData(x,y,1,1).data);
+const rgb=color=>[...color.slice(1).matchAll(/../g)].map(match=>parseInt(match[0],16)).concat(255);
+const crop=(rendered,x,y,w,h)=>createHash('sha256').update(rendered.canvas.getContext('2d').getImageData(x,y,w,h).data).digest('hex');
+const session=createRenderSession({plan:fixture(),adapters:syntheticCast()});
+
+test('resolved matrix renders each active cell from current phase and only event-revealed numbers',()=>{
+ for(const [frame,cell] of [[69,null],[70,'RR'],[119,'RR'],[120,null],[140,'RB'],[200,null],[220,'RR'],[240,null],[260,'RB'],[280,null]]){
+  const rendered=session.render(frame);assert.equal(rendered.state.activeCell,cell);
+  for(const [index,key] of ['RR','RB','BR','BB'].entries()){
+   const x=740+(index%2)*470,y=430+Math.floor(index/2)*170;
+   assert.deepEqual(pixel(rendered,x+5,y+35),rgb(key===cell?COLORS.ink:((frame>=200&&frame<280&&index<2)?COLORS.faint:COLORS.paper)),`actual cell border ${key} at ${frame}`);
+  }
+ }
+ assert.equal(session.render(89).textRecords.filter(record=>record.role.startsWith('score:')).length,0);
+ assert.deepEqual(session.render(90).textRecords.filter(record=>record.role.startsWith('score:')).map(record=>record.text),['2']);
+ assert.deepEqual(session.render(170).textRecords.filter(record=>record.role.startsWith('score:')).map(record=>record.text),['2','7','1','9']);
+});
+test('all four cells and asymmetric owner slots render for a replaced numeric case',()=>{
+ const plan=fixture();const first=plan.blocks[1],second=plan.blocks[2];
+ for(const block of [first,second])for(const phase of block.subtitles)phase.focus.expectedCell=block===first?'BR':'BB';
+ for(const block of [first,second])for(const event of block.events)event.cell=block===first?'BR':'BB';
+ first.subtitles[0].lines=['甲方选蓝，乙方选红。'];first.subtitles[1].lines=['甲方得八分，乙方得零分。'];
+ second.subtitles[0].lines=['两位都选蓝牌。'];second.subtitles[1].lines=['甲方得四分，乙方得六分。'];
+ for(const [index,phase] of plan.blocks[3].subtitles.entries()){phase.focus.expectedCell=index?'BB':'BR';phase.focus.rowChoice='blue';phase.lines=[index?'对方选蓝，甲方得四分。':'对方选红，甲方得八分；'];plan.blocks[3].events[index].cell=phase.focus.expectedCell;}
+ for(const block of plan.blocks)block.voiceover=block.subtitles.flatMap(phase=>phase.lines).join('');
+ const changed=createRenderSession({plan,adapters:syntheticCast()});
+ const state=changed.render(170);assert.deepEqual(state.textRecords.filter(record=>record.role.startsWith('score:')).map(record=>[record.role,record.text]),[['score:BR:0','8'],['score:BR:1','0'],['score:BB:0','4'],['score:BB:1','6']]);
+ assert.deepEqual(pixel(changed.render(70),745,635),rgb(COLORS.ink));assert.deepEqual(pixel(changed.render(140),1215,635),rgb(COLORS.ink));
+});
+test('joint reveal card pixels and information labels agree before/during/after opening',()=>{
+ const before=session.render(19),middle=session.render(30),after=session.render(40),hidden=session.render(50);
+ assert.deepEqual(pixel(before,100,250),rgb(COLORS.faint));assert.deepEqual(pixel(hidden,100,250),rgb(COLORS.faint));
+ assert.deepEqual(pixel(after,100,250),rgb(COLORS.red));assert.notDeepEqual(pixel(middle,100,250),pixel(before,100,250));assert.notDeepEqual(pixel(middle,100,250),pixel(after,100,250));
+ assert.equal(before.textRecords.find(record=>record.role==='information').text,'选牌时：看不到对方选择');
+ assert.equal(middle.textRecords.find(record=>record.role==='information').text,'正在一起亮牌');
+ assert.equal(after.textRecords.find(record=>record.role==='information').text,'亮牌后：双方可见');
+});
+test('full one/two-line subtitle raster persists through transitions and tail frames',()=>{
+ const expected=crop(session.render(0),0,936,1920,144);
+ for(const frame of [1,19,20,30,40,49,50,59])assert.equal(crop(session.render(frame),0,936,1920,144),expected);
+ const plan=fixture();plan.blocks[0].subtitles[0].lines=['甲方和乙方各自选牌，','一起亮牌。'];
+ const two=createRenderSession({plan,adapters:syntheticCast()});
+ const first=two.render(0),last=two.render(59);assert.equal(crop(first,0,936,1920,144),crop(last,0,936,1920,144));
+ assert.equal(last.textRecords.filter(record=>record.role==='subtitle').length,2);
+ assert(last.textRecords.filter(record=>record.role==='subtitle').every(record=>record.font==='700 40px "GameTheory Noto Sans SC"'));
+});
+test('actual avatar alpha and every visible text role have clearance on all motion frames',()=>{
+ const adapters=syntheticCast(),current=createRenderSession({plan:fixture(),adapters});
+ for(let frame=0;frame<=51;frame++){const rendered=current.render(frame);assertRasterClearance(rendered,adapters);rendered.dispose();}
+ const bad=structuredClone(PUBLIC_AVATAR_TRACKS);bad.A.to.x=345;
+ const colliding=createRenderSession({plan:fixture(),adapters,tracks:bad});
+ assert.throws(()=>assertRasterClearance(colliding.render(50),adapters),/clearance/);
+});
+test('replacement names/strategies are used in actual fonts, labels and fingerprints',()=>{
+ const plan=fixture();plan.caseData.players.A.name='参与甲';plan.caseData.players.B.name='参与乙';plan.caseData.strategies={red:'合作',blue:'退出'};
+ for(const block of plan.blocks){block.voiceover=block.voiceover.replaceAll('甲方','参与甲').replaceAll('乙方','参与乙');for(const phase of block.subtitles)phase.lines=phase.lines.map(line=>line.replaceAll('甲方','参与甲').replaceAll('乙方','参与乙'));}
+ const next=createRenderSession({plan,adapters:syntheticCast()}),rendered=next.render(100);
+ assert.notEqual(next.fingerprint,session.fingerprint);assert(rendered.textRecords.some(record=>record.role==='name:A'&&record.text==='参与甲'));
+ assert(rendered.textRecords.some(record=>record.role==='column:red'&&record.text==='合作'));
+ assertRasterClearance(rendered,syntheticCast());
+});
+test('provider identity, truthful full alpha bounds and complete resources are mandatory',()=>{
+ const adapters=syntheticCast();adapters.A.id='B';assert.throws(()=>createRenderSession({plan:fixture(),adapters}),/identity/);
+ const wrong=syntheticCast();wrong.A.alphaBounds={x:0,y:0,width:96,height:112};assert.throws(()=>createRenderSession({plan:fixture(),adapters:wrong}),/alphaBounds/);
+ assert.throws(()=>createRenderSession({plan:fixture(),adapters:{A:syntheticCast().A}}),/Exactly A and B/);
+});
+
+test('four- and six-character actor names fit measured slots at the requested 36px',()=>{
+ for(const [nameA,nameB] of [['原创甲方','原创乙方'],['公共示例甲方','公共示例乙方']]){
+  const plan=fixture();plan.caseData.players.A.name=nameA;plan.caseData.players.B.name=nameB;
+  for(const block of plan.blocks){block.voiceover=block.voiceover.replaceAll('甲方',nameA).replaceAll('乙方',nameB);for(const phase of block.subtitles)phase.lines=phase.lines.map(line=>line.replaceAll('甲方',nameA).replaceAll('乙方',nameB));}
+  plan.blocks[0].subtitles[0].lines=[`${nameA}和${nameB}各自选牌，`,'一起亮牌。'];
+  const rendered=createRenderSession({plan,adapters:syntheticCast()}).render(0);
+  assert(rendered.textRecords.filter(record=>record.role.startsWith('name:')).every(record=>record.size===36&&record.weight===700&&record.family==='GameTheory Noto Sans SC'));
+  assertRasterClearance(rendered,syntheticCast());rendered.dispose();
+ }
+});
+test('otherwise valid long actor name is rejected with role, requested size and measured ink',()=>{
+ const plan=fixture(),name='公共测试参与者甲';plan.caseData.players.A.name=name;
+ for(const block of plan.blocks){block.voiceover=block.voiceover.replaceAll('甲方',name);for(const phase of block.subtitles)phase.lines=phase.lines.map(line=>line.replaceAll('甲方',name));}
+ const next=createRenderSession({plan,adapters:syntheticCast()});
+ assert.throws(()=>next.render(0),/Text layout slot overflow: name:A; 36px; measured ink/);
+});
+test('long strategy column labels and punctuation-rich subtitle lines fail measured slots without shrinking',()=>{
+ const plan=fixture();plan.caseData.strategies.red='这是无法放入固定列标题区域的策略名称';
+ assert.throws(()=>createRenderSession({plan,adapters:syntheticCast()}).render(0),/Text layout slot overflow: column:red; 36px/);
+ const caption=fixture();caption.blocks[0].voiceover='，'.repeat(50);caption.blocks[0].subtitles[0].lines=[caption.blocks[0].voiceover];
+ assert.throws(()=>createRenderSession({plan:caption,adapters:syntheticCast()}).render(0),/Text layout slot overflow: subtitle; 40px/);
+});
+test('actual subtitle alpha ink has the expected 40px font-scale height',()=>{
+ const rendered=session.render(0),ctx=rendered.textMask.getContext('2d');
+ const pixels=ctx.getImageData(0,936,1920,144).data;let min=144,max=-1;
+ for(let y=0;y<144;y++)for(let x=0;x<1920;x++)if(pixels[(y*1920+x)*4+3]){min=Math.min(min,y);max=Math.max(max,y);}
+ assert(max-min+1>=35 && max-min+1<=44,`Actual subtitle ink is ${max-min+1}px high`);
+ const record=rendered.textRecords.find(record=>record.role==='subtitle');assert(record.height>=35&&record.height<=44);rendered.dispose();
+});
+
+for(const [label,from,to,reason] of [
+ ['tiny applied subtitle font','ctx.font=canvasFont(size,weight);',"ctx.font=canvasFont(role==='subtitle'?8:size,weight);",/Applied canvas font size must be 40px/],
+ ['regular applied subtitle weight','ctx.font=canvasFont(size,weight);',"ctx.font=canvasFont(size,role==='subtitle'?400:weight);",/Applied canvas font weight must be 700/],
+ ['wrong applied subtitle family','ctx.font=canvasFont(size,weight);',"ctx.font=role==='subtitle'?'700 40px \"Other SC\"':canvasFont(size,weight);",/Applied canvas font family must be GameTheory Noto Sans SC/],
+ ['shifted subtitle ink','line,960,lines.length===1?', 'line,1740,lines.length===1?',/Text layout slot overflow: subtitle/],
+ ['shifted column ink','x+cw*(index+.5),388,36','650,528,36',/Text layout slot overflow: column:red/],
+ ['shifted legend ink',',1210,855,30',',1800,855,30',/Text layout slot overflow: legend/],
+])test(`real compositor rejects ${label}`,()=>{
+ withSourceFixture(root=>{
+  const file=path.join(root,'production/src/animatic/render-frame.mjs'),source=fs.readFileSync(file,'utf8');assert(source.includes(from),`Mutation anchor missing: ${label}`);fs.writeFileSync(file,source.replace(from,to));
+  const code="import fs from 'node:fs'; import {createRenderSession} from './production/src/animatic/render-frame.mjs'; import {syntheticCast} from './tests/fixtures/animatic/synthetic-cast.mjs'; const result=createRenderSession({plan:JSON.parse(fs.readFileSync('tests/fixtures/animatic/minimal-plan.json')),adapters:syntheticCast()}).render(0);result.dispose();";
+  const result=spawnSync(process.execPath,['--import','./scripts/isolated-fonts.mjs','--input-type=module','-e',code],{cwd:root,encoding:'utf8',maxBuffer:4*1024*1024});
+  assert.notEqual(result.status,0,`${label} unexpectedly passed`);assert.match(result.stdout+result.stderr,reason);
+ });
+});
