@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Game Theory Studio role-to-asset registry",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "actors",
+    "strategies"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "actors": {
+      "type": "object",
+      "required": [
+        "A",
+        "B"
+      ],
+      "properties": {
+        "A": {
+          "$ref": "#/$defs/actor"
+        },
+        "B": {
+          "$ref": "#/$defs/actor"
+        }
+      }
+    },
+    "strategies": {
+      "type": "object",
+      "required": [
+        "red",
+        "blue",
+        "back"
+      ]
+    }
+  },
+  "$defs": {
+    "actor": {
+      "type": "object",
+      "required": [
+        "display_name",
+        "asset",
+        "identity_shape",
+        "badge_anchor"
+      ],
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "asset": {
+          "type": "string",
+          "pattern": "\\.(svg|png|webp)$"
+        },
+        "identity_shape": {
+          "enum": [
+            "circle",
+            "square"
+          ]
+        },
+        "badge_anchor": {
+          "anyOf": [
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "asset_type": {
+          "enum": [
+            "svg",
+            "raster",
+            "layered_raster"
+          ]
+        }
+      }
+    }
+  }
+}

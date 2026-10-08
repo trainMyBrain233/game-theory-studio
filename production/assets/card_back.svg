@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 190" width="140" height="190" role="img" aria-labelledby="title"><title id="title">Neutral strategy card back with diagonal hatching</title>
+<defs><pattern id="hatch" patternUnits="userSpaceOnUse" width="12" height="12" patternTransform="rotate(45)"><path d="M0 0 V12" fill="none" stroke="#243E66" stroke-width="2" opacity=".3"/></pattern></defs>
+<rect id="card-paper" x="3.5" y="3.5" width="133" height="183" rx="4" fill="#FFFEF8" stroke="#243E66" stroke-width="3.5"/>
+<rect id="card-field" x="12" y="12" width="116" height="166" rx="1" fill="#E5EDF4"/>
+<rect id="card-hatching" x="12" y="12" width="116" height="166" rx="1" fill="url(#hatch)"/>
+<rect id="inner-keyline" x="19" y="19" width="102" height="152" rx="1" fill="none" stroke="#243E66" stroke-width="1.5"/>
+</svg>

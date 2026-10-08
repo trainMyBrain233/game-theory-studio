@@ -1,0 +1,23 @@
+{
+  "name": "game-theory-textbook-video-v2",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Original editable SVG/Skia textbook animation with narration-ready timing",
+  "scripts": {
+    "render:1080": "node render.mjs --width 1920",
+    "render:4k": "node render.mjs --width 3840",
+    "stills": "node render.mjs --stills",
+    "preview": "node render.mjs --preview",
+    "qa": "node qa/validate.mjs",
+    "qa:content": "node qa/content.mjs",
+    "qa:all": "node qa/content.mjs && node qa/validate.mjs --all-frames --actor-alpha && python qa/check_fonts.py",
+    "qa:placeholder": "node qa/content.mjs --placeholder-cast && node qa/validate.mjs --placeholder-cast",
+    "export:text": "node build_deliverables.mjs",
+    "pack:private": "python pack_source.py",
+    "pack:public": "python pack_source.py --public"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.10"
+  }
+}
