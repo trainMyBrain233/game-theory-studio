@@ -15,7 +15,7 @@
 
 ## 角色坐标与诊断
 
-stored是原PNG像素；prepared是prepare_flip_x后的像素；rig的pivot全部指prepared。torso及B全部层先flipX；world再按torso锚点、统一scale和side变换，二者不能合并或重复抵消。upper按270px高裁切，其余使用源高。
+stored是原PNG像素；prepared是prepare_flip_x后的像素；rig的pivot全部指prepared。A torso与B非torso层预翻；world再按torso锚点、统一scale和side变换，二者不能合并或重复抵消。upper按270px高裁切，其余使用源高。
 
 `prepareCharacterAssets()`读取外部八层后返回manifest，记录实际源/准备后尺寸、源字节数/SHA256、crop、pivot、parent、预处理镜像、真实capabilities与私有分发状态。`character_adapter.getAssetManifest()`供受控生产报告读取；默认不向公开仓库写清单或PNG。测试传入临时目录的八张原创几何RGBA验证实际加载/镜像，未使用第三方图像。
 
