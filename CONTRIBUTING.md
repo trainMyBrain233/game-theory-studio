@@ -30,6 +30,8 @@ npm test
 
 内容修改时递增该章节的 `contentVersion`。结构契约改变时先更新 Schema/版本与迁移说明，再改消费者；不要为了绕过验证删除 Schema 或负向样本。详见 [版本与更新流程](docs/project-structure.md#版本与更新流程)。
 
+僵尸王国 [r2 编辑草稿](chapters/01-four-elements/editorial/zombie-kingdom-r2/README.md)与正式时间轴分开。修改共享案例/实验身份配置后，显式运行 `npm run build:editorial`，再以 `npm run qa:editorial` 只读比较语义 JSON、37段映射和提词器净稿；它不会批准正文、生成音频时间码或覆盖旧录制材料。
+
 创作与制作验收使用[博弈论视频制作指南](docs/production-guide/video-production-guide.zh-CN.md)和[逐集十项验收模板](docs/production-guide/episode-acceptance-template.zh-CN.md)。[来源登记](docs/production-guide/sources.zh-CN.md)区分官方要求、研究建议与尚未核实的投稿规格；未做真人试听或实际平台播放的项目保持待验。
 
 ## 代码与依赖

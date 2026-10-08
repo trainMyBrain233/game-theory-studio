@@ -9,7 +9,7 @@ export function presentationModel(config,scene){
  if(config.actors.A.name===config.actors.B.name)throw Error('Distinct players need distinct visible names.');
  const adapted=structuredClone(scene);
  for(const actor of adapted.actors)actor.label=config.actors[actor.id].name;
- return {status:'draft',header:`${config.series}｜第${config.episode.number}集·${config.episode.title}`,
+ return {status:'draft',header:`${config.series}｜第${config.episode.number}集·${config.episode.title}`,headerLines:[config.series,`第${config.episode.number}集·${config.episode.title}`],
   actors:structuredClone(config.actors),narrationNames:Object.fromEntries(['A','B'].map(id=>[id,config.actors[id].name])),scene:adapted,
   matrix:{rowActor:'A',columnActor:'B',scoreOrder:['A','B'],values:structuredClone(scene.payoffs)},timingRevision:'pending-new-script'};
 }

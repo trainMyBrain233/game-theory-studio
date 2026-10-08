@@ -44,7 +44,9 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           npm run setup:python
       - name: Content and configuration contracts
-        run: npm run qa:data
+        run: |
+          npm run qa:data
+          npm run qa:editorial
       - name: Core and negative regression tests
         run: npm run test:core
       - name: Prepare checksum-pinned official SC fonts

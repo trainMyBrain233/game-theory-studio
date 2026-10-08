@@ -1,0 +1,603 @@
+{
+  "schema": "zombie_kingdom_semantic_draft_v1",
+  "draft_version": "zk01-narration-draft-2026-10-08-r2",
+  "status": "editorial_draft_pending_review",
+  "language": "zh-CN",
+  "not_a_production_timeline": true,
+  "human_audio_available": false,
+  "audio_alignment_status": "not_started_waiting_for_human_recording",
+  "production_timeline_update_authorized": false,
+  "user_final_approval": false,
+  "title_selection_status": "candidates_only_not_approved",
+  "series_label": "僵尸王国",
+  "source_metadata_status": "partial_block_notes_truncated_in_delegation_message",
+  "timing_notice": "无时间码语义草稿；timing 全部 null。先确认真人口播，再人工建立参考时间轴并按实录重定时；不得硬套旧片长或覆盖正式 timeline。",
+  "source": {
+    "repository_url": "https://github.com/trainMyBrain233/game-theory-studio",
+    "reference_commit": "0b93331bcaa79abd834951c95e0352c7c10536b3",
+    "reference_timeline_sha256": "7f969307dcd159feaf71431a0683417930fb7ec43ba80cd565e08110a1954b67",
+    "active_timeline_sha256": "7f969307dcd159feaf71431a0683417930fb7ec43ba80cd565e08110a1954b67",
+    "timeline_repository_relative_path": "chapters/01-four-elements/narration/timeline.json",
+    "source_reference_duration_seconds": 174.1,
+    "source_reference_duration_is_recording_target": false,
+    "old_recording_pack_status": "delivered_legacy_small_A_B_version_pending_revision",
+    "presentation_source": "design/experiments/tabletop/presentation.json",
+    "case_source": "design/scenes.json"
+  },
+  "metrics": {
+    "definition": "汉字、拉丁字母和数字逐字符计数，不含空白标点；文量不是片长预测。",
+    "old_spoken_character_count": 460,
+    "draft_spoken_character_count": 646,
+    "old_semantic_blocks": 37,
+    "draft_semantic_blocks": 40
+  },
+  "model_contract": {
+    "game_rounds": 1,
+    "current_choices_observed_before_deciding": false,
+    "score_rules_public_to_both": true,
+    "players": {
+      "A": {
+        "display_name": "普通僵尸",
+        "matrix_axis": "row",
+        "payoff_index": 0,
+        "avatar": {
+          "actor": "A",
+          "layer": "head"
+        }
+      },
+      "B": {
+        "display_name": "路障僵尸",
+        "matrix_axis": "column",
+        "payoff_index": 1,
+        "avatar": {
+          "actor": "B",
+          "layer": "head"
+        }
+      }
+    },
+    "matrix_values": {
+      "RR": [
+        3,
+        3
+      ],
+      "RB": [
+        0,
+        5
+      ],
+      "BR": [
+        5,
+        0
+      ],
+      "BB": [
+        1,
+        1
+      ]
+    },
+    "matrix_reveal_order": [
+      "RR",
+      "RB",
+      "BR",
+      "BB"
+    ],
+    "payoff_read_order": [
+      "普通僵尸",
+      "路障僵尸"
+    ],
+    "internal_keys_visible_to_audience": false,
+    "multi_round_example": {
+      "is_comparison_only": true,
+      "return_to_one_round_block": "zk01_b17"
+    },
+    "no_predicted_choice_or_equilibrium": true
+  },
+  "recording_contract": {
+    "pace": "按自然语速和意义断句，不追旧片长。",
+    "read_titles_ids_and_notes": false,
+    "keep_names_and_number_units_together": true,
+    "pronunciation": {
+      "行": "háng"
+    },
+    "recommended_contiguous_groups": [
+      [
+        "zk01_b15",
+        "zk01_b16",
+        "zk01_b17"
+      ],
+      [
+        "zk01_b20",
+        "zk01_b21",
+        "zk01_b22",
+        "zk01_b23"
+      ],
+      [
+        "zk01_b24",
+        "zk01_b25"
+      ],
+      [
+        "zk01_b26",
+        "zk01_b27"
+      ],
+      [
+        "zk01_b28",
+        "zk01_b29"
+      ],
+      [
+        "zk01_b30",
+        "zk01_b31"
+      ],
+      [
+        "zk01_b32",
+        "zk01_b33"
+      ]
+    ]
+  },
+  "sections": [
+    {
+      "id": "intro",
+      "block_ids": [
+        "zk01_b01",
+        "zk01_b02",
+        "zk01_b03"
+      ]
+    },
+    {
+      "id": "players",
+      "block_ids": [
+        "zk01_b04",
+        "zk01_b05",
+        "zk01_b06"
+      ]
+    },
+    {
+      "id": "information",
+      "block_ids": [
+        "zk01_b07",
+        "zk01_b08",
+        "zk01_b09",
+        "zk01_b10"
+      ]
+    },
+    {
+      "id": "strategy",
+      "block_ids": [
+        "zk01_b11",
+        "zk01_b12",
+        "zk01_b13",
+        "zk01_b14",
+        "zk01_b15",
+        "zk01_b16",
+        "zk01_b17"
+      ]
+    },
+    {
+      "id": "payoffs",
+      "block_ids": [
+        "zk01_b18",
+        "zk01_b19",
+        "zk01_b20",
+        "zk01_b21",
+        "zk01_b22",
+        "zk01_b23",
+        "zk01_b24",
+        "zk01_b25",
+        "zk01_b26",
+        "zk01_b27",
+        "zk01_b28",
+        "zk01_b29",
+        "zk01_b30",
+        "zk01_b31",
+        "zk01_b32",
+        "zk01_b33",
+        "zk01_b34",
+        "zk01_b35"
+      ]
+    },
+    {
+      "id": "recap",
+      "block_ids": [
+        "zk01_b36",
+        "zk01_b37",
+        "zk01_b38",
+        "zk01_b39",
+        "zk01_b40"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "zk01_b01",
+      "section": "intro",
+      "original_segment_ids": [
+        "s04_setup"
+      ],
+      "voiceover": "僵尸王国里，普通僵尸和路障僵尸准备玩一轮红蓝牌局。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b02",
+      "section": "intro",
+      "original_segment_ids": [
+        "s01_hook"
+      ],
+      "voiceover": "两位都想多拿分，为什么还得琢磨对方怎么选？",
+      "timing": null
+    },
+    {
+      "id": "zk01_b03",
+      "section": "intro",
+      "original_segment_ids": [
+        "s02_four_questions"
+      ],
+      "voiceover": "看懂这场博弈，我们先问四个问题。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b04",
+      "section": "players",
+      "original_segment_ids": [
+        "s03_question"
+      ],
+      "voiceover": "第一，谁在做决定？",
+      "timing": null
+    },
+    {
+      "id": "zk01_b05",
+      "section": "players",
+      "original_segment_ids": [
+        "s04_setup",
+        "s06_definition"
+      ],
+      "voiceover": "普通僵尸和路障僵尸各自选牌，他们就是这场博弈的参与者。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b06",
+      "section": "players",
+      "original_segment_ids": [
+        "s05_goal",
+        "s06_definition"
+      ],
+      "voiceover": "这一局，我们设定双方都希望自己的得分更高。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b07",
+      "section": "information",
+      "original_segment_ids": [
+        "s07_question"
+      ],
+      "voiceover": "第二，做决定时，知道什么？",
+      "timing": null
+    },
+    {
+      "id": "zk01_b08",
+      "section": "information",
+      "original_segment_ids": [
+        "s08_known_unknown",
+        "s10_distinction"
+      ],
+      "voiceover": "双方都知道计分规则，但选牌时，看不到对方这一轮选了什么。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b09",
+      "section": "information",
+      "original_segment_ids": [
+        "s09_simultaneous"
+      ],
+      "voiceover": "他们各自选好，再一起亮牌。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b10",
+      "section": "information",
+      "original_segment_ids": [
+        "s10_distinction",
+        "s11_timing"
+      ],
+      "voiceover": "这叫同时行动：做决定时，不能先看见对方的选择，再决定自己出什么。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b11",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s12_question"
+      ],
+      "voiceover": "第三，能怎样选择？",
+      "timing": null
+    },
+    {
+      "id": "zk01_b12",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s13_options"
+      ],
+      "voiceover": "这一轮，每位都可以选红牌，或者蓝牌。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b13",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s14_simple_case"
+      ],
+      "voiceover": "这里只做一次决定，固定选红或固定选蓝，就是两种纯策略。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b14",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s15_definition"
+      ],
+      "voiceover": "一般来说，策略是一整套应对计划：每种可能遇到的情况，都根据当时能知道的信息，安排好怎么选。",
+      "subtitle_chunks": [
+        {
+          "id": "zk01_b14_c01",
+          "spoken_span": "一般来说，策略是一整套应对计划：",
+          "suggested_lines": [
+            "一般来说，",
+            "策略是一整套应对计划："
+          ],
+          "timing": null
+        },
+        {
+          "id": "zk01_b14_c02",
+          "spoken_span": "每种可能遇到的情况，",
+          "suggested_lines": [
+            "每种可能遇到的情况，"
+          ],
+          "timing": null
+        },
+        {
+          "id": "zk01_b14_c03",
+          "spoken_span": "都根据当时能知道的信息，安排好怎么选。",
+          "suggested_lines": [
+            "都根据当时能知道的信息，",
+            "安排好怎么选。"
+          ],
+          "timing": null
+        }
+      ],
+      "timing": null
+    },
+    {
+      "id": "zk01_b15",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s16_comparison_intro"
+      ],
+      "voiceover": "比如，假如改成多轮，每轮结束都能看到对方出的牌。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b16",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s17_comparison_example"
+      ],
+      "voiceover": "就可以先定好：第一轮选红；以后每一轮，跟着对方上一轮的牌选。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b17",
+      "section": "strategy",
+      "original_segment_ids": [
+        "s18_return_single_round"
+      ],
+      "voiceover": "这是一个跨轮次的计划。现在回到本集，只玩一轮。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b18",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s19_question"
+      ],
+      "voiceover": "第四，双方这样选，各会得到什么？",
+      "timing": null
+    },
+    {
+      "id": "zk01_b19",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s20_definition"
+      ],
+      "voiceover": "这一局，用得分表示收益。分数越高，对自己越好。",
+      "editorial_note": "支付是 payoff 的可用译法；本集移至术语备考，正文只用收益。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b20",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s21_rows",
+        "s22_columns"
+      ],
+      "voiceover": "把四种选择组合放进表里，就得到了这张收益矩阵。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b21",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s21_rows"
+      ],
+      "voiceover": "普通僵尸选的牌，决定看哪一行。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b22",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s22_columns"
+      ],
+      "voiceover": "路障僵尸选的牌，决定看哪一列。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b23",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s23_score_order"
+      ],
+      "voiceover": "每个格子里，先读普通僵尸的分数，再读路障僵尸的分数。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b24",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s24_rr_select"
+      ],
+      "voiceover": "两位都选红牌。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b25",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s25_rr_score"
+      ],
+      "voiceover": "各得三分。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b26",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s26_rb_select"
+      ],
+      "voiceover": "普通僵尸选红，路障僵尸选蓝。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b27",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s27_rb_score"
+      ],
+      "voiceover": "普通僵尸得零分，路障僵尸得五分。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b28",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s28_br_select"
+      ],
+      "voiceover": "普通僵尸选蓝，路障僵尸选红。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b29",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s29_br_score"
+      ],
+      "voiceover": "普通僵尸得五分，路障僵尸得零分。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b30",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s30_bb_select"
+      ],
+      "voiceover": "两位都选蓝牌。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b31",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s31_bb_score"
+      ],
+      "voiceover": "各得一分。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b32",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s32_joint_choices"
+      ],
+      "voiceover": "盯住普通僵尸选红的这一行：对方选红，他得三分；对方选蓝，他得零分。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b33",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s32_joint_choices"
+      ],
+      "voiceover": "所以，收益取决于双方的选择组合。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b34",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s33_beyond_money"
+      ],
+      "voiceover": "收益未必是钱，也可以表示省下的时间，或者对结果的偏好。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b35",
+      "section": "payoffs",
+      "original_segment_ids": [
+        "s33_beyond_money"
+      ],
+      "voiceover": "具体怎么计，要看参与者在乎什么。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b36",
+      "section": "recap",
+      "original_segment_ids": [
+        "s34_intro"
+      ],
+      "voiceover": "最后，记住这四问：",
+      "timing": null
+    },
+    {
+      "id": "zk01_b37",
+      "section": "recap",
+      "original_segment_ids": [
+        "s35_first_pair"
+      ],
+      "voiceover": "谁来决定？知道什么？",
+      "timing": null
+    },
+    {
+      "id": "zk01_b38",
+      "section": "recap",
+      "original_segment_ids": [
+        "s36_second_pair"
+      ],
+      "voiceover": "怎么选择？各得什么？",
+      "timing": null
+    },
+    {
+      "id": "zk01_b39",
+      "section": "recap",
+      "original_segment_ids": [
+        "s35_first_pair",
+        "s36_second_pair"
+      ],
+      "voiceover": "对应的概念，就是参与者、信息、策略和收益。",
+      "timing": null
+    },
+    {
+      "id": "zk01_b40",
+      "section": "recap",
+      "original_segment_ids": [
+        "s37_closing"
+      ],
+      "voiceover": "先把这场博弈讲清楚，再分析他们会怎么选。",
+      "timing": null
+    }
+  ]
+}
