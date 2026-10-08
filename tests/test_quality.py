@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib
 import base64
+import json
 from contextlib import redirect_stdout, redirect_stderr
 import io
 import os
@@ -10,6 +11,7 @@ import sys
 import tempfile
 import struct
 import zlib
+import zipfile
 import unittest
 from unittest.mock import patch
 
@@ -22,6 +24,81 @@ import setup_fonts
 
 
 class PublicationTests(unittest.TestCase):
+    @staticmethod
+    def archive_fixture(root):
+        # Git is only used to create a genuine source checkout, never added to its exported ZIP.
+        for relative in ['.gitignore', 'production/.gitignore', 'package.json', 'scripts/qa_source.py',
+                         'production/pack_source.py', 'production/verify_source_archive.py',
+                         'schemas/chapter.schema.json', 'schemas/timeline.schema.json',
+                         'schemas/scenes.schema.json', 'schemas/tokens.schema.json',
+                         'chapters/01-four-elements/chapter.json']:
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((ROOT / relative).read_bytes())
+        package = json.loads((root / 'package.json').read_text(encoding='utf-8'))
+        package['version'] = '0.1.0'
+        (root / 'package.json').write_text(json.dumps(package), encoding='utf-8')
+        chapter = root / 'chapters/01-four-elements/chapter.json'
+        config = json.loads(chapter.read_text(encoding='utf-8'))
+        config['contentVersion'] = '1.2.3'
+        chapter.write_text(json.dumps(config), encoding='utf-8')
+        for args in [['init', '-q'], ['add', '.'],
+                     ['-c', 'user.name=Source Fixture', '-c', 'user.email=source-fixture@example.invalid', 'commit', '-qm', 'source fixture']]:
+            subprocess.run(['git', *args], cwd=root, check=True, capture_output=True)
+
+    def test_archive_records_clean_and_dirty_source_identity_and_actual_versions(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.archive_fixture(root)
+            commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+            archive_path = root / 'production/output/game_theory_studio_public_source.zip'
+            for dirty in [False, True]:
+                if dirty:
+                    (root / 'new-source.txt').write_text('original new source', encoding='utf-8')
+                    package = json.loads((root / 'package.json').read_text(encoding='utf-8'))
+                    package['version'] = '0.1.1'
+                    (root / 'package.json').write_text(json.dumps(package), encoding='utf-8')
+                run = subprocess.run([sys.executable, str(root / 'production/pack_source.py'), '--public'], capture_output=True)
+                self.assertEqual(run.returncode, 0, run.stderr.decode('utf-8'))
+                with zipfile.ZipFile(archive_path) as archive:
+                    manifest = json.loads(archive.read('game-theory-studio/SOURCE_MANIFEST.json'))
+                    self.assertEqual(manifest['source']['commit'], commit)
+                    self.assertEqual(manifest['source']['working_tree_dirty'], dirty)
+                    self.assertEqual(manifest['source']['reproducible_from_commit'], not dirty)
+                    self.assertEqual(manifest['versions']['project'], '0.1.1' if dirty else '0.1.0')
+                    self.assertEqual(manifest['versions']['schemas']['schemas/timeline.schema.json']['data_version'], '2.1')
+                    self.assertEqual(manifest['versions']['schemas']['schemas/scenes.schema.json']['id'], 'urn:game-theory-studio:scenes:1.0')
+                    self.assertEqual(manifest['versions']['chapters']['01-four-elements']['content'], '1.2.3')
+                    for entry in manifest['files']:
+                        data = archive.read('game-theory-studio/' + entry['path'])
+                        self.assertEqual(len(data), entry['bytes'])
+                        self.assertEqual(hashlib.sha256(data).hexdigest(), entry['sha256'])
+
+    def test_archive_extraction_integrity_without_git_rejects_tampering_and_unlisted_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / 'checkout'; root.mkdir()
+            self.archive_fixture(root)
+            subprocess.run([sys.executable, str(root / 'production/pack_source.py'), '--public'], check=True, capture_output=True)
+            with zipfile.ZipFile(root / 'production/output/game_theory_studio_public_source.zip') as archive:
+                archive.extractall(base / 'extracted')
+            extracted = base / 'extracted/game-theory-studio'
+            self.assertFalse((extracted / '.git').exists())
+            command = [sys.executable, str(extracted / 'production/verify_source_archive.py')]
+            for _ in range(2):
+                run = subprocess.run(command, cwd=extracted, capture_output=True)
+                self.assertEqual(run.returncode, 0, run.stderr.decode('utf-8'))
+            extra = extracted / 'unlisted.txt'; extra.write_text('not in manifest')
+            run = subprocess.run(command, cwd=extracted, capture_output=True)
+            self.assertNotEqual(run.returncode, 0); self.assertIn(b'unlisted files', run.stderr)
+            extra.unlink()
+            package = extracted / 'package.json'; package.write_bytes(package.read_bytes() + b'\n')
+            run = subprocess.run(command, cwd=extracted, capture_output=True)
+            self.assertNotEqual(run.returncode, 0); self.assertIn(b'Archive source differs', run.stderr)
+            # Development source QA reports the honest Git boundary instead of silently initializing Git.
+            run = subprocess.run([sys.executable, str(extracted / 'scripts/qa_source.py')], capture_output=True)
+            self.assertNotEqual(run.returncode, 0); self.assertIn(b'requires a Git checkout', run.stderr)
+
     def scan(self, name, data):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

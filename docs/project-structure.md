@@ -1,5 +1,7 @@
 # 工程与配置契约
 
+数据流、模块依赖和当前扩展限制见[架构与扩展边界](architecture.md)；官方参考、当前技术债与第二章迁移条件见 [ADR-001：内容驱动视频工程的模块边界](adr/001-video-project-architecture.md)。
+
 ## 目录和来源
 
 | 目录/文件 | 职责 | 更新入口 |
@@ -25,8 +27,8 @@
 
 | Schema | 当前版本/范围 |
 | --- | --- |
-| `scenes.schema.json` | `schemaVersion: 1.0`；固定角色 id A/B、策略 id red/blue、2×2 矩阵；可改显示名、策略名、0–99 整数收益、默认选择、模板文案 |
-| `tokens.schema.json` | `schemaVersion: 1.0`；可改合法 RGB 颜色、字幕 38–48px、正文 36–42px、每风格标题 sans/serif；当前原生几何、角色形状和字重是固定合同，修改会明确报错 |
+| `scenes.schema.json` | `$id: urn:game-theory-studio:scenes:1.0`；数据没有schemaVersion字段；固定角色 id A/B、策略 id red/blue、2×2 矩阵；可改显示名、策略名、0–99 整数收益、默认选择、模板文案 |
+| `tokens.schema.json` | `$id: urn:game-theory-studio:tokens:1.0`；数据没有schemaVersion字段；可改合法 RGB 颜色、字幕 38–48px、正文 36–42px、每风格标题 sans/serif；当前原生几何、角色形状和字重是固定合同，修改会明确报错 |
 | `chapter.schema.json` | `schemaVersion: 1.0`；`NN-slug` id、SemVer 内容版本、B 风格、当前案例；阶段字段保留后续阶段，但 Schema 2.1 的参考时间轴只能标为 prototype |
 | `timeline.schema.json` | `schema_version: 2.1`；人工口播参考；语义块、章节、选择/收益事件及玩家引用；当前不接受“已按音频对齐”声明；完整格揭示需A/B各一个事件，数组可乱序 |
 
@@ -52,3 +54,5 @@ Schema2.0 → 2.1迁移：`reveal_scores`必须包含matrix_cell/scores/score_re
 ## 本地产物
 
 `design/frames/`、`design/boards/`、`design/qa/`、`typography/fonts/`、`typography/qa/`、章节 `narration/qa/` 、`production/output/`、`production/qa/*.json`、`production/narration/exports/` 与 `artifacts/smoke/` 均忽略。报告可记录当次时间，但渲染本身只依赖内容、字体、平台和显式时间输入；不要保存机器绝对路径到公开源码。
+
+源码ZIP的manifest记录工程/Schema/章节版本、实际Git HEAD与dirty状态；未提交输入不能标为按HEAD直接复现。ZIP是归档，Git clone才是开发入口；无需Git的解压完整性检查及其验收范围见[架构说明](architecture.md#源码包与开发工作区)。

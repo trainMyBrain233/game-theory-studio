@@ -55,7 +55,7 @@ npm run qa:fonts
 | `npm run render:smoke` | 12 个变异矩阵、4 选牌状态、48px/宋体实际像素、原创几何 0/0.5/1s 确定性 |
 | `npm run test:episode` | 整集Schema/语义、633布局采样、4格变更案例实际像素/字形、字体与5 SVG、导出文本与5张1080p占位帧 |
 | `npm run render:episode:preview -- --placeholder-cast` | 13秒原创占位视频预览，需FFmpeg；整片/4K/音效/联系图命令见生产模块 |
-| `npm run pack:source` | 公开源码归档，带边界扫描、SHA256 manifest与CRC校验，不包含私有素材 |
+| `npm run pack:source` | Git checkout公开源码归档；manifest含真实commit/dirty、分发类型、项目/Schema/章节版本、逐文件SHA256；CRC/边界检查通过后写回 |
 | `npm run qa:source` | 候选源码中的常见秘密、私有路径、二进制、嵌入图片 SVG 和过大文件 |
 | `npm test` | 上述自动检查；需先准备字体，编码/音效不属于默认CI |
 | `npm run build:narration -- <id>` | 只重建指定章节；省略 id 重建全部 |
@@ -64,6 +64,8 @@ npm run qa:fonts
 | `npm run chapter:new -- 02-example "章节标题"` | 创建原创两段原型章节，不覆盖已有章节 |
 
 整集制作/配置与素材模式见 [production/README](production/README.md)。视频编码需要外部 FFmpeg/libx264；可选 `setup:media` 安装固定 NumPy/Pillow，用于原创音效和联系图。
+
+开发/完整测试使用上面的`git clone`入口。公开ZIP只用于源码归档，不含`.git`，不承诺解压后直接`npm test`。干净解压后可运行`python3 production/verify_source_archive.py`检查所有清单文件和未列明文件，无需Git/npm/fontTools；这只验证归档完整性。模块数据流和扩展限制见[架构说明](docs/architecture.md)。
 
 `qa:cast` 先在临时目录重建并比较9 SVG/2 JSON，再做净空检查；`npm test` 不写回这些跟踪文件。需要更新产物时显式 `build:cast`（`render:cast` 为兼容别名）。
 

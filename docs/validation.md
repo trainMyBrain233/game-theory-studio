@@ -11,7 +11,7 @@
 | 干净 npm 安装 | npm ci --ignore-scripts 成功；使用当前平台原生 optional dependency |
 | Python 与字体 | 项目 .venv 安装固定 fontTools；本机未安装 Noto，官方网络下载成功，4 个 SC OTF 各 65,535 glyphs；有效字库验证成功 |
 | 数据 | scenes/tokens/2 章节元数据与 timeline 通过；37 段/173.3s 原型与两段/9s 原创例；临时重建逐字节一致 |
-| 核心回归 | 61 个 Node 用例、21 个 Python 用例通过；包含错选择/收益/玩家、完整双玩家揭示合同、cue 反转、重复尾停、只读过期 SRT/SVG/JSON、非 UTF-8 locale、生成失败保留、字体下载恢复 |
+| 核心回归 | 61 个 Node 用例、23 个 Python 用例通过；包含错选择/收益/玩家、完整双玩家揭示合同、cue 反转、重复尾停、只读过期 SRT/SVG/JSON、非 UTF-8 locale、生成失败保留、字体下载恢复、真实clean/dirty归档与无Git解压负例 |
 | 实际字体 | 独立解析 ctx.font 实际字号、400/700与完整SC Sans/Serif family；相同文字/位置的四种样式像素有差异；四字库覆盖根227字符/整集236字符。强制400、8px、Sans的三项隔离变异均被拒绝，强制400的完整 npm test 确认非零退出 |
 | 字体来源 | 缓存仍检查官方固定SHA；有效字体追加字节并伪造manifest也被拒绝，验证来源恢复成功。四个真实SC TTC测试源可重复提取；伪造派生目标hash被独立重提拒绝。verify-only保留manifest原字节 |
 | 静帧 | 6 张原生1080p、3 张3840×1320原生对照板；53 项通过、0 失败；四状态检查核对真实高亮像素、边框与焦点说明 |
@@ -23,7 +23,8 @@
 | 更章流程 | 隔离副本使用明月/青禾、合作/退出、不对称11–42收益和默认BR，真实执行build:narration、qa:data、test:core、render:proposals、qa:design、qa:layout、qa:cast全部成功；53设计项按当前有效配置核对。录音说明不再残留小A/小B或(0,5)原例 |
 | 可选制作链 | 固定NumPy2.3.5/Pillow12.3.0安装；30个原创SFX事件（峰值−27.29dBFS）、39张1080p帧、两张联系图成功并目视检查；公开源码ZIP CRC/manifest通过，停用私有打包模式 |
 | 短段编码 | 本机FFmpeg/libx264编码1秒1080p原创建模段；30帧完整解码，H.264/yuv420p/BT.709/1:1 SAR/帧率/时长通过，无音轨；这不是全长影片验收 |
-| 公开源码 | 候选源码扫描通过；SVG后缀不分大小写，XML local-name检查拒绝带namespace的image/script/foreignObject及非本地引用；实际公开打包负例失败且保留旧ZIP；本轮公开ZIP含130源码文件并通过CRC。无检测到的秘密、私有路径、二进制或嵌入位图SVG；发布前另人工核对暂存diff |
+| 公开源码 | 候选源码扫描通过；SVG后缀不分大小写，XML local-name检查拒绝带namespace的image/script/foreignObject及非本地引用；实际公开打包负例失败且保留旧ZIP；本轮公开ZIP含133源码文件并通过CRC。manifest真实记录commit/dirty/分发类型与工程/Schema/章节版本，dirty输入不冒称可按HEAD复现。无检测到的秘密、私有路径、二进制或嵌入位图SVG；发布前另人工核对暂存diff |
+| 无Git源码归档 | 本轮完整公开ZIP实际解压后无.git，运行完整性命令两次成功；新增extra.txt及篡改package.json均非零。未为解压目录初始化Git；开发源门禁明确失败并提示clone，未把归档完整性当成解压安装/npm test通过 |
 
 本次还修复了事件存储顺序影响数字归属/组合揭示时间、字体缓存重新给未知字节盖章、归档QA覆写编辑、SVG扩展名/namespace绕过、生产徽标忽略display_name和牌色忽略token。Timeline合同从2.0升至2.1：完整格子揭示须有唯一A/B事件，零/单项/省略/重复在绘制前被拒绝。更章测试不再假定原收益/RB选择，录音说明改为适用于当前姓名/分数的读法。已有时间窗、事件、SRT与口播正文不变；timeline仅版本/读法说明元信息更新，录音稿仅头部说明更新。默认牌色和官方字库不变；私有生产徽标会改为与口播一致的“小A/小B”，需在新head私有重渲中验收。
 

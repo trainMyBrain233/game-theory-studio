@@ -68,6 +68,11 @@ def scan_sources(root, files):
 
 
 def main():
+    repository = subprocess.run(['git', 'rev-parse', '--show-toplevel'], cwd=ROOT, capture_output=True, text=True)
+    if repository.returncode or Path(repository.stdout.strip()).resolve() != ROOT.resolve():
+        raise SystemExit('Source QA requires a Git checkout. Public ZIP is an archive, not a development checkout. '
+                         'Run python3 production/verify_source_archive.py on an unchanged extraction for integrity; '
+                         'git clone --branch infra/quality-pipeline https://github.com/trainMyBrain233/game-theory-studio.git for npm test.')
     output = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT)
     files = sorted(set(x.decode('utf-8') for x in output.split(b'\0') if x))
     errors, total = scan_sources(ROOT, files)
