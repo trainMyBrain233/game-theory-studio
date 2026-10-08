@@ -1,24 +1,27 @@
 import path from 'node:path';
 import fs from 'node:fs';
+import {createHash} from 'node:crypto';
 import {loadImage,createCanvas} from '@napi-rs/canvas';
 import {clamp,kinematicEase as ease,mix} from './motion.mjs';
 export {kinematicEase as ease,mix} from './motion.mjs';
+import {RIG,CHARACTER_LAYERS,BONE_LENGTHS,layerContract,characterManifest} from './character-layers.mjs';
+export {RIG} from './character-layers.mjs';
 export const assets={};
+export let assetManifest=characterManifest();
 const ROOT=path.resolve(import.meta.dirname,'../private_characters/pvz');
 function flipped(img){const c=createCanvas(img.width,img.height),x=c.getContext('2d');x.translate(img.width,0);x.scale(-1,1);x.drawImage(img,0,0);return c;}
-export async function prepareCharacterAssets(){
- for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm']){
-  const file=path.join(ROOT,'assets',`${id}_${part}.png`);
+export async function prepareCharacterAssets({directory=ROOT}={}){
+ const layers=[];
+ for(const id of ['a','b'])for(const part of CHARACTER_LAYERS){
+  const file=path.join(directory,'assets',`${id}_${part}.png`);
   if(!fs.existsSync(file)){const e=new Error(`Missing private character layer: ${path.relative(path.resolve(import.meta.dirname,'..'),file)}. Supply the private production assets, or run with --placeholder-cast for the original SVG CI cast.`);e.code='PRIVATE_ASSET_MISSING';throw e;}
-  const img=await loadImage(file);
+  const bytes=fs.readFileSync(file),img=await loadImage(bytes),contract=layerContract(id,part);
   // Only geometric atlas cropping/flipping: the generated alpha is untouched.
-  assets[`${id}_${part}`]=(part==='torso'||id==='b')?flipped(img):img;
+  assets[`${id}_${part}`]=contract.prepare_flip_x?flipped(img):img;
+  layers.push({...contract,file:`assets/${id}_${part}.png`,stored:{width:img.width,height:img.height,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')},prepared:{width:img.width,height:img.height}});
  }
+ assetManifest=characterManifest(layers);return assetManifest;
 }
-export const RIG={
- a:{head:[83,-284],headPivot:[113,316],shoulder:[118,102],upperPivot:[54,44],upperElbow:[75,260],forePivot:[35,65],foreHand:[278,105]},
- b:{head:[78,-361],headPivot:[83,408],shoulder:[118,102],upperPivot:[61,40],upperElbow:[58,253],forePivot:[34,69],foreHand:[278,105]}
-};
 export function handAt(id,t){
  const rest=[293,135],selected=[380,143],lift=[423,84],place=[490,143];
  let h=rest;
@@ -44,7 +47,7 @@ function segment(ctx,img,pivot,end,from,to,{cropHeight=img.height,scale=null}={}
 export function getRigPose(id,t,{handOverride=null,headAngleOverride=null}={}){
  id=id.toLowerCase();const r=RIG[id],requestedHand=handOverride??handAt(id,t),s=r.shoulder;
  let dx=requestedHand[0]-s[0],dy=requestedHand[1]-s[1],rawDistance=Math.hypot(dx,dy),d=rawDistance;
- const l1=164,l2=218;d=Math.min(l1+l2-.5,Math.max(Math.abs(l1-l2)+.5,d));
+ const l1=BONE_LENGTHS.upper,l2=BONE_LENGTHS.forearm;d=Math.min(l1+l2-.5,Math.max(Math.abs(l1-l2)+.5,d));
  const h=[s[0]+dx/(rawDistance||1)*d,s[1]+dy/(rawDistance||1)*d];
  const angle=Math.atan2(dy,dx)+Math.acos(clamp((l1*l1+d*d-l2*l2)/(2*l1*d),-1,1));
  const elbow=[s[0]+Math.cos(angle)*l1,s[1]+Math.sin(angle)*l1];
@@ -65,7 +68,7 @@ export function drawCharacter(ctx,id,{x,y,scale=1,t=0,side=null,layer='all',hand
   ctx.drawImage(assets[id+'_head'],-r.headPivot[0],-r.headPivot[1]);ctx.restore();
  }
  if(layer==='all'||layer==='arm'){
-  segment(ctx,assets[id+'_upper'],r.upperPivot,r.upperElbow,p.shoulder,p.elbow,{cropHeight:270});
+  segment(ctx,assets[id+'_upper'],r.upperPivot,r.upperElbow,p.shoulder,p.elbow,{cropHeight:layerContract(id,'upper').cropHeight});
   segment(ctx,assets[id+'_forearm'],r.forePivot,r.foreHand,p.elbow,p.hand);
  }
  ctx.restore();return p;

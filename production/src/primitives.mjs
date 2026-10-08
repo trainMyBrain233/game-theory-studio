@@ -6,7 +6,7 @@ import {CAST,resolveCastText} from './cast.mjs';
 import {registerFonts,canvasFont,FONT_FAMILY,SERIF_FAMILY} from '../typography/fonts.mjs';
 import {assertAppliedFont} from '../../typography/font-contract.mjs';
 import {mix,transformState,textTransitionState} from './motion.mjs';
-import {cardTransform} from './card-transform.mjs';
+import {createCardElement} from './elements/card.mjs';
 export {clamp,ease,mix,ramp,span} from './motion.mjs';
 registerFonts({serif:true});
 export {TOKENS} from './model.mjs';
@@ -70,11 +70,10 @@ export function reveal(c,t,start,fn,{d=.55,dy=12}={}){const state=textTransition
 export function person(c,id,x,y,s=1,alpha=1){if(characterRenderer){characterRenderer.draw(c,id,{x,y,scale:s,alpha,t:currentSceneTime});return;}if(!assets['person-'+id.toLowerCase()])return;group(c,alpha,0,0,()=>{c.drawImage(assets['person-'+id.toLowerCase()],x,y,420*s,500*s);if(CAST.actors[id].badge_anchor!==null)tx(c,id,x+(CAST.actors[id].badge_anchor?.[0]||164)*s,y+((CAST.actors[id].badge_anchor?.[1]||374)+10)*s,26*s,700,C.white,'center',{record:false})})}
 export function badge(c,id,x,y,r=25,{name=false}={}){if(id==='A')circle(c,x,y,r,C.ink,null);else round(c,x-r,y-r,r*2,r*2,1,C.ink,null);tx(c,id,x,y+r*.4,r*1.05,700,C.white,'center',{record:false});if(name)tx(c,CAST.actors[id].display_name,x+r+17,y+11,31,700)}
 export function card(c,kind,x,y,w=112,{angle=0,flip=1,alpha=1,label=true}={}){
- const transform=cardTransform({x,y,w,angle,flip}),h=transform.height;c.save();c.globalAlpha*=alpha;c.translate(transform.x,transform.y);c.rotate(transform.angle);c.scale(transform.visibleScaleX,1);
- const image=assets['card-'+kind];if(image)c.drawImage(image,-w/2,-h/2,w,h);else round(c,-w/2,-h/2,w,h,8,C.paper,C.ink,3);
- if(label&&kind!=='back')tx(c,CAST.strategies[kind].label,0,h*.31,Math.max(28,w*.29),700,C.white,'center',{record:false});c.restore();
+ return cardElement.draw(c,{kind,x,y,width:w,angle,flip,alpha,label});
 }
-export function cardFlip(c,from,to,x,y,w,p,opts={}){const kind=p<.5?from:to;card(c,kind,x,y,w,{...opts,flip:Math.cos(Math.PI*p)})}
+export function cardFlip(c,from,to,x,y,w,p,{angle=0,alpha=1,label=true}={}){return cardElement.drawFlip(c,{from,to,x,y,width:w,progress:p,angle,alpha,label})}
+export const cardElement=createCardElement({assets,palette:C,strategies:CAST.strategies,drawing:{tx,round}});
 export function tag(c,text,x,y,w,{fill=C.faint,size=30,stroke=null}={}){round(c,x,y,w,54,10,fill,stroke,2);tx(c,text,x+w/2,y+38,size,700,C.ink,'center')}
 export function desk(c,alpha=1,y=796,x1=235,x2=1685){group(c,alpha,0,0,()=>{line(c,x1,y,x2,y,C.ink,3.5);line(c,x1+50,y,x1+31,y+72,C.ink,3);line(c,x2-50,y,x2-31,y+72,C.ink,3)})}
 export function cross(c,x,y,size=10){line(c,x-size,y-size,x+size,y+size,C.muted,3);line(c,x-size,y+size,x+size,y-size,C.muted,3)}

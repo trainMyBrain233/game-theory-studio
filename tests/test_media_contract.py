@@ -27,4 +27,3 @@ class MediaContract(unittest.TestCase):
             info = self.fixture()
             info['streams'][0][field] = value
             with self.assertRaises(AssertionError): module.validate_streams(info, 1)
-

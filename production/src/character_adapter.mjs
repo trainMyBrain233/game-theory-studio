@@ -2,7 +2,7 @@
  * Geometry is normalized to the existing 420×500 story slot. At the main .84 slot
  * scale the rig draws at .6 in 1080p for clear facial/hand action; 4K character layers use 1.2× scaling.
  */
-import {prepareCharacterAssets,drawCharacter,getRigPose} from './rgba_character_rig.mjs';
+import {prepareCharacterAssets,drawCharacter,getRigPose,assetManifest} from './rgba_character_rig.mjs';
 import {timeline} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
 import {createCanvas} from '@napi-rs/canvas';
@@ -12,7 +12,8 @@ export function getMask(){return actorMask}
 export function beginFrame(canvas){armQueue=[];if(!process.argv.includes('--actor-alpha'))return;if(!actorMask||actorMask.width!==canvas.width)actorMask=createCanvas(canvas.width,canvas.height);const c=actorMask.getContext('2d');c.resetTransform();c.clearRect(0,0,canvas.width,canvas.height)}
 const T=id=>timeline.segments.find(s=>s.id===id).start;
 export const SOURCE_KIND='layered_rgba_raster';
-export async function prepare(){await prepareCharacterAssets()}
+export async function prepare(){return await prepareCharacterAssets()}
+export function getAssetManifest(){return assetManifest}
 export const pixelBudget={normal_main_rig_scale_1080:.6,normal_main_rig_scale_4k:1.2,maximum_head_source_scale_4k:1.2,meaning:'Native RGBA layers; figure rig is drawn directly, not enlarged from a low-resolution composited character frame.'};
 /** Pose planning can be checked without opening the private PNG files.
  * World units refer to the 1920x1080 layout; they are not image-edge evidence.

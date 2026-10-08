@@ -25,8 +25,8 @@ export function transformState(alpha,dx=0,dy=0){
  * Exit begins at exitStart; it never shortens the configured hold window.
  * With no exit configured this is exactly the episode's existing reveal().
  */
-export function textTransitionState(t,start,{d=.55,dy=12,exitStart=Infinity,exitDuration=.55,exitDy=0}={}){
+export function textTransitionState(t,start,{d=.55,dy=12,exitStart=Infinity,exitDuration=.55,exitDy=0,offsetBy='entry'}={}){
  const entered=ramp(t,start,d),exited=exitStart===Infinity?0:ramp(t,exitStart,exitDuration);
- const offset=(1-entered)*dy;
- return {...transformState(entered*(1-exited),0,exited===0?offset:offset+exited*exitDy),entered,exited};
+ const alpha=entered*(1-exited),offset=(1-(offsetBy==='visibility'?alpha:entered))*dy;
+ return {...transformState(alpha,0,exited===0?offset:offset+exited*exitDy),entered,exited};
 }

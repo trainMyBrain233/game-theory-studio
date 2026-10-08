@@ -1,11 +1,16 @@
 export {timeline,content} from './model.mjs';
 import {timeline,content,sceneData} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
+import {textTransitionState} from './motion.mjs';
+import {createSubtitleElement} from './elements/subtitle.mjs';
+import {createPayoffMatrixElement} from './elements/payoff-matrix.mjs';
 import {TOKENS,C,clamp,ease,mix,ramp,span,tx,line,round,circle,arrow,group,reveal,person,badge,card,cardFlip,tag,desk,eye,resetRecords,setSceneTime,finishActorLayers} from './primitives.mjs';
 export const W=TOKENS.canvas.width,H=TOKENS.canvas.height,FPS=TOKENS.canvas.fps,DURATION=timeline.duration;
 const S=id=>timeline.segments.find(s=>s.id===id);
 const T=id=>S(id).start;
 const SEC=id=>timeline.sections.find(s=>s.id===id);
+const {draw:subtitle}=createSubtitleElement({timeline,tokens:TOKENS,drawing:{C,ramp,group,tx}});
+const {draw:matrix,currentCell}=createPayoffMatrixElement({timeline,summaryStart:T('s32_joint_choices'),drawing:{C,ramp,group,round,line,tx,reveal}});
 export const designTokens=TOKENS;
 const sections={intro:{no:'00',name:'四个问题',title:'为什么要琢磨对方怎么选？',lead:'两个人，都想让自己的得分更高。'},players:{no:'01',name:'参与者',title:'谁在做决定？',lead:'先认识做决定的人，和他们各自的目标。'},information:{no:'02',name:'信息',title:'做决定时，知道什么？',lead:'公开的规则，和看不到的当前选择。'},strategy:{no:'03',name:'策略',title:'能怎样选择？',lead:'先看这一轮，再理解一整套应对计划。'},payoffs:{no:'04',name:'收益',title:'不同选择，各得什么？',lead:'先找选择组合，再读两个人的得分。'},recap:{no:'05',name:'四问复盘',title:'四个问题，先把博弈说清楚',lead:'参与者、信息、策略、收益。'}};
 const secAt=t=>timeline.sections.find(s=>t>=s.start&&t<s.end)||timeline.sections.at(-1);
@@ -13,23 +18,15 @@ function chapter(c,t){
  const sec=secAt(t),conf=sections[sec.id];
  tx(c,'博弈论入门',84,84,31,700);tx(c,sec.id==='recap'?'四问复盘':'一轮积分游戏 · 虚构教学案例',1836,84,27,400,C.muted,'right');
  line(c,84,116,1836,116,C.light,1.5);
- const fadeOut=sec.id==='recap'?1:1-ramp(t,sec.end-.3,.25), fadeIn=ramp(t,sec.start+.06,.42),p=sec.id==='intro'?ramp(t,0,.55):fadeIn;
- group(c,p*fadeOut,0,(1-p)*12,()=>{
+ const state=textTransitionState(t,sec.id==='intro'?0:sec.start+.06,{d:sec.id==='intro'?.55:.42,dy:12,exitStart:sec.id==='recap'?Infinity:sec.end-.3,exitDuration:.25});
+ group(c,state.alpha,state.dx,state.dy,()=>{
   round(c,84,165,62,62,0,C.ink,null);tx(c,conf.no,115,209,30,700,C.white,'center');
   tx(c,conf.title,178,226,sec.id==='recap'?65:72,700,C.ink,'left',{serif:TOKENS.titleFamily==='serif'});tx(c,conf.lead,178,291,33,400,C.muted);
  });
  // Progress is a quiet reading aid; it does not change semantic color mappings.
  const filled=(t/DURATION)*1752;line(c,84,936,1836,936,C.light,1);line(c,84,936,84+filled,936,C.ink,2);
 }
-function subtitle(c,t){
- const s=timeline.segments.find(x=>t>=x.start&&t<x.end);if(!s)return;
- // Whole clauses remain visible through the planned breathing space.
- const a=ramp(t,s.start,.09);group(c,a,0,0,()=>{
- const ys=s.lines.length===1?[1010]:TOKENS.spacing.subtitle_baselines;
- s.lines.forEach((str,i)=>tx(c,str,960,ys[i],TOKENS.type.subtitle,700,C.ink,'center'));
- });
-}
-function definition(c,label,text,t,start,{end=1e9}={}){const p=ramp(t,start,.5)*(1-ramp(t,end-.3,.25));group(c,p,0,(1-p)*9,()=>{line(c,84,869,84,913,C.ink,7);tx(c,label,113,905,34,700);tx(c,text,292,905,33,400)})}
+function definition(c,label,text,t,start,{end=1e9}={}){const state=textTransitionState(t,start,{d:.5,dy:9,exitStart:end-.3,exitDuration:.25,offsetBy:'visibility'});group(c,state.alpha,state.dx,state.dy,()=>{line(c,84,869,84,913,C.ink,7);tx(c,label,113,905,34,700);tx(c,text,292,905,33,400)})}
 function duo(c,t,{alpha=1,spread=0,cards=true,names=true,hidden=0,cardY=786}={}){
  const s=mix(.84,.66,spread),ax=mix(260,115,spread),bx=mix(1284,1528,spread),y=mix(357,443.2,spread);
  desk(c,alpha,760,mix(230,88,spread),mix(1688,1832,spread));person(c,'A',ax,y,s,alpha);person(c,'B',bx,y,s,alpha);
@@ -122,30 +119,6 @@ function strategy(c,t){
   reveal(c,t,T('s17_comparison_example')+3.0,()=>{tx(c,'对方选{{blue}}',1250,806,30,700,C.ink,'center');card(c,'blue',1430,732,100);tx(c,'自己选{{blue}}',1570,744,33,700)});
  });
  group(c,ramp(t,T('s18_return_single_round')+3.4,.4)*(1-ramp(t,SEC('strategy').end-.3,.25)),0,0,()=>{tx(c,'回到本片',960,483,33,400,C.muted,'center');tx(c,'仍然只玩一轮',960,570,43,700,C.ink,'center')});
-}
-const cells={RR:[0,0],RB:[0,1],BR:[1,0],BB:[1,1]};
-function scoreValues(c,t,key,cx,cy,size=64){
- const s=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key);if(!s||t<s.start)return;
- const reveals=s.visual_cue.score_reveals;
- tx(c,'(',cx-126*size/64,cy+21*size/64,size,400,C.ink,'center');tx(c,',',cx,cy+21*size/64,size,400,C.ink,'center');tx(c,')',cx+126*size/64,cy+21*size/64,size,400,C.ink,'center');
- reveals.forEach(r=>reveal(c,t,s.start+r.offset,()=>tx(c,String(r.value),cx+(r.player==='A'?-64:64)*size/64,cy+21*size/64,size,700,C.ink,'center'),{d:.38,dy:6}));
-}
-function currentCell(t){return timeline.segments.filter(s=>s.start<=t&&s.visual_cue.matrix_cell).at(-1)?.visual_cue.matrix_cell||null}
-function matrix(c,t,{progress=1,geometry={x:780,y:503,cw:480,ch:170},fontSize=64}={}){
- const {x,y,cw,ch}=geometry;
- const key=currentCell(t),current=cells[key];
- const showSummary=t>=T('s32_joint_choices');
- if(current&&!showSummary){const select=timeline.segments.find(s=>s.visual_cue.action==='highlight_choices'&&s.visual_cue.matrix_cell===key);const p=ramp(t,select.start+1.7,.55);group(c,p,0,0,()=>round(c,x+current[1]*cw+3,y+current[0]*ch+3,cw-6,ch-6,0,C.faint,null));}
- // All grid strokes live in dedicated gutters around text.
- line(c,x,y,x+cw*2,y,C.ink,3,progress);line(c,x,y+ch,x+cw*2,y+ch,C.ink,3,progress);line(c,x,y+2*ch,x+cw*2,y+2*ch,C.ink,3,progress);
- line(c,x,y,x,y+2*ch,C.ink,3,progress);line(c,x+cw,y,x+cw,y+2*ch,C.ink,3,progress);line(c,x+2*cw,y,x+2*cw,y+2*ch,C.ink,3,progress);
- Object.entries(cells).forEach(([key,[r,co]])=>scoreValues(c,t,key,x+co*cw+cw/2,y+r*ch+ch/2,fontSize));
- if(current&&!showSummary){const s=timeline.segments.find(s=>s.visual_cue.action==='highlight_choices'&&s.visual_cue.matrix_cell===key);const pr=ramp(t,s.start,.45),pc=ramp(t,s.start+1.65,.45);
-  // Indicators are short and remain outside the grid; they never cross scores.
-  line(c,757,y+current[0]*ch+20,757,y+(current[0]+1)*ch-20,C.ink,5,pr);
-  line(c,x+current[1]*cw+50,488,x+(current[1]+1)*cw-50,488,C.ink,5,pc);
-  group(c,ramp(t,s.start+1.7,.5),0,0,()=>round(c,x+current[1]*cw+3,y+current[0]*ch+3,cw-6,ch-6,0,null,C.ink,4));
- }
 }
 function payoffs(c,t){
  const move=ramp(t,T('s21_rows')+.1,1.2),rows=ramp(t,T('s21_rows')+1.5,.45),cols=ramp(t,T('s22_columns'),.65),oldExit=1-ramp(t,T('s21_rows')-.45,.42);
