@@ -5,16 +5,14 @@ import {loadImage} from '@napi-rs/canvas';
 import {CAST,resolveCastText} from './cast.mjs';
 import {registerFonts,canvasFont,FONT_FAMILY,SERIF_FAMILY} from '../typography/fonts.mjs';
 import {assertAppliedFont} from '../../typography/font-contract.mjs';
+import {mix,transformState,textTransitionState} from './motion.mjs';
+import {cardTransform} from './card-transform.mjs';
+export {clamp,ease,mix,ramp,span} from './motion.mjs';
 registerFonts({serif:true});
 export {TOKENS} from './model.mjs';
 import {TOKENS} from './model.mjs';
 const tc=TOKENS.colors;
 export const C={paper:tc.paper,ink:tc.ink,muted:tc.secondary,light:tc.line,faint:tc.focus_fill,blue:tc.blue_strategy,red:tc.red_strategy,beige:'#F2E7CE',white:'#FFFFFF'};
-export const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
-export const ease=x=>{x=clamp(x);return x*x*x*(x*(x*6-15)+10)};
-export const mix=(a,b,p)=>a+(b-a)*p;
-export const ramp=(t,start,d=.6)=>ease((t-start)/d);
-export const span=(t,a,b)=>ramp(t,a,.4)*(1-ramp(t,b-.4,.4));
 export const assets={};
 let characterRenderer=null,currentSceneTime=0;
 export function setSceneTime(t,canvas){currentSceneTime=t;characterRenderer?.beginFrame?.(canvas)}
@@ -67,12 +65,12 @@ export function circle(c,x,y,r,fill=C.paper,stroke=C.ink,w=3){c.save();c.beginPa
 export function arrow(c,x1,y1,x2,y2,p=1,{color=C.ink,w=3,dashed=false}={}){
  line(c,x1,y1,x2,y2,color,w,p,dashed);if(p<.97)return;const a=Math.atan2(y2-y1,x2-x1);c.save();c.fillStyle=color;c.beginPath();c.moveTo(x2,y2);c.lineTo(x2-15*Math.cos(a-.42),y2-15*Math.sin(a-.42));c.lineTo(x2-15*Math.cos(a+.42),y2-15*Math.sin(a+.42));c.closePath();c.fill();c.restore();
 }
-export function group(c,alpha,dx,dy,fn){if(alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.translate(dx,dy);fn();c.restore()}
-export function reveal(c,t,start,fn,{d=.55,dy=12}={}){const p=ramp(t,start,d);group(c,p,0,(1-p)*dy,fn)}
+export function group(c,alpha,dx,dy,fn){const state=transformState(alpha,dx,dy);if(!state.visible)return;c.save();c.globalAlpha*=state.alpha;c.translate(state.dx,state.dy);fn();c.restore()}
+export function reveal(c,t,start,fn,{d=.55,dy=12}={}){const state=textTransitionState(t,start,{d,dy});group(c,state.alpha,state.dx,state.dy,fn)}
 export function person(c,id,x,y,s=1,alpha=1){if(characterRenderer){characterRenderer.draw(c,id,{x,y,scale:s,alpha,t:currentSceneTime});return;}if(!assets['person-'+id.toLowerCase()])return;group(c,alpha,0,0,()=>{c.drawImage(assets['person-'+id.toLowerCase()],x,y,420*s,500*s);if(CAST.actors[id].badge_anchor!==null)tx(c,id,x+(CAST.actors[id].badge_anchor?.[0]||164)*s,y+((CAST.actors[id].badge_anchor?.[1]||374)+10)*s,26*s,700,C.white,'center',{record:false})})}
 export function badge(c,id,x,y,r=25,{name=false}={}){if(id==='A')circle(c,x,y,r,C.ink,null);else round(c,x-r,y-r,r*2,r*2,1,C.ink,null);tx(c,id,x,y+r*.4,r*1.05,700,C.white,'center',{record:false});if(name)tx(c,CAST.actors[id].display_name,x+r+17,y+11,31,700)}
 export function card(c,kind,x,y,w=112,{angle=0,flip=1,alpha=1,label=true}={}){
- const h=w*190/140;c.save();c.globalAlpha*=alpha;c.translate(x,y);c.rotate(angle);c.scale(Math.max(Math.abs(flip),.012),1);
+ const transform=cardTransform({x,y,w,angle,flip}),h=transform.height;c.save();c.globalAlpha*=alpha;c.translate(transform.x,transform.y);c.rotate(transform.angle);c.scale(transform.visibleScaleX,1);
  const image=assets['card-'+kind];if(image)c.drawImage(image,-w/2,-h/2,w,h);else round(c,-w/2,-h/2,w,h,8,C.paper,C.ink,3);
  if(label&&kind!=='back')tx(c,CAST.strategies[kind].label,0,h*.31,Math.max(28,w*.29),700,C.white,'center',{record:false});c.restore();
 }

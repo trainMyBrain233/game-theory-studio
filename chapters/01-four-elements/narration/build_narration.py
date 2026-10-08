@@ -11,6 +11,9 @@ parser.add_argument('--output-dir',type=Path,default=Path(__file__).resolve().pa
 OUT=parser.parse_args().output_dir
 OUT.mkdir(parents=True,exist_ok=True)
 # Speech estimates are authored per semantic unit; they are not character-rate allocation.
+# Only revised text is re-estimated; unchanged original reference windows stay fixed.
+def revised_speech(text,previous):
+    return max(previous,round(len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',text))/3.8,1))
 rows=[]
 def add(section,key,text,spoken_duration,pause,lines=None,cue=None,breaths=None):
     text=CASE.score_text(cue['matrix_cell']) if cue and cue.get('action')=='reveal_scores' else CASE.text(text)
@@ -51,7 +54,7 @@ add('payoffs','br_score',CASE.score_text('BR'),3.8,.9,cue={'action':'reveal_scor
 add('payoffs','bb_select','小A选蓝，小B也选蓝。',3.5,.6,cue={'action':'highlight_choices','matrix_cell':'BB','choices':{'A':'蓝','B':'蓝'},'note':'先选择，再结算。'},breaths=['小A选蓝，'])
 add('payoffs','bb_score',CASE.score_text('BB'),2.5,1.0,cue={'action':'reveal_scores','matrix_cell':'BB','scores':PAYOFFS['BB'],'score_reveals':[{'offset':1.8,'player':'A','value':PAYOFFS['BB'][0]},{'offset':1.8,'player':'B','value':PAYOFFS['BB'][1]}],'note':'固定数对（1，1）；四格全部保留。'},breaths=['两个人，'])
 add('payoffs','joint_choices','所以，收益取决于两个人的选择组合。',4.3,.9,cue={'action':'summarize_joint_choices','note':'完整矩阵静置，轻扫同一行的不同收益。'},breaths=['所以，'])
-add('payoffs','beyond_money','收益不一定是钱，还可以表示时间、声誉，或对结果的偏好。',6.0,1.0,['收益不一定是钱，','还可以表示时间、声誉，或对结果的偏好。'],{'action':'broaden_payoff_meaning','note':'小图标配文字，避免把时间/声誉画成必定能直接相加的数。'},['不一定是钱，','时间、声誉，'])
+add('payoffs','beyond_money','收益不一定是钱，还可以表示节省的时间、声誉，或对结果的偏好。',revised_speech('收益不一定是钱，还可以表示节省的时间、声誉，或对结果的偏好。',6.0),1.0,['收益不一定是钱，','还可以表示节省的时间、声誉，或对结果的偏好。'],{'action':'broaden_payoff_meaning','note':'小图标配文字，避免把时间/声誉画成必定能直接相加的数。'},['不一定是钱，','节省的时间、声誉，'])
 add('recap','intro','最后，记住这四问：',2.3,.7,cue={'action':'restore_four_questions'})
 add('recap','first_pair','谁来决定？知道什么？',2.8,.8,cue={'action':'recap_first_pair','note':'参与者、信息两卡分别高亮。'},breaths=['谁来决定？'])
 add('recap','second_pair','怎么选择？各得什么？',2.8,.8,cue={'action':'recap_second_pair','note':'策略、收益两卡分别高亮。'},breaths=['怎么选择？'])

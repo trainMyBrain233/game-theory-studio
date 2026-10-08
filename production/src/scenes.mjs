@@ -69,8 +69,8 @@ function information(c,t){
  duo(c,t,{cards:false});
  // One selected card per person; the unused option withdraws before the back flips.
  const choose=choreography.move,ca=choreography.cards.A,cb=choreography.cards.B;
- cardFlip(c,ca.kind,'back',ca.x,ca.y,105,hidden,{angle:-.035});
- cardFlip(c,cb.kind,'back',cb.x,cb.y,105,hidden,{angle:.035});
+ cardFlip(c,ca.kind,'back',ca.x,ca.y,ca.w,hidden,{angle:ca.angle});
+ cardFlip(c,cb.kind,'back',cb.x,cb.y,cb.w,hidden,{angle:cb.angle});
  group(c,choreography.unused,0,choose*34,()=>{card(c,sceneData.selected.row===0?'blue':'red',sceneData.selected.row===0?546:408,786,105);card(c,sceneData.selected.column===0?'blue':'red',sceneData.selected.column===0?1508:1370,786,105)});
  reveal(c,t,T('s08_known_unknown'),()=>tag(c,'计分规则：双方都知道',738,377,444,{size:30}));
  const dist=ramp(t,T('s10_distinction'),.5),summ=ramp(t,T('s11_timing'),.55);
@@ -172,7 +172,7 @@ function payoffs(c,t){
    const rs=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key),lastReveal=rs.start+Math.max(...rs.visual_cue.score_reveals.map(event=>event.offset));if(t>=lastReveal)reveal(c,t,lastReveal,()=>{tx(c,'得分',100,739,30,400,C.muted);tx(c,`(${rs.visual_cue.scores[0]}, ${rs.visual_cue.scores[1]})`,208,744,52,700)});
    } else if(summary){tx(c,'两个人的选择',100,583,35,700);tx(c,'共同决定收益',100,646,35,700);}
   });
-  group(c,beyond*(1-ramp(t,SEC('payoffs').end-.3,.25)),0,(1-beyond)*10,()=>{tx(c,'收益可以表示',100,418,37,700);[['时间',519],['声誉',625],['对结果的偏好',731]].forEach(([a,y],i)=>{const pp=ramp(t,T('s33_beyond_money')+1.1+i*1.15,.4);group(c,pp,0,0,()=>{circle(c,124,y-12,17,C.paper,C.ink,2.5);if(i===0){line(c,124,y-12,124,y-23,C.ink,2);line(c,124,y-12,134,y-7,C.ink,2)}else if(i===1){line(c,116,y-11,122,y-5,C.ink,2);line(c,122,y-5,132,y-20,C.ink,2)}else{circle(c,124,y-12,6,C.ink,null)}tx(c,a,164,y,34,400)})})});
+  group(c,beyond*(1-ramp(t,SEC('payoffs').end-.3,.25)),0,(1-beyond)*10,()=>{tx(c,'收益可以表示',100,418,37,700);[['省下的时间',519],['声誉',625],['对结果的偏好',731]].forEach(([a,y],i)=>{const pp=ramp(t,T('s33_beyond_money')+1.1+i*1.15,.4);group(c,pp,0,0,()=>{circle(c,124,y-12,17,C.paper,C.ink,2.5);if(i===0){line(c,124,y-12,124,y-23,C.ink,2);line(c,124,y-12,134,y-7,C.ink,2)}else if(i===1){line(c,116,y-11,122,y-5,C.ink,2);line(c,122,y-5,132,y-20,C.ink,2)}else{circle(c,124,y-12,6,C.ink,null)}tx(c,a,164,y,34,400)})})});
   reveal(c,t,T('s23_score_order'),()=>{tx(c,'数对顺序：',786,899,30,400,C.muted);tx(c,'（{{A}}得分，{{B}}得分）',958,899,32,700)});
  }
 }

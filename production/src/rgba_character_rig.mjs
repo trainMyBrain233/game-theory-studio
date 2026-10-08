@@ -1,11 +1,10 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import {loadImage,createCanvas} from '@napi-rs/canvas';
+import {clamp,kinematicEase as ease,mix} from './motion.mjs';
+export {kinematicEase as ease,mix} from './motion.mjs';
 export const assets={};
 const ROOT=path.resolve(import.meta.dirname,'../private_characters/pvz');
-const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
-export function ease(x){x=clamp(x);return x*x*x*(10+x*(-15+6*x));}
-export const mix=(a,b,t)=>a+(b-a)*t;
 function flipped(img){const c=createCanvas(img.width,img.height),x=c.getContext('2d');x.translate(img.width,0);x.scale(-1,1);x.drawImage(img,0,0);return c;}
 export async function prepareCharacterAssets(){
  for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm']){
@@ -52,7 +51,7 @@ export function getRigPose(id,t,{handOverride=null,headAngleOverride=null}={}){
  const thought=.035*Math.sin(Math.PI*clamp(t/1.8));
  const glance=.045*Math.sin(Math.PI*clamp((t-7.65)/1.5));
  const reaction=(id==='b'?-1:1)*.026*Math.sin(Math.PI*clamp((t-10.6)/1.4));
- return {shoulder:s,elbow,hand:h,requestedHand,handClamped:Math.abs(rawDistance-d)>.001,headAngle:headAngleOverride??(thought-glance+reaction)};
+ return {shoulder:s,elbow,hand:h,solvedHand:h,requestedHand,handClamped:Math.abs(rawDistance-d)>.001,contactError:Math.hypot(h[0]-requestedHand[0],h[1]-requestedHand[1]),headAngle:headAngleOverride??(thought-glance+reaction)};
 }
 /** Draw independently pivoted RGBA layers; x/y anchor the torso top-left.
  * side=1 faces right; side=-1 faces left. This is a tabletop cutout rig,
