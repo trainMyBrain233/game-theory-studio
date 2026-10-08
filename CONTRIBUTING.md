@@ -30,6 +30,8 @@ npm test
 
 内容修改时递增该章节的 `contentVersion`。结构契约改变时先更新 Schema/版本与迁移说明，再改消费者；不要为了绕过验证删除 Schema 或负向样本。详见 [版本与更新流程](docs/project-structure.md#版本与更新流程)。
 
+创作与制作验收使用[博弈论视频制作指南](docs/production-guide/video-production-guide.zh-CN.md)和[逐集十项验收模板](docs/production-guide/episode-acceptance-template.zh-CN.md)。[来源登记](docs/production-guide/sources.zh-CN.md)区分官方要求、研究建议与尚未核实的投稿规格；未做真人试听或实际平台播放的项目保持待验。
+
 ## 代码与依赖
 
 - Node 使用 ESM 和内置测试器；Python 保留明确 UTF-8 I/O 和项目虚拟环境。优先复用现有 Canvas 渲染器与字体注册模块。
@@ -45,3 +47,5 @@ npm test
 运行 `npm test` 与 `git diff --check`，目视查看 B 两个模板、SC 字形板和改动涉及的中间帧。按 [交付检查单](docs/delivery-checklist.md) 记录范围与未覆盖项。生成的 PNG、视频、字体、本机 manifest 和机器 QA 报告不提交。
 
 PR 描述包含触发问题、结果行为、实际验证、已知限制与相关审查链接。CI 必须属于当前 head commit。基础建设阶段的叠加 PR 以 `setup/studio-foundation` 为 base；不要自行合并或直接写 main。GitHub/Codex Auto review 的连接和配置由独立任务管理。
+
+创作内容复核见[教学内容检查单](docs/teaching-content-checklist.md)；通用元素、角色层坐标与支持范围见[可复用绘制接口](docs/render-elements.md)。

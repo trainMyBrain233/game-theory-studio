@@ -1,6 +1,10 @@
 # 第一集完整时间线渲染模块
 
-`production/` 提供 173.3 秒、六节、30fps 的 B 暖白/深蓝教材风渲染器：参与者、信息遮挡与亮牌、一轮/多轮策略对照、四格逐项读表和复盘。当前main仅LICENSE；先按根README检出infra/quality-pipeline或对应评审分支。代码可执行整段时间线；当前时间窗是人工口播参考，没有配音对齐。云端已报告f694678的173.3秒私有PvZ视觉预览生成/验收、5199帧完整解码和与已验收媒体逐字节一致，影片与八层素材不在公开仓库。本轮修改后由生产验证重新绑定head；没有未知新hash或新head成片通过声明。公开占位CI与这项私有视觉证据分开。
+`production/` 提供 174.1 秒、六节、30fps 的 B 暖白/深蓝教材风渲染器（章节内容2.0.2，完整时间轴5223帧）：参与者、信息遮挡与亮牌、一轮/多轮策略对照、四格逐项读表和复盘。当前main仅LICENSE；先按根README检出infra/quality-pipeline或对应评审分支。代码可执行整段时间线；当前时间窗是人工口播参考，没有配音对齐。云端已报告f694678的173.3秒私有PvZ视觉预览生成/验收、5199帧完整解码和与已验收媒体逐字节一致，影片与八层素材不在公开仓库。本轮修改后由生产验证重新绑定head；没有未知新hash或新head成片通过声明。公开占位CI与这项私有视觉证据分开。
+
+## 创作说明
+
+制作流程、横屏观看尺寸、录音后对齐、音频状态与发布范围见[博弈论视频制作指南](../docs/production-guide/video-production-guide.zh-CN.md)。逐集复制[十项验收模板](../docs/production-guide/episode-acceptance-template.zh-CN.md)，按实际完成的阶段记录通过、待验或不适用；外部建议的适用范围与访问限制见[来源登记](../docs/production-guide/sources.zh-CN.md)。历史媒体实测不自动覆盖修改后的源码，平台播放与真人试听需单独记录。
 
 ## 统一入口
 
@@ -60,3 +64,5 @@ npm run pack:source
 实际本机记录见 [验证记录](../docs/validation.md)。不保留来源包中的历史私有媒体通过声明。4K 原生绘制可提高文字/矩阵分辨率，不能补出位图角色原图缺失的细节。
 
 原 MIT [LICENSE](../LICENSE) 覆盖原创代码/SVG；字体使用独立 OFL。EA/PvZ 图像、重绘、截图、视频和私有角色素材均不在公开仓库，见 [素材边界](PRIVATE_ASSETS.md) 和 [第三方说明](../docs/third-party-content.md)。
+
+创作内容复核见[教学内容检查单](../docs/teaching-content-checklist.md)；通用元素、角色层坐标与支持范围见[可复用绘制接口](../docs/render-elements.md)。

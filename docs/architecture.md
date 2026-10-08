@@ -27,6 +27,7 @@ flowchart LR
 | 内容 | 章节生成器维护语义块、参考发声窗和停顿。派生timeline/SRT/录音稿提交供审查，重建必须确定且只读QA相等。 |
 | 模型 | `production/src/model.mjs`验证案例、timeline和production Schema，再补齐CAST姓名、content矩阵、TOKENS颜色/字幕。此层不导入场景、字体、私有图层或FFmpeg。 |
 | 渲染 | `scenes.mjs`组织六节，`primitives.mjs`绘制可测量的文字/图形，`choreography.mjs`提供显式时间动作，`character_adapter.mjs`适配角色槽位。状态依赖传入时间，不读墙钟驱动动画。 |
+| 纯计算/元素 | `motion.mjs`由实际文字出入场、标题/定义、动作和rig消费；`elements/`通过显式资源/API注入复用卡牌、矩阵和字幕；`character-layers.mjs`定义prepared空间。接口及限制见[可复用绘制接口](render-elements.md)。 |
 | 素材/字体 | 原创SVG与私有RGBA通过明确模式进入绘制；缺私有层不静默替换。`production/typography/fonts.mjs`仅保留旧导入兼容入口，重新导出根字体注册器。 |
 | 编码/交付 | `render.mjs`处理逐帧输出与FFmpeg流；文本导出、源码归档、音效、联系图各有命令。编码失败不代表内容Schema失败，完整解码也不代表音频对齐成功。 |
 | 验证/工具 | `scripts/`目前同时包含命令入口和小共享库（case、schema、layout、Python路径）；`tests/`提供独立负例和变异。保留现有路径，新增模块优先按单一职责命名，出现实际复用需求再拆库。 |

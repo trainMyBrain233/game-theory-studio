@@ -17,6 +17,7 @@
 | `typography/` | 完整 SC 字体准备/注册 | 字体二进制和 manifest 只存本地 |
 | `assets/characters/` | A/B 通用接口，原创历史提案归档 | 最终第三方角色图像由仓库外生产流程管理 |
 | `production/` | 六节时间线、动作、私有RGBA适配、原创占位SVG和整集QA | 根目录 `test:episode` / `render:episode:*`；共用根案例/时间轴/字体 |
+| `production/src/elements/`、`motion.mjs`、`character-layers.mjs` | 实际主片消费的卡牌/矩阵/字幕接口与纯动作/角色层元数据 | [接口与坐标契约](render-elements.md)；保留第一章回归 |
 | `requirements-media.txt` | 可选原创音效/联系图工具 | `setup:media`；NumPy/Pillow精确版本 |
 | `project-status.json` | 当前原型/生产状态 | 人工核对状态，不能把 QA 通过当整片完成 |
 | `.github/workflows/quality.yml` | Linux/macOS 最小权限 CI | 当前源码验证；不发布任何内容 |
