@@ -124,6 +124,9 @@ Resources and pure imports never create output files/directories.
 A transition supplies integer start/end frames and from/to poses containing
 `x`, `y`, `scale`, `side`, `alpha`. x/y anchor the intrinsic image's top-left;
 side -1 mirrors inside that footprint. Side cannot change during a transition.
+Track keys are limited to `startFrame`, `endFrame`, `from`, `to` and optional
+`easing`; endpoint keys are exactly the five pose fields above. Unknown fields
+(including `rotation` and `anchor`) are rejected rather than silently dropped.
 Positive scale and finite poses are mandatory. Supported easing is linear,
 smoothstep or smootherstep. The sampler clamps before/after and exposes raw
 and eased progress. `avatarTransitionFrames` includes before/start, rounded
@@ -161,6 +164,18 @@ the pixel evidence. It uses a conservative square (Chebyshev) gap, stricter
 than Euclidean distance at diagonals. Errors identify the offending text role,
 actual text/avatar pixel witnesses, measured gap and required gap; glyph boxes
 attribute the role only after the pixel collision has been established.
+
+The fixed layout also reserves the complete matrix panel (including its outer
+stroke) and both card rectangles. These regions and their drawing commands
+share `PUBLIC_GEOMETRY`; there is no separately copied collision layout.
+After the text-ink check, a visible avatar's captured, filtered alpha envelope
+must not overlap any reserved region, even an empty matrix cell. This is a
+conservative rectangle reservation, not a claim of precise shape clearance;
+transparent native-image padding alone does not collide. It adds no spacing
+requirement beyond non-overlap for graphics. Zero-opacity avatars paint no ink,
+but every later visible sample is checked. Errors identify the actor, graphic
+role, filtered envelope, reserved rectangle and positive overlap dimensions.
+Safe endpoint positions do not authorize crossing a teaching graphic midway.
 
 Session creation proves containment, not future text clearance. Per-frame
 checks also catch paths whose endpoints are clear but middle frames cross text,

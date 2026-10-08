@@ -77,7 +77,9 @@ test('real avatar masks retain pinned low smoothing and default cold/cached pixe
 
 test('runtime clearance follows newly visible score ink rather than only a static layout preflight',()=>{
  const session=createRenderSession({plan:fixture(),adapters:syntheticCast(),tracks:fixedTrack('A',{x:870,y:465})});
- const before=session.render(89);assert.equal(before.state.revealedScores.RR[0],null);before.dispose();
+ // The earlier score-free frame is also unsafe: the complete matrix panel
+ // is now reserved. Visible score ink still receives its specific text diagnosis.
+ assert.throws(()=>session.render(89),error=>{assert.equal(error.details.graphicRole,'matrix');return true;});
  assert.throws(()=>session.render(90),error=>{assert(error.details.roles.includes('score:RR:0'));assert(error.details.actualGap<32);return true;});
 });
 

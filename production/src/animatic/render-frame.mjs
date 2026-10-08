@@ -10,7 +10,26 @@ import {prepareVerifiedAnimaticFonts,registerVerifiedAnimaticFonts} from './font
 import {assertAvatarTrackInFrame,assertAvatarSampleInFrame,assertAvatarTextClearance} from './geometry.mjs';
 import {validateAvatarAdapter,alphaInkBounds,createAvatarTransition,sampleAvatarTransition,drawAvatarSample} from './avatar.mjs';
 
-export const PUBLIC_GEOMETRY=deepFreeze({width:1920,height:1080,matrix:{x:740,y:430,width:940,height:340},subtitle:{singleY:1018,twoY:988,lineHeight:52,size:40}});
+export const PUBLIC_GEOMETRY=deepFreeze({width:1920,height:1080,matrix:{x:740,y:430,width:940,height:340,strokeWidth:2,focusInset:5,focusStrokeWidth:5},cards:{x:84,y:210,width:90,height:120,stride:130},subtitle:{singleY:1018,twoY:988,lineHeight:52,size:40}});
+// Reserve complete teaching-graphic panels, including the centered outer stroke.
+// Drawing and rejection derive from this same immutable geometry, not copied boxes.
+export const PUBLIC_GRAPHIC_REGIONS=deepFreeze([
+ {role:'matrix',x:PUBLIC_GEOMETRY.matrix.x-PUBLIC_GEOMETRY.matrix.strokeWidth/2,y:PUBLIC_GEOMETRY.matrix.y-PUBLIC_GEOMETRY.matrix.strokeWidth/2,width:PUBLIC_GEOMETRY.matrix.width+PUBLIC_GEOMETRY.matrix.strokeWidth,height:PUBLIC_GEOMETRY.matrix.height+PUBLIC_GEOMETRY.matrix.strokeWidth},
+ ...['A','B'].map((owner,index)=>({role:`card:${owner}`,x:PUBLIC_GEOMETRY.cards.x+index*PUBLIC_GEOMETRY.cards.stride,y:PUBLIC_GEOMETRY.cards.y,width:PUBLIC_GEOMETRY.cards.width,height:PUBLIC_GEOMETRY.cards.height}))
+]);
+function assertGraphicRegionsClear(avatarRecords){
+ for(const {id,sample,supportBounds:ink} of avatarRecords){
+  if(sample.alpha===0)continue;
+  for(const graphic of PUBLIC_GRAPHIC_REGIONS){
+   const dx=Math.min(ink.x+ink.width,graphic.x+graphic.width)-Math.max(ink.x,graphic.x);
+   const dy=Math.min(ink.y+ink.height,graphic.y+graphic.height)-Math.max(ink.y,graphic.y);
+   if(dx<=0 || dy<=0)continue;
+   const failure=new RangeError(`Avatar ${id} filtered alpha footprint overlaps reserved graphic region ${graphic.role}; overlap ${dx}x${dy}px.`);
+   Object.defineProperty(failure,'details',{value:deepFreeze({avatar:id,graphicRole:graphic.role,avatarSupport:{...ink},graphicRegion:{...graphic},overlap:{width:dx,height:dy}}),enumerable:true});
+   throw failure;
+  }
+ }
+}
 export const TEXT_SLOTS=deepFreeze({
  header:{x:84,y:24,width:1752,height:88},information:{x:84,y:126,width:1752,height:68},
  'name:A':{x:340,y:448,width:240,height:88},'name:B':{x:1160,y:238,width:640,height:80},
@@ -40,15 +59,15 @@ export function drawResolvedSubtitle(ctx,textContext,records,state,fontFamily=FO
  for(const [index,line] of lines.entries())drawText([ctx,textContext],records,line,960,lines.length===1?g.singleY:g.twoY+index*g.lineHeight,g.size,{fontFamily,role:'subtitle',align:'center'});
 }
 export function drawResolvedMatrix(ctx,textContext,records,state,caseData,fontFamily=FONT_FAMILY) {
- const {x,y,width,height}=PUBLIC_GEOMETRY.matrix,cw=width/2,ch=height/2;
+ const {x,y,width,height,strokeWidth,focusInset,focusStrokeWidth}=PUBLIC_GEOMETRY.matrix,cw=width/2,ch=height/2;
  for(const [index,cell] of CELLS.entries()){
   const row=Math.floor(index/2),column=index%2,left=x+column*cw,top=y+row*ch;
   ctx.fillStyle=state.activeCell===cell || state.rowFocus===(row===0?'red':'blue')?COLORS.faint:COLORS.paper;ctx.fillRect(left,top,cw,ch);
-  ctx.strokeStyle=COLORS.line;ctx.lineWidth=2;ctx.strokeRect(left,top,cw,ch);
+  ctx.strokeStyle=COLORS.line;ctx.lineWidth=strokeWidth;ctx.strokeRect(left,top,cw,ch);
   const values=state.revealedScores[cell];
   for(const [owner,value] of values.entries())if(value!==null)drawText([ctx,textContext],records,String(value),left+cw/2+(owner===0?-62:62),top+ch/2+24,64,{fontFamily,role:`score:${cell}:${owner}`,align:'center'});
   if(values.every(value=>value!==null))drawText([ctx,textContext],records,'，',left+cw/2,top+ch/2+24,56,{fontFamily,role:`comma:${cell}`,align:'center',weight:400});
-  if(state.activeCell===cell){ctx.strokeStyle=COLORS.ink;ctx.lineWidth=5;ctx.strokeRect(left+5,top+5,cw-10,ch-10);}
+  if(state.activeCell===cell){ctx.strokeStyle=COLORS.ink;ctx.lineWidth=focusStrokeWidth;ctx.strokeRect(left+focusInset,top+focusInset,cw-2*focusInset,ch-2*focusInset);}
  }
  for(const [index,key] of ['red','blue'].entries()){
   drawText([ctx,textContext],records,caseData.strategies[key],x+cw*(index+.5),388,36,{fontFamily,role:`column:${key}`,align:'center',color:COLORS[key]});
@@ -133,8 +152,8 @@ export function createRenderSession({plan,adapters,title='公共动画组件测�
   drawText([ctx,textContext],textRecords,informationLabel,84,170,33,{fontFamily,role:'information'});
   for(const [index,owner] of ['A','B'].entries()){
    const key=state.information.choices?.[owner];
-   const left=84+index*130;ctx.fillStyle=COLORS.faint;ctx.fillRect(left,210,90,120);
-   if(key){ctx.save();ctx.globalAlpha=state.information.revealProgress;ctx.fillStyle=COLORS[key];ctx.fillRect(left,210,90,120);ctx.restore();}
+   const card=PUBLIC_GEOMETRY.cards,left=card.x+index*card.stride;ctx.fillStyle=COLORS.faint;ctx.fillRect(left,card.y,card.width,card.height);
+   if(key){ctx.save();ctx.globalAlpha=state.information.revealProgress;ctx.fillStyle=COLORS[key];ctx.fillRect(left,card.y,card.width,card.height);ctx.restore();}
   }
   drawResolvedMatrix(ctx,textContext,textRecords,state,compiled.plan.caseData,fontFamily);
   const avatarRecords=[];
@@ -158,6 +177,7 @@ export function createRenderSession({plan,adapters,title='公共动画组件测�
    Object.defineProperty(failure,'details',{value:Object.freeze({...details,roles:Object.freeze(roles)}),enumerable:true});
    throw failure;
   }
+  assertGraphicRegionsClear(avatarRecords);
   return {canvas,state,textMask,avatarMask,textRecords,avatarRecords,dispose:()=>{for(const surface of [canvas,textMask,avatarMask]){surface.width=1;surface.height=1;}}};
   }catch(error){for(const surface of [canvas,textMask,avatarMask]){surface.width=1;surface.height=1;}throw error;}
  }

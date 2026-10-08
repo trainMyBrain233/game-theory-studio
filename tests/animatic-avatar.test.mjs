@@ -14,6 +14,7 @@ import {
   validateAvatarAdapter, createAvatarTransition, sampleAvatarTransition,
   avatarTransitionFrames, avatarSampleBounds, drawAvatarSample, alphaInkBounds,
 } from '../production/src/animatic/avatar.mjs';
+import {assertAvatarTrackInFrame, assertAvatarSampleInFrame} from '../production/src/animatic/geometry.mjs';
 
 registerFonts();
 const SIZE = {width: 1920, height: 1080};
@@ -202,6 +203,118 @@ test('invalid transitions, changing direction, and non-integer frame inputs fail
   for (const frame of [NaN,Infinity,-Infinity,0.5,'12',null,undefined,Number.MAX_SAFE_INTEGER+1]) {
     assert.throws(() => sampleAvatarTransition(valid, frame), /frame.*safe integer/);
   }
+});
+
+// These contract regressions use no raster allocation or provider execution.
+const contractAdapter = {
+  id: 'plain-data-contract', width: 12, height: 14,
+  alphaBounds: {x:2, y:3, width:4, height:5},
+  draw() { assert.fail('Pure contract validation must not execute the provider.'); },
+};
+function assertInvalidPlainTransition(input, expected) {
+  for (const validate of [
+    () => createAvatarTransition(input),
+    () => sampleAvatarTransition(input, 32),
+    () => avatarTransitionFrames(input),
+    () => assertAvatarTrackInFrame(contractAdapter, input, SIZE),
+  ]) assert.throws(validate, expected);
+}
+
+test('plain-data transition contract rejects every unsupported track and endpoint property', () => {
+  for (const location of ['track', 'from', 'to']) {
+    for (const [key, value] of [['rotation', Math.PI / 4], ['anchor', 'center'], ['extra', true], ['easnig', 'linear'], ['constructor', 'extra'], ['__proto__', {rotation:0.5}]]) {
+      const input = structuredClone(track()), target = location === 'track' ? input : input[location];
+      Object.defineProperty(target, key, {value, enumerable:true});
+      assertInvalidPlainTransition(input, new RegExp(`unsupported property ${key}`));
+    }
+  }
+  for (const endpoint of ['from', 'to']) for (const key of ['frame', 'progress', 'easedProgress']) {
+    const input = structuredClone(track()); input[endpoint][key] = 0;
+    assertInvalidPlainTransition(input, new RegExp(`unsupported property ${key}`));
+  }
+});
+
+test('plain-data transition contract rejects inherited fields and nonplain records', () => {
+  for (const location of ['track', 'from', 'to']) {
+    for (const prototype of [{rotation:0.5}, {anchor:'center'}, {extra:true}, Date.prototype]) {
+      const input = structuredClone(track()), target = location === 'track' ? input : input[location];
+      Object.setPrototypeOf(target, prototype);
+      assertInvalidPlainTransition(input, /must be a plain object/);
+    }
+    const input = structuredClone(track()), target = location === 'track' ? input : input[location];
+    const inherited = Object.create(target);
+    assertInvalidPlainTransition(location === 'track' ? inherited : {...input, [location]:inherited}, /must be a plain object/);
+    for (const key of location === 'track' ? ['startFrame', 'endFrame', 'from', 'to'] : ['x', 'y', 'scale', 'side', 'alpha']) {
+      const missing = structuredClone(input), record = location === 'track' ? missing : missing[location];
+      delete record[key];
+      assertInvalidPlainTransition(missing, new RegExp(`${key} must be an own data property`));
+    }
+  }
+});
+
+test('plain-data transition contract rejects hidden, symbol, and accessor properties without reading getters', () => {
+  let getterReads = 0;
+  for (const location of ['track', 'from', 'to']) {
+    const supported = location === 'track' ? ['startFrame', 'endFrame', 'from', 'to', 'easing'] : ['x', 'y', 'scale', 'side', 'alpha'];
+    for (const key of ['rotation', 'anchor', Symbol('extra'), ...supported]) {
+      for (const descriptor of [
+        {value:1, enumerable:false},
+        {get() { getterReads++; throw Error('Getter must not execute.'); }, enumerable:true},
+      ]) {
+        const input = structuredClone(track()), target = location === 'track' ? input : input[location];
+        Object.defineProperty(target, key, descriptor);
+        assertInvalidPlainTransition(input, /unsupported property|must be an enumerable data property/);
+      }
+    }
+  }
+  assert.equal(getterReads, 0);
+});
+
+test('plain-data transition contract preserves supported defaults and null-prototype immutable copies', () => {
+  for (const easing of [undefined, null, 'linear', 'smoothstep', 'smootherstep']) {
+    const input = {startFrame:12, endFrame:52, from:pose(), to:pose({x:560}), easing};
+    if (easing === undefined) delete input.easing;
+    for (const nullPrototype of [false, true]) {
+      const candidate = structuredClone(input);
+      if (nullPrototype) for (const record of [candidate, candidate.from, candidate.to]) Object.setPrototypeOf(record, null);
+      const transition = createAvatarTransition(candidate), expectedEasing = easing ?? 'smoothstep';
+      assert.equal(transition.easing, expectedEasing);
+      assert.equal(sampleAvatarTransition(transition, 22).easedProgress,
+        {linear:0.25, smoothstep:0.15625, smootherstep:0.103515625}[expectedEasing]);
+      assert.deepEqual(transition.from, pose()); assert.deepEqual(transition.to, pose({x:560}));
+      for (const record of [transition, transition.from, transition.to]) assert.ok(Object.isFrozen(record));
+      candidate.from.x = -100;
+      assert.equal(transition.from.x, 160); assert.equal(Object.isFrozen(candidate.from), false);
+    }
+  }
+  assert.equal(track({easing:undefined}).easing, 'smoothstep', 'An explicit undefined easing keeps its existing default.');
+});
+
+test('plain-data samples retain declared metadata through real geometry and drawing entrypoints', () => {
+  let draws = 0;
+  const adapter = {...contractAdapter, draw() { draws++; }};
+  const ctx = {globalAlpha:0.5, save() { this.savedAlpha = this.globalAlpha; }, restore() { this.globalAlpha = this.savedAlpha; }, translate() {}, scale() {}};
+  for (const side of [1, -1]) {
+    const transition = track({from:pose({side}), to:pose({side, x:560})});
+    assertAvatarTrackInFrame(adapter, transition, SIZE);
+    for (const frame of avatarTransitionFrames(transition)) {
+      const sample = sampleAvatarTransition(transition, frame);
+      assert.deepEqual(Object.keys(sample).sort(), ['alpha', 'easedProgress', 'frame', 'progress', 'scale', 'side', 'x', 'y']);
+      const expected = {x:sample.x + (side === 1 ? 2 : 6), y:sample.y + 3, width:4, height:5};
+      assert.deepEqual(avatarSampleBounds(adapter, sample), expected);
+      assertAvatarSampleInFrame(adapter, sample, SIZE);
+      assert.deepEqual(drawAvatarSample(ctx, adapter, sample), expected);
+      assert.equal(ctx.globalAlpha, 0.5);
+    }
+  }
+  assert.equal(draws, 14);
+  for (const [key, value] of [['rotation', 0.5], ['anchor', 'center'], ['extra', true], [Symbol('extra'), true]]) {
+    const sample = {...sampleAvatarTransition(track(), 32), [key]:value};
+    assert.throws(() => avatarSampleBounds(adapter, sample), /unsupported property/);
+    assert.throws(() => assertAvatarSampleInFrame(adapter, sample, SIZE), /unsupported property/);
+    assert.throws(() => drawAvatarSample(ctx, adapter, sample), /unsupported property/);
+  }
+  assert.equal(draws, 14, 'Unsupported sample fields fail before drawing.');
 });
 
 test('mirror and scaling preserve intrinsic footprint but move asymmetric ink correctly', () => {

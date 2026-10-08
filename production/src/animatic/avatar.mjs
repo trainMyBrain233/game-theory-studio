@@ -8,16 +8,41 @@
  * side=-1 mirrors inside that footprint; it does not move the outer box.
  * Direction is fixed over a transition. All sampled values are absolute, so
  * frames can be drawn cold, repeated, or out of order on a fresh canvas.
+ * Tracks and poses are plain records of declared, own enumerable data fields;
+ * unknown geometry, inherited values, accessors, hidden and symbol fields fail.
  */
 const EASINGS = Object.freeze({
   linear: t => t,
   smoothstep: t => t * t * (3 - 2 * t),
   smootherstep: t => t * t * t * (t * (t * 6 - 15) + 10),
 });
+const POSE_KEYS = Object.freeze(['x', 'y', 'scale', 'side', 'alpha']);
+const SAMPLE_KEYS = Object.freeze([...POSE_KEYS, 'frame', 'progress', 'easedProgress']);
+const TRACK_KEYS = Object.freeze(['startFrame', 'endFrame', 'from', 'to', 'easing']);
 
 function record(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError(`${label} must be an object.`);
+  }
+}
+/** Reject unsupported fields before a defensive copy can silently discard them. */
+function plainDataRecord(value, label, keys, required = keys) {
+  record(value, label);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${label} must be a plain object.`);
+  }
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string' || !keys.includes(key)) {
+      throw new TypeError(`${label} has unsupported property ${String(key)}.`);
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${label}.${key} must be an enumerable data property.`);
+    }
+  }
+  for (const key of required) {
+    if (!Object.hasOwn(value, key)) throw new TypeError(`${label}.${key} must be an own data property.`);
   }
 }
 function finite(value, label) {
@@ -28,18 +53,18 @@ function integer(value, label, minimum = Number.MIN_SAFE_INTEGER) {
     throw new TypeError(`${label} must be a safe integer >= ${minimum}.`);
   }
 }
-function validatePose(pose, label) {
-  record(pose, label);
+function validatePose(pose, label, keys = POSE_KEYS) {
+  plainDataRecord(pose, label, keys, POSE_KEYS);
   for (const key of ['x', 'y', 'scale', 'alpha']) finite(pose[key], `${label}.${key}`);
   if (pose.scale <= 0) throw new RangeError(`${label}.scale must be positive.`);
   if (pose.side !== 1 && pose.side !== -1) throw new RangeError(`${label}.side must be 1 or -1.`);
   if (pose.alpha < 0 || pose.alpha > 1) throw new RangeError(`${label}.alpha must be between 0 and 1.`);
 }
 function copyPose(pose) {
-  return Object.freeze(Object.fromEntries(['x', 'y', 'scale', 'side', 'alpha'].map(key => [key, pose[key]])));
+  return Object.freeze(Object.fromEntries(POSE_KEYS.map(key => [key, pose[key]])));
 }
 function validateTrack(track) {
-  record(track, 'Avatar transition');
+  plainDataRecord(track, 'Avatar transition', TRACK_KEYS, ['startFrame', 'endFrame', 'from', 'to']);
   integer(track.startFrame, 'startFrame', 0);
   integer(track.endFrame, 'endFrame', 1);
   if (track.endFrame <= track.startFrame) throw new RangeError('endFrame must be after startFrame.');
@@ -49,7 +74,7 @@ function validateTrack(track) {
   validatePose(track.from, 'from');
   validatePose(track.to, 'to');
   if (track.from.side !== track.to.side) throw new RangeError('Avatar direction must stay fixed during a transition.');
-  const easing = track.easing ?? 'smoothstep';
+  const easing = Object.hasOwn(track, 'easing') ? track.easing ?? 'smoothstep' : 'smoothstep';
   if (typeof easing !== 'string' || !Object.hasOwn(EASINGS, easing)) throw new RangeError('easing must be linear, smoothstep, or smootherstep.');
   return easing;
 }
@@ -117,7 +142,8 @@ export function avatarTransitionFrames(track) {
 /** Transformed declared bounds are useful for planning, not a raster proof. */
 export function avatarSampleBounds(adapter, sample) {
   validateAvatarAdapter(adapter);
-  validatePose(sample, 'sample');
+  // Drawing accepts either a plain endpoint pose or the sampler's declared metadata.
+  validatePose(sample, 'sample', SAMPLE_KEYS);
   const bounds = adapter.alphaBounds;
   const x = sample.x + (sample.side === 1 ? bounds.x : adapter.width - bounds.x - bounds.width) * sample.scale;
   const y = sample.y + bounds.y * sample.scale;
