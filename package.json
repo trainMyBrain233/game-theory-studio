@@ -31,7 +31,7 @@
     "qa:episode:content": "node scripts/production.mjs qa/content.mjs --placeholder-cast",
     "qa:episode:layout": "node scripts/production.mjs qa/validate.mjs --placeholder-cast",
     "export:episode:text": "node scripts/production.mjs build_deliverables.mjs",
-    "qa:episode:assets": "node scripts/production.mjs assets/verify-assets.mjs",
+    "qa:episode:assets": "node scripts/production.mjs assets/verify-assets.mjs && node --import ./scripts/isolated-fonts.mjs production/assets/verify-private-routing.mjs",
     "qa:episode:fonts": "node scripts/python.mjs production/qa/check_fonts.py",
     "test:episode": "npm run qa:motion && npm run qa:episode:content && npm run qa:episode:layout && npm run qa:episode:fonts && node scripts/episode-smoke.mjs && npm run qa:episode:assets && npm run export:episode:text && npm run render:episode:stills -- --placeholder-cast --times 27,38.2,83,126.3,172",
     "setup:media": "node scripts/python.mjs -m pip install -r requirements-media.txt",
@@ -44,7 +44,8 @@
     "build:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/draw_cast.mjs && node assets/characters/archive/proposals/build_manifest.mjs",
     "test:font-mutations": "node scripts/font-mutation-smoke.mjs",
     "test:case-reuse": "node scripts/case-reuse-smoke.mjs",
-    "qa:motion": "node --import ./scripts/isolated-fonts.mjs production/qa/motion-demo.mjs"
+    "qa:motion": "node --import ./scripts/isolated-fonts.mjs production/qa/motion-demo.mjs",
+    "render:art-proof": "node --import ./scripts/isolated-fonts.mjs scripts/render-public-art-proof.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.10"

@@ -3,11 +3,12 @@
   <desc id="desc">Original editable textbook illustration. Relaxed participant with both forearms and hands resting at table height. Blank square identity badge.</desc>
   <g id="figure-b" stroke="#243E66" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
     <path id="hair-back" fill="#243E66" d="M210 54 C158 49 125 79 121 135 C116 185 124 221 118 259 Q145 275 178 265 L244 265 Q276 277 302 259 C294 221 304 175 297 130 C290 79 261 53 210 54 Z"/>
-    <g id="arms" fill="#F2E7CE">
-      <path id="left-sleeve" d="M131 285 C105 291 92 312 82 343 L61 414 C54 436 63 454 80 465 C96 474 125 475 151 474 L160 444 L113 432 Q107 430 111 421 L133 364 Z"/>
-      <path id="right-sleeve" d="M289 285 C315 291 328 312 338 343 L359 414 C366 436 357 454 340 465 C324 474 295 475 269 474 L260 444 L307 432 Q313 430 309 421 L287 364 Z"/>
+    <g id="upper-arms" fill="#F2E7CE">
+      <path id="left-upper-sleeve" d="M132 284 C104 289 91 312 81 345 L63 407 L109 422 L133 363 Z"/>
+      <path id="right-upper-sleeve" d="M288 284 C316 289 329 312 339 345 L357 407 L311 422 L287 363 Z"/>
     </g>
-    <path id="blouse-body" fill="#F2E7CE" d="M134 282 L181 272 L239 272 L286 282 C300 290 308 310 309 334 L320 480 L100 480 L111 334 C112 310 120 290 134 282 Z"/>
+    <path id="blouse-body" stroke="none" fill="#F2E7CE" d="M134 282 L181 272 L239 272 L286 282 C300 290 308 310 309 334 L320 480 L100 480 L111 334 C112 310 120 290 134 282 Z"/>
+    <path id="blouse-outline" fill="none" d="M100 480 L111 334 C112 310 120 290 134 282 L181 272 L239 272 L286 282 C300 290 308 310 309 334 L320 480"/>
     <g id="neck" fill="#FFFEF8">
       <path d="M185 231 L185 273 Q184 283 176 286 Q183 314 210 322 Q237 314 244 286 Q236 283 235 273 L235 231 Z"/>
       <path d="M187 253 Q210 263 233 253" stroke-width="2.5"/>
@@ -20,9 +21,6 @@
       <path d="M210 314 L210 467"/>
       <path d="M122 348 L116 405 M298 348 L304 405"/>
       <path d="M143 299 L137 318 M277 299 L283 318"/>
-      <path d="M92 410 L104 417 M328 410 L316 417"/>
-      <path d="M115 431 Q129 432 143 438 M305 431 Q291 432 277 438"/>
-      <path d="M133 468 L134 473 M287 468 L286 473"/>
     </g>
     <g id="buttons" fill="#FFFEF8" stroke-width="2"><circle cx="210" cy="348" r="3.2"/><circle cx="210" cy="387" r="3.2"/><circle cx="210" cy="426" r="3.2"/></g>
     <g id="ears" fill="#FFFEF8">
@@ -41,10 +39,18 @@
       <path id="mouth" d="M192 207 Q210 220 228 207"/>
       <path id="lip" d="M204 222 Q210 224 216 222" stroke-width="1.8"/>
     </g>
+    <g id="forearms" fill="#F2E7CE">
+      <path id="left-forearm" d="M63 407 C54 430 61 452 79 464 C95 474 111 474 128 471 L131 439 L113 432 Q108 429 109 422 Z"/>
+      <path id="right-forearm" d="M357 407 C366 430 359 452 341 464 C325 474 309 474 292 471 L289 439 L307 432 Q312 429 311 422 Z"/>
+    </g>
+    <g id="forearm-details" fill="none" stroke-width="2.5">
+      <path d="M76 416 Q91 419 103 423 M344 416 Q329 419 317 423"/>
+      <path d="M90 455 Q104 460 119 459 M330 455 Q316 460 301 459"/>
+    </g>
     <g id="cuffs" fill="#FFFEF8"><path d="M131 439 L151 443 L147 474 L128 471 Z"/><path d="M289 439 L269 443 L273 474 L292 471 Z"/></g>
     <g id="hands" fill="#FFFEF8">
-      <path id="left-hand" d="M150 446 C159 438 168 437 179 441 L195 448 C199 450 202 453 200 456 C198 459 193 458 187 456 L174 452 C180 458 190 462 200 466 C204 468 204 472 201 474 C195 478 184 477 176 475 L163 473 C157 472 152 472 147 472 Z"/>
-      <path id="right-hand" d="M270 446 C261 438 252 437 241 441 L225 448 C221 450 218 453 220 456 C222 459 227 458 233 456 L246 452 C240 458 230 462 220 466 C216 468 216 472 219 474 C225 478 236 477 244 475 L257 473 C263 472 268 472 273 472 Z"/>
+      <path id="left-hand" d="M151 443 C159 438 168 437 179 441 L195 448 C199 450 202 453 200 456 C198 459 193 458 187 456 L174 452 C180 458 190 462 200 466 C204 468 204 472 201 474 C195 478 184 477 176 475 L163 473 C157 472 152 472 147 474 Z"/>
+      <path id="right-hand" d="M269 443 C261 438 252 437 241 441 L225 448 C221 450 218 453 220 456 C222 459 227 458 233 456 L246 452 C240 458 230 462 220 466 C216 468 216 472 219 474 C225 478 236 477 244 475 L257 473 C263 472 268 472 273 474 Z"/>
       <path d="M170 459 Q181 467 195 469 M166 465 Q178 472 188 474 M250 459 Q239 467 225 469 M254 465 Q242 472 232 474" fill="none" stroke-width="2.1"/>
     </g>
     <rect id="identity-badge" x="143" y="353" width="42" height="42" rx="1" fill="#243E66" stroke="none"/>

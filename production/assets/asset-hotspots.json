@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "style": "clean textbook B; original editable vectors",
   "colors": {
     "ink": "#243E66",
@@ -31,14 +31,16 @@
       "person_a.svg": {"badgeShape": "circle", "badgeBounds": [143, 353, 185, 395]},
       "person_b.svg": {"badgeShape": "square", "badgeBounds": [143, 353, 185, 395]}
     },
-    "groupIds": ["arms", "neck", "collar", "ears", "face", "hair-strands", "brows", "eyes", "face-details", "cuffs", "hands", "identity-badge"]
+    "layerOrder": ["upper-arms", "body-fill", "body-outline", "body-details", "forearms", "forearm-details", "cuffs", "hands"],
+    "wristSeams": {"left": [[151, 443], [147, 474]], "right": [[269, 443], [273, 474]]},
+    "groupIds": ["upper-arms", "neck", "collar", "ears", "face", "hair-strands", "brows", "eyes", "face-details", "forearms", "forearm-details", "cuffs", "hands", "identity-badge"]
   },
   "cards": {
     "viewBox": [0, 0, 140, 190],
     "mainStroke": 3.5,
     "center": [70, 95],
     "bottomCenter": [70, 188.25],
-    "symbolCenter": [70, 57],
+    "symbolCenter": [70, 73],
     "labelCenter": [70, 130],
     "labelSafeBounds": [24, 102, 116, 163],
     "labelStyle": {"fill": "#FFFEF8", "fontSize": 44, "fontWeight": 700, "align": "center", "baseline": "middle"},
@@ -48,6 +50,13 @@
       "card_back.svg": {"symbol": "neutral diagonal hatch", "label": null}
     }
   },
+  "sourceHashes": {
+    "person_a.svg": "b88c1294231a9edfcfbe25e3617a73ec5f98b71148a639728b97976c10e54544",
+    "person_b.svg": "9e3587fe9988bbb30c882bffea824bdfa4df1552e40c9cb4f84f9230a6c0ec8b",
+    "card_red.svg": "9d43553a1ca7f915ebf65a9900c7e7565a2dd435df957fd24a8e17e9a5f89a90",
+    "card_blue.svg": "cd0e8f724bfaf299becb9594535e0c04e3178a7dbcd0d6281dbd999772c8c98a",
+    "card_back.svg": "8e0841f517693223a3f732927e393661306bd21dd7db40ea73ac05042c65e250"
+  },
   "usage": [
     "Position a figure at (x,y), uniform scale s. The external desk line belongs at y+480*s. Draw the desk after the figure to hide the bottom stroke cleanly.",
     "Identity badges contain no visible text. Overlay A/B at transformed badgeTextAnchor using middle baseline and center alignment.",
@@ -55,6 +64,7 @@
     "All components are native SVG paths, ellipses, circles and rectangles. No external font, image, script, filter or gradient dependencies.",
     "The neutral back uses a native SVG pattern. Duplicate IDs are safe when loading each SVG as a separate image; prefix IDs before combining into one SVG DOM.",
     "For animation, transform an entire figure or grouped arms/hands together. Hands are resting poses and should not be rotated independently without redrawing the forearms.",
+    "Upper sleeves are behind the torso; bent forearms, cuffs and hands are in front. Body fill keeps the original bounds, while the open body outline omits the bottom hem through the palm area. No mask/clip or downscaling conceals intersections.",
     "The visible image begins around x=56 and y=48; preserve the full viewBox for predictable placement. Minimum recommended displayed figure width is 300 px in a 1920 px wide master."
   ]
 }
