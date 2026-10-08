@@ -1,10 +1,24 @@
 from pathlib import Path
-import json,re
-OUT=Path(__file__).resolve().parent
+import argparse,json,re,sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[3]/'scripts'))
+from narration_io import write_products
+from case_data import Case
+CASE=Case(Path(__file__).resolve().parents[3])
+PAYOFFS=CASE.values
+sys.stdout.reconfigure(encoding='utf-8')
+parser=argparse.ArgumentParser(description='Rebuild the authored chapter; QA can use a temporary output directory.')
+parser.add_argument('--output-dir',type=Path,default=Path(__file__).resolve().parent)
+OUT=parser.parse_args().output_dir
+OUT.mkdir(parents=True,exist_ok=True)
 # Speech estimates are authored per semantic unit; they are not character-rate allocation.
 rows=[]
 def add(section,key,text,spoken_duration,pause,lines=None,cue=None,breaths=None):
-    rows.append(dict(section=section,key=key,text=text,voiceover=text,spoken_duration=spoken_duration,pause_after=pause,lines=lines or [text],visual_cue=cue or {},breath_points=breaths or []))
+    text=CASE.score_text(cue['matrix_cell']) if cue and cue.get('action')=='reveal_scores' else CASE.text(text)
+    lines=[CASE.text(line) for line in lines] if lines else CASE.lines(text)
+    if any(len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',line))>22 for line in lines):lines=CASE.lines(text)
+    if not CASE.is_original:spoken_duration=max(spoken_duration,round(len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',text))/3.8,1))
+    breaths=[CASE.text(breath) for breath in (breaths or []) if CASE.text(breath) in text]
+    rows.append(dict(section=section,key=key,text=text,voiceover=text,spoken_duration=spoken_duration,pause_after=pause,lines=lines,visual_cue=CASE.cue(cue or {}),breath_points=breaths))
 add('intro','hook','两个人都想多拿分，为什么还得琢磨对方怎么选？',5.7,.8,['两个人都想多拿分，','为什么还得琢磨对方怎么选？'],{'action':'show_shared_game','note':'同一桌面、同一对角色和红蓝牌；第一句不抢先解释。'},['多拿分，'])
 add('intro','four_questions','看懂一场博弈，先问四个问题。',3.9,.8,cue={'action':'introduce_four_questions','note':'四个卡片有序出现，仅突出总标题。'},breaths=['一场博弈，'])
 add('players','question','第一，谁在做决定？',2.5,.7,cue={'action':'focus_question','question':1})
@@ -29,13 +43,13 @@ add('payoffs','rows','看这张表：行，是小A的选择。',3.8,.7,cue={'act
 add('payoffs','columns','列，是小B的选择。',2.5,.7,cue={'action':'introduce_matrix_columns','note':'只突出列标签小B及红、蓝，不亮数值。'},breaths=['列，'])
 add('payoffs','score_order','每格先读小A的得分，再读小B的得分。',4.5,.9,['每格先读小A的得分，','再读小B的得分。'],{'action':'introduce_score_order','note':'常驻“（小A得分，小B得分）”；文字与人物颜色一致。'},['小A的得分，'])
 add('payoffs','rr_select','小A选红，小B也选红。',3.5,.6,cue={'action':'highlight_choices','matrix_cell':'RR','choices':{'A':'红','B':'红'},'note':'先沿行列找到交点，格内数字暂不出现。'},breaths=['小A选红，'])
-add('payoffs','rr_score','两个人，各得三分。',2.5,.9,cue={'action':'reveal_scores','matrix_cell':'RR','scores':[3,3],'score_reveals':[{'offset':1.8,'player':'A','value':3},{'offset':1.8,'player':'B','value':3}],'note':'两者同时得三分；固定数对（3，3）。'},breaths=['两个人，'])
+add('payoffs','rr_score',CASE.score_text('RR'),2.5,.9,cue={'action':'reveal_scores','matrix_cell':'RR','scores':PAYOFFS['RR'],'score_reveals':[{'offset':1.8,'player':'A','value':PAYOFFS['RR'][0]},{'offset':1.8,'player':'B','value':PAYOFFS['RR'][1]}],'note':'两者同时得三分；固定数对（3，3）。'},breaths=['两个人，'])
 add('payoffs','rb_select','小A选红，小B选蓝。',3.3,.6,cue={'action':'highlight_choices','matrix_cell':'RB','choices':{'A':'红','B':'蓝'},'note':'先选择，再结算；不可交换收益数对。'},breaths=['小A选红，'])
-add('payoffs','rb_score','小A得零分，小B得五分。',3.8,.9,cue={'action':'reveal_scores','matrix_cell':'RB','scores':[0,5],'score_reveals':[{'offset':1.0,'player':'A','value':0},{'offset':3.0,'player':'B','value':5}],'note':'依次显出A零、B五；固定数对（0，5）。'},breaths=['小A得零分，'])
+add('payoffs','rb_score',CASE.score_text('RB'),3.8,.9,cue={'action':'reveal_scores','matrix_cell':'RB','scores':PAYOFFS['RB'],'score_reveals':[{'offset':1.0,'player':'A','value':PAYOFFS['RB'][0]},{'offset':3.0,'player':'B','value':PAYOFFS['RB'][1]}],'note':'依次显出A零、B五；固定数对（0，5）。'},breaths=['小A得零分，'])
 add('payoffs','br_select','小A选蓝，小B选红。',3.3,.6,cue={'action':'highlight_choices','matrix_cell':'BR','choices':{'A':'蓝','B':'红'},'note':'先选择，再结算。'},breaths=['小A选蓝，'])
-add('payoffs','br_score','小A得五分，小B得零分。',3.8,.9,cue={'action':'reveal_scores','matrix_cell':'BR','scores':[5,0],'score_reveals':[{'offset':1.0,'player':'A','value':5},{'offset':3.0,'player':'B','value':0}],'note':'依次显出A五、B零；固定数对（5，0）。'},breaths=['小A得五分，'])
+add('payoffs','br_score',CASE.score_text('BR'),3.8,.9,cue={'action':'reveal_scores','matrix_cell':'BR','scores':PAYOFFS['BR'],'score_reveals':[{'offset':1.0,'player':'A','value':PAYOFFS['BR'][0]},{'offset':3.0,'player':'B','value':PAYOFFS['BR'][1]}],'note':'依次显出A五、B零；固定数对（5，0）。'},breaths=['小A得五分，'])
 add('payoffs','bb_select','小A选蓝，小B也选蓝。',3.5,.6,cue={'action':'highlight_choices','matrix_cell':'BB','choices':{'A':'蓝','B':'蓝'},'note':'先选择，再结算。'},breaths=['小A选蓝，'])
-add('payoffs','bb_score','两个人，各得一分。',2.5,1.0,cue={'action':'reveal_scores','matrix_cell':'BB','scores':[1,1],'score_reveals':[{'offset':1.8,'player':'A','value':1},{'offset':1.8,'player':'B','value':1}],'note':'固定数对（1，1）；四格全部保留。'},breaths=['两个人，'])
+add('payoffs','bb_score',CASE.score_text('BB'),2.5,1.0,cue={'action':'reveal_scores','matrix_cell':'BB','scores':PAYOFFS['BB'],'score_reveals':[{'offset':1.8,'player':'A','value':PAYOFFS['BB'][0]},{'offset':1.8,'player':'B','value':PAYOFFS['BB'][1]}],'note':'固定数对（1，1）；四格全部保留。'},breaths=['两个人，'])
 add('payoffs','joint_choices','所以，收益取决于两个人的选择组合。',4.3,.9,cue={'action':'summarize_joint_choices','note':'完整矩阵静置，轻扫同一行的不同收益。'},breaths=['所以，'])
 add('payoffs','beyond_money','收益不一定是钱，还可以表示时间、声誉，或对结果的偏好。',6.0,1.0,['收益不一定是钱，','还可以表示时间、声誉，或对结果的偏好。'],{'action':'broaden_payoff_meaning','note':'小图标配文字，避免把时间/声誉画成必定能直接相加的数。'},['不一定是钱，','时间、声誉，'])
 add('recap','intro','最后，记住这四问：',2.3,.7,cue={'action':'restore_four_questions'})
@@ -63,14 +77,13 @@ data={
  'timing_status':'manual_voiceover_reference_not_audio_aligned',
  'timing_notice':'本时间轴没有真人口播音频作为依据。发声时长、句内停顿与数值出现点均为人工参考；录制后应以实际呼吸和语义停顿重对齐，不能宣称已经按音频对齐。',
  'speech_guidance':{'tone':'清楚、平和，像面对一个第一次接触博弈论的人讲解。','names':'小A、小B中的字母读英语字母名称；不要读成甲乙，也不要省掉人名。','numbers_and_symbols':'数值全部用中文数字口播；（0，5）读成小A得零分、小B得五分；≠读不等于；行读 háng。','pace':'句内逗号轻停，问句和定义后留理解时间。允许局部伸缩，不要为踩时间码加速。','subtitle_policy':'整句或语义块完整出现；不逐字打字。字幕从start保留到end，包含尾部停顿，不提前收走。','pause_after_definition':'pause_after位于start/end显示窗的结尾：end = voiceover_end + pause_after。不是在end后再追加一次。'},
- 'visual_contract':{'participants':['小A','小B'],'game_rounds':1,'matrix_orientation':'小A为行，小B为列','matrix_score_order':['小A','小B'],'matrix_values':{'RR':[3,3],'RB':[0,5],'BR':[5,0],'BB':[1,1]},'matrix_reveal_order':['RR','RB','BR','BB'],'multi_round_is_comparison_only':True,'framework_note':'四问是入门整理，不是唯一公认分类。','information_note':'知道完整计分规则而看不到本轮行动，不能据此称为不完全信息。','persistent_visual_notes':['虚构教学案例','本片：一轮游戏'],'transitions':'转场优先落在pause_after内；字幕层保持清晰、稳定，不把转场时间从阅读窗硬扣除。'},
+ 'visual_contract':{'participants':CASE.players,'game_rounds':1,'matrix_orientation':f'{CASE.players[0]}为行，{CASE.players[1]}为列','matrix_score_order':CASE.players,'matrix_values':PAYOFFS,'matrix_reveal_order':['RR','RB','BR','BB'],'multi_round_is_comparison_only':True,'framework_note':'四问是入门整理，不是唯一公认分类。','information_note':'知道完整计分规则而看不到本轮行动，不能据此称为不完全信息。','persistent_visual_notes':['虚构教学案例','本片：一轮游戏'],'transitions':'转场优先落在pause_after内；字幕层保持清晰、稳定，不把转场时间从阅读窗硬扣除。'},
  'sections':sections,'segments':rows}
-(OUT/'timeline.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+timeline_text=json.dumps(data,ensure_ascii=False,indent=2)+'\n'
 def ts(s):
     ms=round(s*1000); h,ms=divmod(ms,3600000); m,ms=divmod(ms,60000); sec,ms=divmod(ms,1000)
     return f'{h:02d}:{m:02d}:{sec:02d},{ms:03d}'
 srt='\n\n'.join(f"{i}\n{ts(r['start'])} --> {ts(r['end'])}\n{r['text']}" for i,r in enumerate(rows,1))+'\n'
-(OUT/'game_theory_v2_zh.srt').write_text(srt)
 def stamp(s):
     return f'{int(s)//60:02d}:{s%60:04.1f}'
 head=f'''四个问题，看懂一场博弈｜V2 可录音稿
@@ -88,7 +101,7 @@ head=f'''四个问题，看懂一场博弈｜V2 可录音稿
 - 方括号内容不读。多轮只用于对照，随后明确回到一轮游戏。
 
 '''
-parts=[head]
+parts=[CASE.text(head)]
 for s in sections:
     parts.append(f"\n【{s['title']}｜{stamp(s['start'])}–{stamp(s['end'])}】\n")
     for r in [x for x in rows if x['section']==s['id']]:
@@ -96,15 +109,29 @@ for s in sections:
 parts.append('\n【自然连读版：仅正文】\n')
 for s in sections:
     parts.append('\n'.join(r['voiceover'] for r in rows if r['section']==s['id'])+'\n')
-(OUT/'voiceover_v2_zh.txt').write_text('\n'.join(parts))
+voiceover_text='\n'.join(parts)
 # Operational QA: CJK/letter/digit characters, punctuation excluded. Reference metrics, not speech standards.
 def chars(s): return len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',s))
 assert all(len(r['lines'])<=2 and max(map(chars,r['lines']))<=22 for r in rows)
 assert all(r['end']>r['start'] and r['voiceover_end']<=r['end'] for r in rows)
 assert all(abs(rows[i]['end']-rows[i+1]['start'])<.0001 for i in range(len(rows)-1))
 assert all(re.sub(r'\s','',r['text'])==re.sub(r'\s','',r['voiceover']) for r in rows)
+for row in rows:
+    cue=row['visual_cue']
+    if 'matrix_cell' in cue:
+        cell=cue['matrix_cell']
+        assert cell in data['visual_contract']['matrix_values']
+        if 'choices' in cue:
+            assert cue['choices']=={'A':CASE.strategies[0 if cell[0]=='R' else 1],'B':CASE.strategies[0 if cell[1]=='R' else 1]}
+        if 'scores' in cue:
+            assert cue['scores']==data['visual_contract']['matrix_values'][cell]
+        for reveal in cue.get('score_reveals',[]):
+            assert reveal['player'] in ['A','B']
+            assert 0<=reveal['offset']<=row['spoken_duration']
+            assert reveal['value']==cue['scores'][0 if reveal['player']=='A' else 1]
 reading=sorted([{'id':r['id'],'text':r['voiceover'],'count':chars(r['voiceover']),'display_seconds':r['display_duration'],'cps':round(chars(r['voiceover'])/r['display_duration'],3),'speech_estimate_cps':round(chars(r['voiceover'])/r['spoken_duration'],3)} for r in rows],key=lambda x:x['cps'],reverse=True)
 metrics={'duration':t,'segment_count':len(rows),'spoken_characters':sum(chars(r['voiceover']) for r in rows),'planned_speech_duration':round(sum(r['spoken_duration'] for r in rows),3),'planned_tail_pause_duration':round(sum(r['pause_after'] for r in rows),3),'max_subtitle_cps':reading[0]['cps'],'max_subtitle_line_characters':max(chars(line) for r in rows for line in r['lines']),'max_subtitle_lines':max(len(r['lines']) for r in rows),'min_tail_pause':min(r['pause_after'] for r in rows),'max_tail_pause':max(r['pause_after'] for r in rows),'reading_rate_definition':'汉字、拉丁字母和数字计为一个可读字符；不计空格和标点；除以整块字幕显示时长。只用于版本自检，不是人的阅读速度标准。','densest_segments':reading[:5],'sections':sections,'checks':{'continuous_no_overlap':True,'subtitle_matches_voiceover':True,'two_lines_max':True,'line_22_readable_characters_max':True,'display_at_least_estimated_speech':True,'matrix_values_exact':True,'no_tts_or_actual_audio_alignment':True}}
-(OUT/'qa').mkdir(exist_ok=True)
-(OUT/'qa/metrics.json').write_text(json.dumps(metrics,ensure_ascii=False,indent=2)+'\n')
+write_products(OUT,{'timeline.json':timeline_text,'game_theory_v2_zh.srt':srt,
+                    'voiceover_v2_zh.txt':voiceover_text,
+                    'qa/metrics.json':json.dumps(metrics,ensure_ascii=False,indent=2)+'\n'})
 print(json.dumps(metrics,ensure_ascii=False,indent=2))

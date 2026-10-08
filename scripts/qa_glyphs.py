@@ -7,8 +7,8 @@ import json
 
 ROOT = Path(__file__).resolve().parent.parent
 font_dir = ROOT / 'typography/fonts'
-manifest = json.loads((font_dir / 'prepared_font_manifest.json').read_text())
-runs = json.loads((ROOT / 'typography/qa/text-runs.json').read_text())['textRuns']
+manifest = json.loads((font_dir / 'prepared_font_manifest.json').read_text(encoding='utf-8'))
+runs = json.loads((ROOT / 'typography/qa/text-runs.json').read_text(encoding='utf-8'))['textRuns']
 chars = {c for c in ''.join(runs) if not c.isspace()}
 results = []
 for kind in ['Sans', 'Serif']:
@@ -28,5 +28,5 @@ for kind in ['Sans', 'Serif']:
                         'unique_characters_checked': len(chars), 'missing': missing,
                         'sha256_matches_local_manifest': True})
         font.close()
-(ROOT / 'typography/qa/glyphs.json').write_text(json.dumps(results, ensure_ascii=False, indent=2) + '\n')
+(ROOT / 'typography/qa/glyphs.json').write_text(json.dumps(results, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 print(f'Glyph QA: all {len(chars)} unique chapter/template characters covered by four full SC fonts.')

@@ -9,21 +9,27 @@
     "node": ">=22"
   },
   "scripts": {
-    "setup:fonts": "python3 scripts/setup_fonts.py",
+    "setup:fonts": "node scripts/python.mjs scripts/setup_fonts.py",
     "render:proposals": "node --import ./scripts/isolated-fonts.mjs design/render-proposals.mjs",
     "qa:design": "node --import ./scripts/isolated-fonts.mjs design/qa.mjs",
-    "qa:fonts": "python3 scripts/setup_fonts.py --verify-only && node --import ./scripts/isolated-fonts.mjs typography/qa-fonts.mjs && python3 scripts/qa_glyphs.py",
-    "build:narration": "python3 chapters/01-four-elements/narration/build_narration.py",
+    "qa:fonts": "node scripts/python.mjs scripts/setup_fonts.py --verify-only && node --import ./scripts/isolated-fonts.mjs typography/qa-fonts.mjs && node scripts/python.mjs scripts/qa_glyphs.py",
+    "build:narration": "node scripts/build-narration.mjs",
     "qa:data": "node scripts/qa-data.mjs",
-    "qa:source": "python3 scripts/qa_source.py",
-    "test": "npm run qa:data && npm run qa:fonts && npm run render:proposals && npm run qa:design && npm run render:cast && npm run qa:cast && npm run qa:source",
+    "qa:source": "node scripts/python.mjs scripts/qa_source.py",
+    "test": "npm run qa:data && npm run test:core && npm run qa:fonts && npm run test:render && npm run render:smoke && npm run qa:source",
     "render:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/draw_cast.mjs && node assets/characters/archive/proposals/build_manifest.mjs",
-    "qa:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/check_clearance.mjs"
+    "qa:cast": "node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/check_clearance.mjs",
+    "setup:python": "node scripts/setup-python.mjs",
+    "qa:layout": "node --import ./scripts/isolated-fonts.mjs scripts/qa-layout.mjs",
+    "test:core": "node --test tests/*.test.mjs && node scripts/python.mjs -m unittest discover -s tests -p test_*.py",
+    "test:render": "npm run render:proposals && npm run qa:design && npm run qa:layout && npm run render:cast && npm run qa:cast",
+    "render:smoke": "node --import ./scripts/isolated-fonts.mjs scripts/render-smoke.mjs",
+    "chapter:new": "node scripts/new-chapter.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.10"
   },
   "devDependencies": {
-    "ajv": "8.17.1"
+    "ajv": "8.20.0"
   }
 }

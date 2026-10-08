@@ -6,8 +6,6 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
-output = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT)
-files = sorted(set(x.decode() for x in output.split(b'\0') if x))
 forbidden_suffixes = {'.otf', '.ttf', '.ttc', '.woff', '.woff2', '.mp4', '.mov', '.webm', '.wav', '.mp3', '.zip', '.png', '.jpg', '.jpeg', '.webp', '.pem', '.key', '.p12', '.pfx'}
 patterns = {
     'private key': re.compile(r'-----BEGIN (?:[A-Z ]+)?PRIVATE' + r' KEY-----'),
@@ -18,27 +16,39 @@ patterns = {
     'machine workspace path': re.compile(r'/(?:workspace|home|Users|root)/[A-Za-z0-9_.-]+/'),
     'internal note reference': re.compile(r'/(?:agent_notes|user_notes)/|dream' + r'_notes'),
 }
-errors = []
-total = 0
-for relative in files:
-    file = ROOT / relative
-    if file.is_symlink():
-        errors.append((relative, 'symlinks are not source artifacts')); continue
-    if not file.is_file(): continue
-    if file.suffix.lower() in forbidden_suffixes or file.name.startswith('.env') or 'node_modules' in file.parts:
-        errors.append((relative, 'forbidden source file type/path')); continue
-    data = file.read_bytes(); total += len(data)
-    if len(data) > 1024 * 1024: errors.append((relative, 'source file exceeds 1 MiB'))
-    if b'\0' in data: errors.append((relative, 'binary content')); continue
-    try: text = data.decode('utf-8')
-    except UnicodeDecodeError:
-        errors.append((relative, 'non-UTF-8 source')); continue
-    for label, pattern in patterns.items():
-        if pattern.search(text): errors.append((relative, label))
-    if file.suffix == '.svg' and re.search(r'<(?:script|image)\b|(?:href|xlink:href)\s*=\s*[\'\"](?:https?:|data:)', text, re.I):
-        errors.append((relative, 'SVG has script, embedded image, or remote reference'))
-if errors:
-    for file, reason in errors: print(f'FAIL {file}: {reason}')
-    sys.exit(1)
-print(f'Source QA: {len(files)} source files, {total:,} bytes; no detected credentials, private paths, binaries, embedded SVG images, or oversized source files.')
-print('Pattern checks are a safeguard, not a guarantee; manually review the diff before publishing.')
+def scan_sources(root, files):
+    errors = []
+    total = 0
+    for relative in files:
+        file = root / relative
+        if file.is_symlink() or any(parent.is_symlink() for parent in file.parents if parent != root and root in parent.parents):
+            errors.append((relative, 'symlinks are not source artifacts')); continue
+        if not file.is_file(): continue
+        if file.suffix.lower() in forbidden_suffixes or file.name.startswith('.env') or 'node_modules' in file.parts:
+            errors.append((relative, 'forbidden source file type/path')); continue
+        data = file.read_bytes(); total += len(data)
+        if len(data) > 1024 * 1024: errors.append((relative, 'source file exceeds 1 MiB'))
+        if b'\0' in data: errors.append((relative, 'binary content')); continue
+        try: text = data.decode('utf-8')
+        except UnicodeDecodeError:
+            errors.append((relative, 'non-UTF-8 source')); continue
+        for label, pattern in patterns.items():
+            if pattern.search(text): errors.append((relative, label))
+        if file.suffix == '.svg' and re.search(r'<(?:script|image|foreignObject)\b|(?:href|xlink:href)\s*=\s*[\'\"](?:https?:|data:)', text, re.I):
+            errors.append((relative, 'SVG has script, embedded image, or remote reference'))
+    return errors, total
+
+
+def main():
+    output = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT)
+    files = sorted(set(x.decode('utf-8') for x in output.split(b'\0') if x))
+    errors, total = scan_sources(ROOT, files)
+    if errors:
+        for file, reason in errors: print(f'FAIL {file}: {reason}')
+        sys.exit(1)
+    print(f'Source QA: {len(files)} source files, {total:,} bytes; no detected credentials, private paths, binaries, embedded SVG images, or oversized source files.')
+    print('Pattern checks are a safeguard, not a guarantee; manually review the diff before publishing.')
+
+
+if __name__ == '__main__':
+    main()

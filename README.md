@@ -1,79 +1,74 @@
 # Game Theory Studio
 
-可复用的中文博弈论视频制作基础工程：把内容、口播时间轴、视觉语义和可编辑图形分开维护。
+中文博弈论视频制作基础工程：可检查的案例配置、人工口播时间轴、明确 SC 字体和可复用静帧模板。
 
-## 当前阶段
+## 当前状态
 
-- **已选视觉方向：B「清爽教材」**。深蓝字线、暖白底、固定收益矩阵。A/C保留为同内容对照与回归样例。
-- **系列角色方向已选《植物大战僵尸》的僵尸**，具体外形/角色组合仍在制作。本仓库只保留通用A/B角色接口，不分发EA角色位图或重绘图；见 [第三方内容边界](docs/third-party-content.md)。
-- **第一章时间轴：173.3秒、37个字幕语义块**。这是人工口播参考，没有真人或合成人声音轨，尚未按实际音频对齐。
-- **完整V2视频尚未在本仓库导出**。已实现可重建的参与者、收益矩阵两类静帧模板；不把模板QA当成全片、转场或音画同步验收。
-
-机器可读状态见 [project-status.json](project-status.json)。
+- **视觉方向 B「清爽教材」**：暖白底、深蓝字线、固定收益矩阵。A/C 保留为同内容回归样例。
+- 已实现两参与者/两策略/2×2 收益矩阵、显示名和选择驱动的说明、两类静帧模板、字幕/口播生成与检查、原创章节脚手架和双平台 CI。
+- 第一章是 **173.3 秒、37 个语义块的人工口播参考**，没有实际音轨，尚未按音频对齐。`00-original-example` 是 9 秒、两段原创测试例，不计入正片。
+- 生产角色方向为 **PvZ 高清分层位图 + 独立绘制的文字/矩阵**；具体角色外观和动作由生产任务完成。EA 图像、重绘角色、截图、字体二进制和视频不放此公开 MIT 仓库。PNG 包进 SVG 仍是位图，不能称为矢量。
+- 当前仓库的模板检查与原创几何烟测**不是完整 V2 影片验收**。机器状态见 [project-status.json](project-status.json)，实际范围见 [验证记录](docs/validation.md)。
 
 ## 开始使用
 
-要求：Node.js 22+、npm、Python 3.10+。已测试环境见 [验证记录](docs/validation.md)。
+Node 22+、npm、Python 3.10+；CI 固定 Node 24.19.0 / Python 3.12 系列。macOS/Linux 从仓库根目录运行同一组命令：
 
 ```sh
 npm ci --ignore-scripts
-python3 -m venv .venv
-. .venv/bin/activate
-python3 -m pip install -r requirements.txt
-npm run setup:fonts
+npm run setup:python
+npm run setup:fonts -- --download
 npm test
 ```
 
-字体默认从本机已安装的Noto CJK中提取完整、明确的SC face，不改名冒充SC，也不依赖系统字体回退。若本机没有字体，可指定本地目录，或显式允许从官方版本下载：
+`setup:python` 创建项目 `.venv` 并安装精确版本 requirements；后续 npm 命令自动选它，不需要激活或全局安装。`PYTHON` 可显式选择解释器。Canvas 使用当前平台的预编译 optional dependency，不要加 `--omit=optional`。
+
+字体只使用完整 Noto CJK SC 2.004/2.003、真实 400/700。`--download` 对缺失/无效目标优先下载固定官方 commit 的 OTF，核验 SHA256，失败保留原目标；有效已准备字体可重复复用。已有对应本地字体可离线运行：
 
 ```sh
 npm run setup:fonts -- --source-dir /path/to/noto-fonts
-npm run setup:fonts -- --download
+npm run qa:fonts
 ```
 
-详细来源、版本和许可证见 [字体说明](typography/README.md)。字体二进制、依赖、PNG、视频和生成QA报告均不提交Git。运行后，预览位于 `design/frames/`、`design/boards/` 与 `assets/characters/archive/proposals/png/`。
+详情见 [字体说明](typography/README.md) 和 [故障排查](docs/troubleshooting.md)。字体、node_modules、PNG、视频、本机 manifest/QA 报告均不提交。
 
-## 命令
+## 验证与制作命令
 
-- `npm run render:proposals`：渲染3套风格×2个1080p场景及3张对照板
-- `npm run qa:design`：53项尺寸、像素一致性、确定性、边界、对比度与四格收益检查
-- `npm run qa:fonts`：明确SC家族、400/700字重、完整字库和章节/模板字形覆盖
-- `npm run build:narration`：重建第一章时间轴、SRT、录音参考稿
-- `npm run qa:data`：JSON Schema、语义、收益、时间连续性与口播产物可复现检查
-- `npm run render:cast`：重建已归档的9个原创SVG、4张历史提案PNG与清单
-- `npm run qa:cast`：验证SVG可加载、无可见文字节点、角色与标签净空
-- `npm run qa:source`：只检查仓库候选源文件，拦截常见凭证、私有路径、二进制和过大文件
-- `npm test`：运行上述基础验收链；字体需先准备
+| 命令 | 内容 |
+| --- | --- |
+| `npm ci --ignore-scripts` | 干净、锁版本 npm 依赖安装 |
+| `npm run setup:python` | 项目 Python 环境与 fontTools |
+| `npm run setup:fonts -- --download` | 官方完整 SC 字体准备；离线可用 `--source-dir` |
+| `npm run qa:data` | scenes/tokens/所有章节 Schema、语义/收益/时间窗、临时重建逐字节比较；不覆写被检查文件 |
+| `npm run test:core` | 配置/选择/得分/暂停负向样本、只读 QA、非 UTF-8 locale、生成失败保留与字体恢复 |
+| `npm run qa:fonts` | 明确 SC 家族/字重、实际应用字号/字形范围、所有章节和模板字符覆盖 |
+| `npm run test:render` | 重建 6 静帧/3 对照板、53 基础检查、15 状态文字边界/碰撞、原创归档角色净空 |
+| `npm run render:smoke` | 12 个变异矩阵、4 选牌状态、48px/宋体实际像素、原创几何 0/0.5/1s 确定性 |
+| `npm run qa:source` | 候选源码中的常见秘密、私有路径、二进制、嵌入图片 SVG 和过大文件 |
+| `npm test` | 上述全部验收；需先准备字体 |
+| `npm run build:narration -- <id>` | 只重建指定章节；省略 id 重建全部 |
+| `npm run chapter:new -- 02-example "章节标题"` | 创建原创两段原型章节，不覆盖已有章节 |
 
-## 目录
+单独渲染可用 `render:proposals` / `qa:design` / `qa:layout` / `render:cast` / `qa:cast`。输出位于 `design/frames/`、`design/boards/`、`typography/qa/`、原创归档提案本地产物目录及 `artifacts/smoke/`。
 
-```text
-chapters/01-four-elements/narration/  173.3秒内容、SRT、时间轴与生成器
-assets/characters/                  通用角色接口；历史原创提案单独归档
-design/                            已工作的tokens、场景数据与静帧渲染器
-typography/                        显式SC字体注册与回归检查
-schemas/                           场景与时间轴JSON Schema
-scripts/                           字体准备、数据QA与公开源码检查
-docs/                              视觉规范、公开研究来源、验收与许可证
-```
+## 配置与教学合同
 
-保留已经工作的 `design/` 与 `typography/` 相对导入，暂不为目录命名重写渲染器。
+`design/scenes.json` 是参与者显示名、策略名、四格收益和默认选择的共同来源。图示标签、高亮、说明/字幕及口播生成器使用这些值。改变案例后运行 `build:narration` 并审查派生文本，不能只改单张图。
 
-## 教学语义约束
+A 为行、B 为列，每格顺序始终为 (A,B)。当前原例 RR(3,3)、RB(0,5)、BR(5,0)、BB(1,1)。策略红/蓝身份不代表参与者。当前章解释参与者、信息、策略、收益，不把选中格称为最优/均衡；“看不到本轮选择”不等于“不完全信息”。
 
-一轮积分游戏：A为行、B为列，每格顺序永远是(A, B)。红红(3,3)、红蓝(0,5)、蓝红(5,0)、蓝蓝(1,1)。策略的红/蓝颜色不代表角色身份。当前章只解释参与者、信息、策略、收益，不把选中格称为最优或均衡；“看不到对方本轮选择”不等于“不完全信息”。
+目前只支持两参与者、两策略、0–99 整数收益和有限长度文案。显示名最多 4 字符、策略名最多 2 字符；实际溢出/碰撞会失败，不缩小字号掩盖问题。字幕 38–48px、正文 36–42px、sans/serif 标题和颜色是支持的视觉配置；固定几何的更改需要更新 Schema 和布局合同。
 
-`pause_after`已经包含在字幕的start/end窗口中，不要重复追加。真实录音完成后，以自然呼吸和语义重新对齐画面、字幕与章节边界。
+`pause_after` 已包含在 start/end 字幕窗中：`end = voiceover_end + pause_after`。实际录音后按自然呼吸和语义重新对齐，不能重复追加尾停或把人工参考当同步验收。
 
-## 文档与下一步
+## 工程与审查
 
-- [视觉系统与两个模板](docs/visual-system.md)
-- [视觉研究及借鉴边界](docs/visual-references.md)
-- [口播和时间轴契约](chapters/01-four-elements/narration/README.md)
-- [基础验收记录与未覆盖项](docs/validation.md)
+[工程目录/Schema/版本流程](docs/project-structure.md) · [贡献指南](CONTRIBUTING.md) · [AGENTS 审查规则](AGENTS.md) · [交付检查单](docs/delivery-checklist.md) · [视觉系统](docs/visual-system.md) · [口播契约](chapters/01-four-elements/narration/README.md)
 
-后续工作：确定具体角色形态与命名，完成生产级动作/表情，接入全时段画面，录音后重对齐，再验收完整导出。当前不包含进行中的生产代码、第三方截图或未完成的全片文件。
+[Quality 工作流](.github/workflows/quality.yml) 在 PR/普通分支 push 上执行 Ubuntu/macOS 检查：只读 contents、官方 Actions 固定 SHA、不保留 checkout 凭证、不引用 secrets、不发布内容，也不使用 pull_request_target。实际 CI 结果必须对应最终 commit。GitHub/Codex Auto review 的账号连接与设置由独立任务管理。
+
+保留已工作的 `design/`、`typography/` 相对导入。后续生产资产/完整影片接入时，单独核对角色来源、音轨、中间帧、编码和播放端，不能把本基础工程通过扩写成正片完成。
 
 ## 许可证
 
-保留仓库原有 [MIT LICENSE](LICENSE)，适用于本仓库原创源码与原创SVG。Noto字体另受SIL Open Font License 1.1约束，见 [字体许可证说明](typography/README.md)。外部参考作品版权归原作者；本仓库只列公开来源和设计观察，不分发其截图、角色或音视频。
+保留原 [MIT LICENSE](LICENSE)，适用于本仓库原创源码/原创 SVG。Noto 字体受 [SIL OFL 1.1](docs/licenses/OFL-Noto.txt) 约束；MIT 不替代字体或 EA 内容权利。外部参考只列来源和设计观察，不分发截图/素材；见 [第三方内容边界](docs/third-party-content.md) 与 [视觉参考](docs/visual-references.md)。

@@ -4,6 +4,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createCanvas, GlobalFonts} from '@napi-rs/canvas';
 import {registerFonts, canvasFont, FONT_FAMILY, SERIF_FAMILY, CJK_REGRESSION} from './fonts.mjs';
+import {chapterDirectories} from '../scripts/chapters.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 assert.equal(process.env.DISABLE_SYSTEM_FONTS_LOAD, '1', 'Use the isolated-fonts preload');
 assert.throws(() => canvasFont(32), /registerFonts/);
@@ -27,6 +28,9 @@ const lines = [
 let y = 50;
 for (const serif of [false, true]) for (const weight of [400, 700]) {
   ctx.font = canvasFont(34, weight, {serif});
+  assert.equal(Number(ctx.font.match(/([0-9.]+)px/)?.[1]), 34, 'Applied canvas font size must match the request');
+  const glyph = ctx.measureText('博');
+  assert(glyph.actualBoundingBoxAscent + glyph.actualBoundingBoxDescent > 24, 'SC glyph should have a readable physical extent');
   const text = `${serif ? 'Serif' : 'Sans'} SC ${weight}：${lines[0]}`;
   assert(ctx.measureText(text).width < 1800);
   ctx.fillText(text, 60, y); y += 64;
@@ -35,13 +39,12 @@ ctx.font = canvasFont(36, 700);
 for (const text of lines.slice(1)) { ctx.fillText(text, 60, y); y += 74; }
 fs.writeFileSync(path.join(out, 'sc-specimen.png'), canvas.toBuffer('image/png'));
 const scenes = JSON.parse(fs.readFileSync(path.join(HERE, '../design/scenes.json')));
-const timeline = JSON.parse(fs.readFileSync(path.join(HERE, '../chapters/01-four-elements/narration/timeline.json')));
+const timelines = chapterDirectories().map(directory => JSON.parse(fs.readFileSync(path.join(directory, 'narration/timeline.json'), 'utf8')));
 const {drawScene, TOKENS, DATA} = await import('../design/render-proposals.mjs');
 const templateRuns=[];
 for(const style of Object.keys(TOKENS.styles))for(const scene of DATA.frames)templateRuns.push(...drawScene(createCanvas(1920,1080),style,scene.id).map(b=>b.text));
 const textRuns = [...templateRuns, CJK_REGRESSION, ...lines,
   ...scenes.frames.flatMap(f => [f.title, f.lead, f.subtitle, f.section]),
-  ...timeline.segments.flatMap(s => [s.text, s.voiceover]),
-  ...timeline.sections.map(s => s.title)];
+  ...timelines.flatMap(timeline => [timeline.title, ...timeline.segments.flatMap(s => [s.text, s.voiceover]), ...timeline.sections.map(s => s.title)])];
 fs.writeFileSync(path.join(out, 'text-runs.json'), JSON.stringify({textRuns}, null, 2) + '\n');
 console.log('Font runtime: explicit SC Sans/Serif; real 400/700 weights; no system-font loading; specimen rendered.');
