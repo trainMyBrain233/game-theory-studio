@@ -35,4 +35,4 @@ The tabletop has a back edge, opaque surface and front face. It occludes the low
 - Check recognition and configured Chinese labels, actual name/text clearance, and compatibility with production subtitles/matrix transitions.
 - Keep the delivered branch unchanged until real-art acceptance completes.
 
-See the [public regression ledger](../../../docs/quality-regressions.md). No canonical case/timeline, production assets/fonts, grip, rig or full-film acceptance is changed by this experiment.
+See the [public regression ledger](../../../docs/quality-regressions.md) and [interaction design contract](../../../docs/references/interaction-design.md). The current five-phase geometry preview is not the seven-state contact/control implementation: separate contact/retreat, orientation, wrist-axis/seam registration, velocity-preserving ownership changes and a front cuff slot remain to implement and validate with registered art. Its non-selected-card fade illustrates selection only, not a physical removal action. No canonical case/timeline, production assets/fonts, grip, rig or full-film acceptance is changed by this experiment.
