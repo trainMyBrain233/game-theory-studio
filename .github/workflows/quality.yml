@@ -47,12 +47,12 @@ jobs:
         run: |
           npm run qa:data
           npm run qa:editorial
-      - name: Core and negative regression tests
-        run: npm run test:core
       - name: Prepare checksum-pinned official SC fonts
         run: npm run setup:fonts -- --download
       - name: Font registration and complete glyph coverage
         run: npm run qa:fonts
+      - name: Core and negative regression tests
+        run: npm run test:core
       - name: Static templates, measured layout and original cast clearance
         run: npm run test:render
       - name: Non-IP rendering and deterministic time smoke

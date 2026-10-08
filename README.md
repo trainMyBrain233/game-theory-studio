@@ -29,6 +29,8 @@ npm run setup:fonts -- --download
 npm test
 ```
 
+`test:core` 包含实际 Canvas 光栅回归，也需要先准备字体。CI 在 core 之前下载并校验固定官方 SC 字体；`npm test` 先只读验证已准备的字体再运行 core，不会自动下载或改用系统字体。
+
 `setup:python` 创建项目 `.venv` 并安装精确版本 requirements；后续 npm 命令自动选它，不需要激活或全局安装。`PYTHON` 可显式选择解释器。Canvas 使用当前平台的预编译 optional dependency，不要加 `--omit=optional`。
 
 字体只使用完整 Noto CJK SC 2.004/2.003、真实 400/700。`--download` 对缺失/无效目标优先下载固定官方 commit 的 OTF，核验 SHA256，失败保留原目标；复用缓存仍核对固定SHA；`--verify-only` 不改manifest。本地TTC提取走独立来源指纹与重提合同，不能冒称下载OTF的固定SHA。已有固定官方OTF或完整同版本TTC可离线运行：

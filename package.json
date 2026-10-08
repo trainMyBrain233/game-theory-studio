@@ -18,7 +18,7 @@
     "qa:editorial": "node chapters/01-four-elements/editorial/zombie-kingdom-r2/build.mjs --check",
     "qa:data": "node scripts/qa-data.mjs",
     "qa:source": "node scripts/python.mjs scripts/qa_source.py",
-    "test": "npm run qa:data && npm run qa:editorial && npm run test:core && npm run qa:fonts && npm run test:render && npm run render:smoke && npm run test:episode && npm run qa:source",
+    "test": "npm run qa:data && npm run qa:editorial && npm run qa:fonts && npm run test:core && npm run test:render && npm run render:smoke && npm run test:episode && npm run qa:source",
     "render:cast": "npm run build:cast",
     "qa:cast": "node scripts/qa-cast-source.mjs && node --import ./scripts/isolated-fonts.mjs assets/characters/archive/proposals/check_clearance.mjs",
     "setup:python": "node scripts/setup-python.mjs",

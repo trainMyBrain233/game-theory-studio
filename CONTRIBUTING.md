@@ -11,6 +11,8 @@ npm run setup:fonts -- --download
 npm test
 ```
 
+`test:core` 现包含真实 Canvas 像素检查，必须在字体准备之后运行；不要把它当作无字体阶段。CI 顺序为显式下载固定官方字体 → 字体校验 → core/负例。`npm test` 先验证本地字体，缺失时明确失败，不自动下载。
+
 macOS/Linux 都使用相同命令。npm 自动选择项目 `.venv`，无需激活或修改全局 Python。已有完整 SC 字体可用 `--source-dir` 离线准备；首次官方字体下载需要网络。详见 [故障排查](docs/troubleshooting.md)。
 
 ## 修改内容或新建章节
