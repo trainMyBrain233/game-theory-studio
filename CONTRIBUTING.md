@@ -26,6 +26,8 @@ npm test
 
 共享的显示名、策略名、收益和默认选择维护在 `design/scenes.json`。章节口播生成器从该案例读取这些值。修改后执行 `build:narration` 重建全部章节，检查中文数字、语义断行、参考语速和所有派生产物的 diff；真实录音完成后再对齐时间。手改派生SRT、归档SVG/JSON会被只读QA报为过期，不会被QA覆盖。归档构建用显式 `build:cast`，测试只在临时目录重建比较。
 
+`test:case-reuse`在隔离副本使用明月/青禾、合作/退出、不对称收益和默认BR，执行真实build与QA命令。设计QA核对当前配置的四格数字归属与默认高亮；负向测试根据当前fixture构造真实矛盾，不能假定原始值。
+
 内容修改时递增该章节的 `contentVersion`。结构契约改变时先更新 Schema/版本与迁移说明，再改消费者；不要为了绕过验证删除 Schema 或负向样本。详见 [版本与更新流程](docs/project-structure.md#版本与更新流程)。
 
 ## 代码与依赖

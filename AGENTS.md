@@ -16,6 +16,8 @@ Run the commands from README after a clean `npm ci --ignore-scripts`. Use `npm t
 
 For configuration, font, timeline or renderer changes, retain negative/variation tests that fail when the implementation is broken. Do not replace a pixel or glyph check with an assertion on a declaration from the same code path.
 
+Supported case edits must pass build and QA. Run `test:case-reuse` for names, strategies, asymmetric payoffs and default BR. Compare rendering with the current valid case, not a hardcoded original matrix/selection; each negative mutation must actually contradict its current fixture. Recording guidance must also remain valid for changed Chinese names and scores.
+
 ## Review rules
 
 1. **SC glyphs:** prepare the complete Noto Sans/Serif CJK SC 2.004/2.003 faces with genuine 400/700 weights. Reject wrong family/version, missing characters and checksum mismatches on first use and cache reuse. Official OTF bytes must match pinned SHA256; local TTC faces must reproduce from recorded source SHA and face index. Verify-only never rewrites provenance. Disable system font loading. Inspect the generated SC specimen at native and reduced sizes; a family alias alone does not establish the glyph region.

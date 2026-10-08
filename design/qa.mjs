@@ -6,6 +6,8 @@ import {TOKENS,DATA,drawScene} from './render-proposals.mjs';
 import {verifySelection} from '../scripts/render-contract.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 const results=[];function check(name,ok,details){results.push({name,ok,details});if(!ok)console.error('FAIL',name,details)}
+const matrixGeometry={editorial:[976,421,353,184],textbook:[382,496,332,159],bright:[316,444,310,181]};
+const ownershipIssues=[],selectionIssues=[];
 const lum=h=>{const ch=h.match(/\w\w/g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return ch[0]*.2126+ch[1]*.7152+ch[2]*.0722};
 const contrast=(a,b)=>{const l=[lum(a),lum(b)].sort((a,b)=>a-b);return (l[1]+.05)/(l[0]+.05)};
 for(const [id,s] of Object.entries(TOKENS.styles)){
@@ -21,10 +23,16 @@ for(const [id,s] of Object.entries(TOKENS.styles)){
  }
  // All four possible outcomes should be drawable by the same reusable template.
  for(let r=0;r<2;r++)for(let k=0;k<2;k++){
-   let c=createCanvas(1920,1080),[a,b]=DATA.payoffs[r][k];let boxes=drawScene(c,id,'payoff',{selected:{row:r,column:k},subtitle:`小A得${a}分，小B得${b}分。`});
+   let c=createCanvas(1920,1080);let boxes=drawScene(c,id,'payoff',{selected:{row:r,column:k}});
    try{verifySelection(c,boxes,id,DATA,{row:r,column:k},TOKENS.styles[id]);check(`${id}: selection, highlight and explanation [${r},${k}]`,true)}catch(error){check(`${id}: selection, highlight and explanation [${r},${k}]`,false,error.message)}
  }
+ const canvas=createCanvas(1920,1080),boxes=drawScene(canvas,id,'payoff');
+ const [x,y,w,h]=matrixGeometry[id];
+ DATA.payoffs.forEach((row,r)=>row.forEach(([a,b],k)=>{
+  if(!boxes.some(box=>box.text===`(${a}, ${b})`&&Math.abs(box.x+box.width/2-(x+w*(k+.5)))<1&&box.y>y+h*r&&box.y+box.height<y+h*(r+1)))ownershipIssues.push(`${id}/${r}/${k}: expected A=${a}, B=${b} in its cell`);
+ }));
+ try{verifySelection(canvas,boxes,id,DATA,DATA.selected,TOKENS.styles[id]);}catch(error){selectionIssues.push(`${id}: ${error.message}`);}
 }
-check('Matrix payoff order A then B',JSON.stringify(DATA.payoffs)==='[[[3,3],[0,5]],[[5,0],[1,1]]]');
-check('Default highlight: A red / B blue → (0,5)',DATA.selected.row===0&&DATA.selected.column===1&&DATA.payoffs[0][1][0]===0&&DATA.payoffs[0][1][1]===5);
+check('Matrix payoff order A then B follows the current case',ownershipIssues.length===0,ownershipIssues);
+check('Default highlight follows the configured selection',selectionIssues.length===0,selectionIssues);
 const report={runAt:new Date().toISOString(),passed:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};fs.writeFileSync(path.join(HERE,'qa/checks.json'),JSON.stringify(report,null,2));console.log(`${report.passed} passed; ${report.failed} failed`);if(report.failed)process.exitCode=1;

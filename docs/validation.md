@@ -20,11 +20,12 @@
 | 变异与几何烟测 | 甲/乙、合作/退出、11–42不同收益的12矩阵状态通过；4种选牌下划线跟随选择；48px/宋体改变像素；原创建模0/0.5/1s、乱序重复帧确定性通过 |
 | 整集模块 | 共享根案例、第一章时间轴和SC字库；6语义项、633采样、10,065文字绘制、4,997路径、0问题；4个face覆盖236字符；5原创SVG与5张1080p CI关键帧 |
 | 整集配置回归 | 甲/乙、合作/退出、11–42收益的四格实际高亮像素与A/B数字位置通过；26帧重排A/B事件逐像素相同，组合收益按最大offset揭示；48px/宋体实际应用，选择驱动动作；8个牌色/纸色/墨色采样跟随token，生产徽标显示配置姓名；无占位flag的缺失私有层明确失败 |
+| 更章流程 | 隔离副本使用明月/青禾、合作/退出、不对称11–42收益和默认BR，真实执行build:narration、qa:data、test:core、render:proposals、qa:design、qa:layout、qa:cast全部成功；53设计项按当前有效配置核对。录音说明不再残留小A/小B或(0,5)原例 |
 | 可选制作链 | 固定NumPy2.3.5/Pillow12.3.0安装；30个原创SFX事件（峰值−27.29dBFS）、39张1080p帧、两张联系图成功并目视检查；公开源码ZIP CRC/manifest通过，停用私有打包模式 |
 | 短段编码 | 本机FFmpeg/libx264编码1秒1080p原创建模段；30帧完整解码，H.264/yuv420p/BT.709/1:1 SAR/帧率/时长通过，无音轨；这不是全长影片验收 |
-| 公开源码 | 候选源码扫描通过；SVG后缀不分大小写，XML local-name检查拒绝带namespace的image/script/foreignObject及非本地引用；实际公开打包负例失败且保留旧ZIP；本轮公开ZIP含129源码文件并通过CRC。无检测到的秘密、私有路径、二进制或嵌入位图SVG；发布前另人工核对暂存diff |
+| 公开源码 | 候选源码扫描通过；SVG后缀不分大小写，XML local-name检查拒绝带namespace的image/script/foreignObject及非本地引用；实际公开打包负例失败且保留旧ZIP；本轮公开ZIP含130源码文件并通过CRC。无检测到的秘密、私有路径、二进制或嵌入位图SVG；发布前另人工核对暂存diff |
 
-本次还修复了事件存储顺序影响数字归属/组合揭示时间、字体缓存重新给未知字节盖章、归档QA覆写编辑、SVG扩展名/namespace绕过、生产徽标忽略display_name和牌色忽略token。Timeline合同从2.0升至2.1：完整格子揭示须有唯一A/B事件，零/单项/省略/重复在绘制前被拒绝；已有时间窗、事件内容、SRT与口播文本不变，两个timeline仅schema_version元信息更新。默认牌色和官方字库不变；私有生产徽标会改为与口播一致的“小A/小B”，需在新head私有重渲中验收。
+本次还修复了事件存储顺序影响数字归属/组合揭示时间、字体缓存重新给未知字节盖章、归档QA覆写编辑、SVG扩展名/namespace绕过、生产徽标忽略display_name和牌色忽略token。Timeline合同从2.0升至2.1：完整格子揭示须有唯一A/B事件，零/单项/省略/重复在绘制前被拒绝。更章测试不再假定原收益/RB选择，录音说明改为适用于当前姓名/分数的读法。已有时间窗、事件、SRT与口播正文不变；timeline仅版本/读法说明元信息更新，录音稿仅头部说明更新。默认牌色和官方字库不变；私有生产徽标会改为与口播一致的“小A/小B”，需在新head私有重渲中验收。
 
 此前f694678的[PR CI](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37729386129)已经在Ubuntu24.04/macOS14成功。本轮修复的最终head与两个Quality job结果见[草稿PR2](https://github.com/trainMyBrain233/game-theory-studio/pull/2)的最新验证记录；历史CI不替代新head结果。当前模板没有Windows实测。
 

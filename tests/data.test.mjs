@@ -24,7 +24,7 @@ test('scene configuration supports independent player labels, strategy names, pa
 });
 for(const [name,mutate] of [
   ['out-of-range selection',x=>{x.selected.row=2;}],
-  ['contradictory strategy reference',x=>{x.selected.actorA='blue';}],
+  ['contradictory strategy reference',x=>{x.selected.actorA=x.strategies[1-x.selected.row].id;}],
   ['duplicate actor ids',x=>{x.actors[1].id='A';}],
   ['duplicate frame ids',x=>{x.frames[1].id='participants';}],
   ['ambiguous player labels',x=>{x.actors[1].label=x.actors[0].label;}],
@@ -32,12 +32,12 @@ for(const [name,mutate] of [
   ['unknown field',x=>{x.secretField=true;}],
 ]) test(`scene rejects ${name}`,()=>{const x=structuredClone(scenes);mutate(x);assert.throws(()=>validateScenes(x));});
 for(const [name,mutate] of [
-  ['swapped payoff order',x=>{x.visual_contract.matrix_values.RB=[5,0];}],
+  ['mismatched payoff ownership',x=>{const pair=x.visual_contract.matrix_values.RB;pair[0]=pair[0]===0?1:0;}],
   ['negative window',x=>{x.segments[0].end=-1;}],
   ['doubled tail pause',x=>{x.segments[0].end+=x.segments[0].pause_after;}],
   ['discontinuous section',x=>{x.sections[1].start+=0.1;}],
   ['unknown score owner',x=>{x.segments.find(s=>s.visual_cue.score_reveals).visual_cue.score_reveals[0].player='C';}],
-  ['reversed choices',x=>{const cue=x.segments.find(s=>s.visual_cue.matrix_cell==='RB'&&s.visual_cue.choices).visual_cue;cue.choices={A:'蓝',B:'红'};}],
+  ['reversed choices',x=>{const cue=x.segments.find(s=>s.visual_cue.matrix_cell==='RB'&&s.visual_cue.choices).visual_cue;cue.choices={A:scenes.strategies[1].label,B:scenes.strategies[0].label};}],
   ['unknown cell without score reveal',x=>{x.segments[0].visual_cue.matrix_cell='XY';}],
   ['score mismatched without score_reveals',x=>{x.segments[0].visual_cue={action:'reveal_scores',matrix_cell:'RB',scores:[5,0]};}],
   ['score event outside speech',x=>{x.segments.find(s=>s.visual_cue.score_reveals).visual_cue.score_reveals[0].offset=99;}],

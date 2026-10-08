@@ -76,7 +76,7 @@ data={
  'schema_version':'2.1','title':'四个问题，看懂一场博弈','language':'zh-CN','duration':t,'fps_reference':30,
  'timing_status':'manual_voiceover_reference_not_audio_aligned',
  'timing_notice':'本时间轴没有真人口播音频作为依据。发声时长、句内停顿与数值出现点均为人工参考；录制后应以实际呼吸和语义停顿重对齐，不能宣称已经按音频对齐。',
- 'speech_guidance':{'tone':'清楚、平和，像面对一个第一次接触博弈论的人讲解。','names':'小A、小B中的字母读英语字母名称；不要读成甲乙，也不要省掉人名。','numbers_and_symbols':'数值全部用中文数字口播；（0，5）读成小A得零分、小B得五分；≠读不等于；行读 háng。','pace':'句内逗号轻停，问句和定义后留理解时间。允许局部伸缩，不要为踩时间码加速。','subtitle_policy':'整句或语义块完整出现；不逐字打字。字幕从start保留到end，包含尾部停顿，不提前收走。','pause_after_definition':'pause_after位于start/end显示窗的结尾：end = voiceover_end + pause_after。不是在end后再追加一次。'},
+ 'speech_guidance':{'tone':'清楚、平和，像面对一个第一次接触博弈论的人讲解。','names':'按当前参与者显示名读；中文姓名按中文发音，只有姓名中的拉丁字母读英语字母名称。不要省掉或替换人名。','numbers_and_symbols':'数值全部用中文数字口播；每格按参与者顺序读“姓名得几分”，不读括号、逗号或矩阵坐标；≠读不等于；行读 háng。','pace':'句内逗号轻停，问句和定义后留理解时间。允许局部伸缩，不要为踩时间码加速。','subtitle_policy':'整句或语义块完整出现；不逐字打字。字幕从start保留到end，包含尾部停顿，不提前收走。','pause_after_definition':'pause_after位于start/end显示窗的结尾：end = voiceover_end + pause_after。不是在end后再追加一次。'},
  'visual_contract':{'participants':CASE.players,'game_rounds':1,'matrix_orientation':f'{CASE.players[0]}为行，{CASE.players[1]}为列','matrix_score_order':CASE.players,'matrix_values':PAYOFFS,'matrix_reveal_order':['RR','RB','BR','BB'],'multi_round_is_comparison_only':True,'framework_note':'四问是入门整理，不是唯一公认分类。','information_note':'知道完整计分规则而看不到本轮行动，不能据此称为不完全信息。','persistent_visual_notes':['虚构教学案例','本片：一轮游戏'],'transitions':'转场优先落在pause_after内；字幕层保持清晰、稳定，不把转场时间从阅读窗硬扣除。'},
  'sections':sections,'segments':rows}
 timeline_text=json.dumps(data,ensure_ascii=False,indent=2)+'\n'
@@ -93,9 +93,9 @@ head=f'''四个问题，看懂一场博弈｜V2 可录音稿
 请先按自己的自然速度完整试录。时间码用于找段，不是要求卡点；有实际口播后，再调整画面和字幕到录音。
 
 读法与停顿
-- 读“小A、小B”时，把A、B读成英语字母名称。
-- 所有分数读中文数字：“三分、零分、五分、一分”。不读括号、逗号或矩阵坐标。
-- “行，是小A的选择”中的“行”读 háng。
+- 按当前参与者显示名读；中文姓名按中文发音，只有姓名中的拉丁字母读英语字母名称。
+- 所有分数读中文数字，按参与者顺序读“姓名得几分”。不读括号、逗号或矩阵坐标。
+- 收益矩阵的“行”读 háng。
 - 逗号通常轻停，句号正常换气；问句、定义和每组得分之后稍留理解时间。
 - 下列“停”是读完该段之后的参考停顿，已包含在段落时间内。可以随呼吸自然调整。
 - 方括号内容不读。多轮只用于对照，随后明确回到一轮游戏。
