@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "width": 1920,
   "height": 1080,
   "fps": 30,
@@ -61,6 +61,9 @@
             "expectedCell": null,
             "scope": null,
             "rowChoice": null
+          },
+          "narration": {
+            "kind": "participants"
           }
         }
       ],
@@ -70,7 +73,12 @@
           "frame": 20,
           "phaseId": "intro_caption",
           "type": "joint_reveal",
-          "durationFrames": 20
+          "durationFrames": 20,
+          "cell": "RB",
+          "choices": {
+            "A": "red",
+            "B": "blue"
+          }
         },
         {
           "id": "hide",
@@ -84,20 +92,23 @@
       "id": "red_pair",
       "startFrame": 60,
       "endFrame": 120,
-      "voiceover": "两位都选红牌。甲方得二分，乙方得七分。",
+      "voiceover": "甲方选红牌，乙方选红牌。甲方得二分，乙方得七分。",
       "subtitles": [
         {
           "id": "rr_choice",
           "startFrame": 60,
           "endFrame": 80,
           "lines": [
-            "两位都选红牌。"
+            "甲方选红牌，乙方选红牌。"
           ],
           "focus": {
             "kind": "case",
             "expectedCell": "RR",
             "scope": "rr_choice",
             "rowChoice": null
+          },
+          "narration": {
+            "kind": "choices"
           }
         },
         {
@@ -112,6 +123,9 @@
             "expectedCell": "RR",
             "scope": "rr_choice",
             "rowChoice": null
+          },
+          "narration": {
+            "kind": "payoffs"
           }
         }
       ],
@@ -145,20 +159,23 @@
       "id": "mixed_pair",
       "startFrame": 120,
       "endFrame": 200,
-      "voiceover": "甲方选红，乙方选蓝。甲方得一分，乙方得九分。",
+      "voiceover": "甲方选红牌，乙方选蓝牌。甲方得一分，乙方得九分。",
       "subtitles": [
         {
           "id": "rb_choice",
           "startFrame": 120,
           "endFrame": 150,
           "lines": [
-            "甲方选红，乙方选蓝。"
+            "甲方选红牌，乙方选蓝牌。"
           ],
           "focus": {
             "kind": "case",
             "expectedCell": "RB",
             "scope": "rb_choice",
             "rowChoice": null
+          },
+          "narration": {
+            "kind": "choices"
           }
         },
         {
@@ -173,6 +190,9 @@
             "expectedCell": "RB",
             "scope": "rb_choice",
             "rowChoice": null
+          },
+          "narration": {
+            "kind": "payoffs"
           }
         }
       ],
@@ -206,20 +226,24 @@
       "id": "compare",
       "startFrame": 200,
       "endFrame": 280,
-      "voiceover": "对方选红，甲方得二分；对方选蓝，甲方得一分。",
+      "voiceover": "乙方选红牌，甲方得二分；乙方选蓝牌，甲方得一分。",
       "subtitles": [
         {
           "id": "compare_red",
           "startFrame": 200,
           "endFrame": 240,
           "lines": [
-            "对方选红，甲方得二分；"
+            "乙方选红牌，甲方得二分；"
           ],
           "focus": {
             "kind": "comparison",
             "expectedCell": "RR",
             "scope": "compare_red",
             "rowChoice": "red"
+          },
+          "narration": {
+            "kind": "comparison",
+            "ending": "；"
           }
         },
         {
@@ -227,13 +251,17 @@
           "startFrame": 240,
           "endFrame": 280,
           "lines": [
-            "对方选蓝，甲方得一分。"
+            "乙方选蓝牌，甲方得一分。"
           ],
           "focus": {
             "kind": "comparison",
             "expectedCell": "RB",
             "scope": "compare_blue",
             "rowChoice": "red"
+          },
+          "narration": {
+            "kind": "comparison",
+            "ending": "。"
           }
         }
       ],
@@ -272,6 +300,9 @@
             "expectedCell": null,
             "scope": null,
             "rowChoice": null
+          },
+          "narration": {
+            "kind": "summary"
           }
         }
       ],

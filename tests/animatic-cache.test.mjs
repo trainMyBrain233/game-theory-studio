@@ -37,3 +37,13 @@ test('cache rejects invalid capacity/session/frame and never aliases adjacent se
   assert.deepEqual(cache.get(left),session.renderPNG(left));assert.deepEqual(cache.get(right),session.renderPNG(right));
  }
 });
+
+test('retained provider context/canvas cannot alter private session pixels or cache identity',()=>{
+ const adapters=syntheticCast(),draw=adapters.A.draw;let retained;
+ adapters.A.draw=ctx=>{retained=ctx;draw(ctx)};
+ const captured=createRenderSession({plan:fixture(),adapters}),cache=createRasterCache(captured,{maxEntries:1}),identity=captured.fingerprint,expected=captured.renderPNG(0);
+ assert.deepEqual(cache.get(0),expected);
+ retained.canvas.width=96;retained.canvas.height=112;retained.clearRect(0,0,96,112);retained.fillStyle='magenta';retained.fillRect(0,0,96,112);
+ assert.equal(captured.fingerprint,identity);assert.deepEqual(captured.renderPNG(0),expected);assert.deepEqual(cache.get(0),expected);
+ cache.get(1);assert.deepEqual(cache.get(0),expected);cache.clear();assert.deepEqual(cache.get(0),expected);
+});

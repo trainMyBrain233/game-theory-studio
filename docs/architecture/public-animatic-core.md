@@ -18,8 +18,8 @@ frames are a test schedule, never a recording duration recommendation.
 All times are integer frames at 30fps, in a fixed 1920×1080 canvas. Every block
 and subtitle window is half-open: `[startFrame, endFrame)`. The valid render
 range is `0 <= frame < durationFrames`; the terminal endpoint is rejected.
-Only `synthetic_test_only` and `manual_reference_not_audio_aligned` schedules
-are accepted in this first schema. `audioTiming` must remain null. Actual audio
+Schema 1.1 accepts only `synthetic_test_only` and
+`manual_reference_not_audio_aligned` schedules. `audioTiming` must remain null. Actual audio
 alignment needs a separate explicit contract and future tests.
 
 ## Modules and the single state source
@@ -52,14 +52,16 @@ A summary's `none` phase clears all current focus while keeping earned numbers.
 The renderer draws the border from `activeCell`, never from the last historical
 selection. Row focus is independently explicit.
 
-`joint_reveal` supplies a start frame and integer duration. One resolved
-information state drives both the visible information label and both card
-face alphas. `conceal_choices` explicitly resets it. Concurrent/conflicting
+`joint_reveal` supplies a start frame, integer duration, semantic cell and
+explicit A/B choices. Both owners are required and must match that cell; a
+focused phase must agree with it too. One resolved information state drives
+the information label, both card face colors and their reveal alphas. The four
+RR/RB/BR/BB combinations have independent actual owner-pixel tests. `conceal_choices` explicitly resets it. Concurrent/conflicting
 card transitions are invalid.
 
 Subtitles are complete groups of one or two authored lines. Lines have at most
 22 readable Unicode letters/digits; their concatenation must equal the block's
-voiceover ignoring whitespace. Player names and numeric-unit tokens cannot
+voiceover exactly, without whitespace normalization. Player names, both configured strategy labels and numeric-unit tokens cannot
 cross line or group boundaries. The group remains fully visible through the
 entire window, including tail frames, outside avatar/scene alpha changes.
 The compositor reads actual `ctx.font` back after applying each font and checks
@@ -69,9 +71,28 @@ bounds. Unsupported names or labels fail with the role, requested size, measured
 ink dimensions and slot; text is never silently shrunk. Four- and six-character
 name replacements are tested. Longer input is accepted only if it really fits.
 
-This checks text conservation and basic token integrity, not natural-language
-truth or listening quality. When changing a case, update authored narration to
-match it and retain editorial review; the core does not parse prose into math.
+Each phase declares one supported semantic narration form: `participants`,
+`choices`, `payoffs`, `comparison` or `summary`. Case-focused forms read their
+explicit `expectedCell`; comparison also declares its ending punctuation.
+`narrationForPhase(caseData, phase)` resolves names, full strategy labels and
+spoken integer scores directly from the same case that drives matrix pixels.
+The author/build step derives the block voiceover and one/two subtitle lines
+from that result. Compilation independently resolves the semantic form again
+and rejects either stale text product; it never rewrites stale input silently.
+Changing only a name, strategy or score is therefore a failing input. Explicit
+rebuilding from the new case produces consistent positive variants.
+
+This first-stage schema intentionally does not accept arbitrary prose or claim
+to understand free-form narration. Adding another form needs its own semantic
+references, schema and tests. The 40-block public editorial draft remains
+unchanged and is not automatically converted into this synthetic plan.
+Listening quality and audio alignment remain separate work.
+
+Player and strategy labels must be trimmed, well-formed, visible, single-line
+text without controls or default-ignorable characters (including Hangul
+fillers, invisible combining joiners and variation selectors). NFKC/whitespace-normalized forms
+must be distinct within each pair, so bytewise differences cannot disguise
+visually empty or equivalent labels.
 
 ## Asset adapter and transition contract
 
@@ -80,6 +101,9 @@ an exact nonzero-alpha bounding rectangle, and `draw(ctx)` at native origin.
 No paths are read from plans and no private import or resource fallback exists.
 The render session requires both actors, captures their actual raster pixels,
 and independently checks declared bounds against every nonzero alpha pixel.
+Provider drawing uses a temporary exposed surface; its pixels are copied into
+a second private surface before hashing. Retaining the provider context or
+canvas cannot mutate the captured pixels, fingerprint or cached/uncached frames.
 Resources and pure imports never create output files/directories.
 
 A transition supplies integer start/end frames and from/to poses containing
@@ -105,12 +129,29 @@ are test figures, not substitutes for production characters.
 
 - A validated frozen plan including case and exact captions
 - Fixed geometry and copied transition tracks
-- The actual regular/bold SC font file hashes and registered family
+- Independently verified regular/bold SC font provenance, actual cmaps and a
+  byte-pair-specific registered family
 - Both avatars' measured dimensions, alpha bounds and RGBA pixel hashes
 - The title and component contract version
 
-Load `scripts/isolated-fonts.mjs` before importing Canvas, as the supplied CLI
-and raster test entrypoints do, so system fonts are disabled.
+The public render module loads `scripts/isolated-fonts.mjs` before Canvas;
+the supplied CLI/tests also preload it. System font loading is disabled.
+`font-resources.mjs` verifies official pinned OTF digests or independently
+reproduces the recorded TTC source/face through the existing font preparation
+verifier. A manifest's own hash is never enough. It checks every requested
+character in both real Unicode cmaps before drawing, including title, labels,
+resolved captions, digits and fixed interface strings. Missing glyphs fail
+instead of becoming fallback/tofu pixels.
+
+Successful proofs are cached by current font, manifest, source and verifier
+byte hashes. The current bytes are rechecked before every render and every
+cache hit/miss, including after GlobalFonts has registered a face. Any change
+invalidates an existing session. Exact verified buffers are registered under a
+full pair-hash alias, so a legacy fixed alias cannot supply stale font metrics.
+No prepared-font cache changes, network access or manifest rewriting occur.
+TTC verification uses temporary re-extraction files which are removed afterward.
+Verification
+requires the existing Python/fontTools setup as well as Node dependencies.
 
 Its SHA-256 fingerprint binds those inputs. Later changes to caller-owned
 objects or provider callbacks cannot change that session. Create a new session
@@ -168,6 +209,10 @@ Real-compositor mutations also reject 8px subtitles, regular instead of bold,
 a wrong font family, displaced subtitles/columns/legend, overlong role text,
 and the formerly overlapping eight-character actor name. Actual subtitle alpha
 height is checked independently of font-record metadata.
+Additional review regressions cover stale case-bound narration, strategy word
+splits, whitespace/control/normalized duplicate labels, all four joint card
+choices, retained provider-context mutation, unsupported glyphs, forged or
+changed font provenance, proof-cache invalidation and stale legacy font aliases.
 The standalone smoke uses the same compositor as the component tests and
 checks 67 boundary/transition frames against cold/cached/reversed PNG bytes.
 

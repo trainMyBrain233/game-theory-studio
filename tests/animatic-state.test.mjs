@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {rebuildNarration} from './fixtures/animatic/rebuild-narration.mjs';
 import {compilePlan,resolveFrame} from '../production/src/animatic/semantic-state.mjs';
 const fixture=()=>JSON.parse(fs.readFileSync(new URL('./fixtures/animatic/minimal-plan.json',import.meta.url),'utf8'));
 const compiled=compilePlan(fixture());
@@ -49,9 +50,7 @@ test('complete subtitle group remains fixed through its full display/tail window
 });
 test('case replacement drives revealed values and names without a second numeric source',()=>{
  const input=fixture();input.caseData.values.RR=[12,34];input.caseData.players.A.name='新甲';
- input.blocks[1].subtitles[1].lines=['甲方得十二分，乙方得三十四分。'];input.blocks[3].subtitles[0].lines=['对方选红，甲方得十二分；'];
- for(const block of input.blocks)block.voiceover=block.subtitles.flatMap(phase=>phase.lines).join('');
- for(const b of input.blocks){b.voiceover=b.voiceover.replaceAll('甲方','新甲');for(const p of b.subtitles)p.lines=p.lines.map(line=>line.replaceAll('甲方','新甲'));}
+ rebuildNarration(input);
  const next=compilePlan(input);assert.deepEqual(resolveFrame(next,100).revealedScores.RR,[12,34]);assert.equal(next.plan.caseData.players.A.name,'新甲');
 });
 for(const [label,mutate] of [
@@ -81,4 +80,62 @@ for(const [label,mutate] of [
 test('invalid and endpoint frame requests fail rather than falling back to last caption',()=>{
  for(const frame of [-1,.5,360,361,NaN,Infinity,'0',Number.MAX_SAFE_INTEGER+1])assert.throws(()=>resolveFrame(compiled,frame));
  assert.throws(()=>resolveFrame(structuredClone(compiled),0),/compilePlan/);
+});
+
+for(const [label,mutate] of [
+ ['player',plan=>plan.caseData.players.A.name='新甲'],
+ ['strategy',plan=>plan.caseData.strategies.red='合作'],
+ ['payoff',plan=>plan.caseData.values.RR[0]=12],
+])test(`case-only ${label} replacement rejects two mutually matching stale narration products`,()=>{
+ const plan=fixture();mutate(plan);assert.throws(()=>compilePlan(plan),/Stale narration/);
+ rebuildNarration(plan);compilePlan(plan);
+});
+test('one semantic case rebuild drives changed names, strategies, asymmetric spoken numbers and state together',()=>{
+ const plan=fixture();plan.caseData.players.A.name='参与甲';plan.caseData.players.B.name='参与乙';plan.caseData.strategies={red:'合作',blue:'退出'};plan.caseData.values.RR=[12,34];
+ rebuildNarration(plan);const next=compilePlan(plan);
+ assert.deepEqual(resolveFrame(next,100).revealedScores.RR,[12,34]);
+ assert.equal(resolveFrame(next,70).caption.lines.join(''),'参与甲选合作，参与乙选合作。');
+ assert.equal(resolveFrame(next,100).caption.lines.join(''),'参与甲得十二分，参与乙得三十四分。');
+ assert.equal(resolveFrame(next,220).caption.lines.join(''),'参与乙选合作，参与甲得十二分；');
+ const changed=structuredClone(plan);changed.blocks[1].subtitles[1].lines=['参与甲得零分，参与乙得零分。'];changed.blocks[1].voiceover=changed.blocks[1].subtitles.flatMap(phase=>phase.lines).join('');assert.throws(()=>compilePlan(changed),/Stale narration/);
+});
+test('strategy words remain indivisible across both lines and subtitle groups',()=>{
+ const plan=fixture(),phase=plan.blocks[1].subtitles[0];phase.lines=['甲方选红','牌，乙方选红牌。'];assert.throws(()=>compilePlan(plan),/splits protected token/);
+ const grouped=fixture(),original=grouped.blocks[1].subtitles[0];const next=structuredClone(original);original.endFrame=65;original.lines=['甲方选红'];next.id='split_choice';next.startFrame=65;next.lines=['牌，乙方选红牌。'];grouped.blocks[1].subtitles.splice(1,0,next);assert.throws(()=>compilePlan(grouped),/Stale narration/);
+});
+for(const [label,A,B,red,blue] of [
+ ['trailing player whitespace','甲方','甲方 ','红牌','蓝牌'],
+ ['empty strategies','甲方','乙方',' ','  '],
+ ['control character','甲\u0000方','乙方','红牌','蓝牌'],
+ ['multiline label','甲\n方','乙方','红牌','蓝牌'],
+ ['zero-width label','甲方','甲\u200B方','红牌','蓝牌'],
+ ['lone surrogate','甲\uD800方','乙方','红牌','蓝牌'],
+ ['canonical equivalent names','é','e\u0301','红牌','蓝牌'],
+ ['compatibility equivalent strategies','甲方','乙方','Ａ','A'],
+ ['collapsed visible spaces','甲 方','甲  方','红牌','蓝牌'],
+])test(`label contract rejects ${label}`,()=>{
+ const plan=fixture();plan.caseData.players.A.name=A;plan.caseData.players.B.name=B;plan.caseData.strategies={red,blue};assert.throws(()=>compilePlan(plan),/label must|visible .* must differ/);
+});
+test('joint reveal requires complete owner choices agreeing with its semantic cell',()=>{
+ for(const mutate of [e=>delete e.cell,e=>delete e.choices,e=>delete e.choices.A,e=>e.choices.A='blue',e=>e.choices.C='red',e=>e.cell='XY']){const plan=fixture();mutate(plan.blocks[0].events[0]);assert.throws(()=>compilePlan(plan));}
+ for(const [cell,choices] of [['RR',{A:'red',B:'red'}],['RB',{A:'red',B:'blue'}],['BR',{A:'blue',B:'red'}],['BB',{A:'blue',B:'blue'}]]){
+  const plan=fixture();Object.assign(plan.blocks[0].events[0],{cell,choices});const next=compilePlan(plan);
+  assert.deepEqual(resolveFrame(next,40).information.choices,choices);assert.equal(resolveFrame(next,40).information.cell,cell);assert.equal(resolveFrame(next,50).information.choices,null);
+ }
+});
+
+test('limited semantic narration schema rejects unbound raw prose and line-separator labels',()=>{
+ for(const change of [p=>p.blocks[1].subtitles[0].narration={kind:'raw_text',text:'任意旧稿'},p=>delete p.blocks[1].subtitles[0].narration,p=>p.blocks[1].subtitles[0].narration={kind:'summary'},p=>p.caseData.players.A.name='甲\u2028方']){const plan=fixture();change(plan);assert.throws(()=>compilePlan(plan));}
+ const plan=fixture();plan.blocks[0].voiceover='两个旧名字不对应新案例。';plan.blocks[0].subtitles[0].lines=[plan.blocks[0].voiceover];assert.throws(()=>compilePlan(plan),/Stale narration/);
+});
+
+test('glyph-bearing but invisible Unicode fillers cannot distinguish player or strategy labels',()=>{
+ for(const point of [0x3164,0x115f,0x1160,0xffa0,0x034f,0x180b]){
+  for(const kind of ['player','strategy']){
+   const plan=fixture(),filler=String.fromCodePoint(point);
+   if(kind==='player')plan.caseData.players.B.name=plan.caseData.players.A.name+filler;
+   else plan.caseData.strategies.blue=plan.caseData.strategies.red+filler;
+   rebuildNarration(plan);assert.throws(()=>compilePlan(plan),/default-ignorable/);
+  }
+ }
 });

@@ -1,11 +1,11 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "urn:game-theory-studio:animatic-plan:1.0",
+  "$id": "urn:game-theory-studio:animatic-plan:1.1",
   "type": "object",
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": "1.0"
+      "const": "1.1"
     },
     "width": {
       "const": 1920
@@ -263,6 +263,46 @@
                     "scope",
                     "rowChoice"
                   ]
+                },
+                "narration": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "enum": [
+                            "participants",
+                            "choices",
+                            "payoffs",
+                            "summary"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "const": "comparison"
+                        },
+                        "ending": {
+                          "enum": [
+                            "；",
+                            "。"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "ending"
+                      ]
+                    }
+                  ]
                 }
               },
               "required": [
@@ -270,7 +310,8 @@
                 "startFrame",
                 "endFrame",
                 "lines",
-                "focus"
+                "focus",
+                "narration"
               ]
             }
           },
@@ -302,6 +343,36 @@
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 9007199254740991
+                    },
+                    "cell": {
+                      "enum": [
+                        "RR",
+                        "RB",
+                        "BR",
+                        "BB"
+                      ]
+                    },
+                    "choices": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "A": {
+                          "enum": [
+                            "red",
+                            "blue"
+                          ]
+                        },
+                        "B": {
+                          "enum": [
+                            "red",
+                            "blue"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "A",
+                        "B"
+                      ]
                     }
                   },
                   "required": [
@@ -309,7 +380,9 @@
                     "frame",
                     "phaseId",
                     "type",
-                    "durationFrames"
+                    "durationFrames",
+                    "cell",
+                    "choices"
                   ]
                 },
                 {
