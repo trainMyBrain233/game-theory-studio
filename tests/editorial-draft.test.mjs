@@ -189,18 +189,25 @@ test('editorial chunks preserve current presentation names within lines and acro
 });
 
 test('editorial chunks protect current strategy labels even when their punctuation looks like a legal break',()=>{
- const scene=readJSON(new URL('../design/scenes.json',import.meta.url)),presentation=readJSON(new URL('../design/experiments/tabletop/presentation.json',import.meta.url));
- const timeline=JSON.parse(fs.readFileSync(new URL('../chapters/01-four-elements/narration/timeline.json',import.meta.url),'utf8').replaceAll('红','，R'));
- scene.strategies[0].label='，R';
- const build=()=>resolveDraft({scene,presentation,timeline,sourceHash:'test-source'});
- withTemplateMutation(draft=>{
-  const item=block(draft,12);item.subtitle_chunks=[draftChunk('strategies',item.voiceover)];
- },()=>{
-  assert.doesNotThrow(build);
-  const item=block(template,12);item.subtitle_chunks=[draftChunk('strategies',item.voiceover,['这一轮，每位都可以选，','R牌，或者{{blue}}牌。'])];
-  assert.throws(build,/protected current-case token or clause: ，R/);
-  item.subtitle_chunks=[draftChunk('left','这一轮，每位都可以选，'),draftChunk('right','R牌，或者{{blue}}牌。')];
-  assert.throws(build,/chunks split protected current-case token or clause: ，R/);
+ withSourceFixture(root=>{
+  const sceneFile=path.join(root,'design/scenes.json'),scene=readJSON(sceneFile),presentation=readJSON(path.join(root,'design/experiments/tabletop/presentation.json'));
+  scene.strategies[0].label='，R';fs.writeFileSync(sceneFile,JSON.stringify(scene));
+  // Rebuild structured cues and speech from the current case. Text replacement
+  // would miss renamed strategies or accidentally alter matching player names.
+  const rebuilt=spawnSync(process.execPath,['scripts/build-narration.mjs'],{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()}});
+  assert.equal(rebuilt.status,0,rebuilt.stderr);
+  const timeline=readJSON(path.join(root,'chapters/01-four-elements/narration/timeline.json'));
+  assert.deepEqual(timeline.visual_contract.participants,scene.actors.map(actor=>actor.label));
+  const build=()=>resolveDraft({scene,presentation,timeline,sourceHash:'test-source'});
+  withTemplateMutation(draft=>{
+   const item=block(draft,12);item.subtitle_chunks=[draftChunk('strategies',item.voiceover)];
+  },()=>{
+   assert.doesNotThrow(build);
+   const item=block(template,12);item.subtitle_chunks=[draftChunk('strategies',item.voiceover,['这一轮，每位都可以选，','R牌，或者{{blue}}牌。'])];
+   assert.throws(build,/protected current-case token or clause: ，R/);
+   item.subtitle_chunks=[draftChunk('left','这一轮，每位都可以选，'),draftChunk('right','R牌，或者{{blue}}牌。')];
+   assert.throws(build,/chunks split protected current-case token or clause: ，R/);
+  });
  });
 });
 
