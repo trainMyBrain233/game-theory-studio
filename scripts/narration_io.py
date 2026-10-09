@@ -1,4 +1,4 @@
-"""Publish UTF-8 products with rollback on ordinary filesystem failures.
+"""Publish UTF-8 text or byte products with rollback on ordinary filesystem failures.
 
 Each replacement is atomic, but the set is NOT atomic to concurrent readers and
 is not crash/power-loss durable. Callers must exclude concurrent writers. A
@@ -68,7 +68,10 @@ def write_products(directory, products):
         for relative, text in entries:
             target = staged / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(text, encoding='utf-8', newline='\n')
+            if isinstance(text, bytes):
+                target.write_bytes(text)
+            else:
+                target.write_text(text, encoding='utf-8', newline='\n')
             original = directory / relative
             if original.exists():
                 backup = saved / relative

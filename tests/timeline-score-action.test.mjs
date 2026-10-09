@@ -174,12 +174,14 @@ const rendererAnchors = [...new Set([
   // Timing helpers are live renderer consumers too, even after extraction from scenes.
   'production/src/comparison-timing.mjs', 'production/src/payoff-entry-timing.mjs',
   'production/src/payoff-recap-timing.mjs', 'production/src/hook-timing.mjs',
-  'production/src/four-questions-timing.mjs', 'production/qa/layout-samples.mjs'
-].flatMap(relative => [...fs.readFileSync(path.join(ROOT, relative), 'utf8').matchAll(/'(s\d\d_[a-z_]+)'/g)].map(match => match[1])))];
+  'production/src/four-questions-timing.mjs', 'production/qa/layout-samples.mjs',
+  'production/sound_plan.py'
+].flatMap(relative => [...fs.readFileSync(path.join(ROOT, relative), 'utf8').matchAll(/["'](s\d\d_[a-z_]+)["']/g)].map(match => match[1])))];
 
 test('every actual renderer/checkpoint anchor rejects omission, renaming and duplicate IDs', () => {
   assert(rendererAnchors.length >= 20, 'The audit must inspect the real literal consumers.');
-  for (const id of rendererAnchors) {
+  assert(rendererAnchors.every(id => timeline.segments.some(segment => segment.id === id)));
+  for (const {id} of timeline.segments) {
     const renamed = structuredClone(timeline);
     renamed.segments.find(segment => segment.id === id).id = 'renamed_anchor';
     validateTimeline(renamed, scenes);
@@ -205,6 +207,69 @@ test('every actual renderer/checkpoint anchor rejects omission, renaming and dup
     const duplicate = structuredClone(timeline);
     duplicate.segments.find(segment => segment.id !== id).id = id;
     assert.throws(() => validateFirstEpisodeTimeline(duplicate, scenes), /Duplicate segment ids/);
+  }
+});
+
+// Move whole semantic blocks and recompute continuous windows. Changing IDs alone
+// would miss regressions in real editorial reorderings and score payload timing.
+function reflow(document) {
+  let time = 0;
+  for (const segment of document.segments) {
+    segment.start = time;
+    segment.voiceover_end = time + segment.spoken_duration;
+    segment.end = segment.voiceover_end + segment.pause_after;
+    segment.display_duration = segment.end - segment.start;
+    time = segment.end;
+  }
+  document.duration = time;
+  for (const section of document.sections) {
+    const rows = document.segments.filter(segment => segment.section === section.id);
+    section.start = rows[0].start;
+    section.end = rows.at(-1).end;
+  }
+  return document;
+}
+
+test('every semantic block rejects moving to any other position within its section', () => {
+  let permutations = 0;
+  for (const section of timeline.sections) {
+    const indices = timeline.segments.flatMap((segment, index) => segment.section === section.id ? [index] : []);
+    for (const from of indices) for (const to of indices) {
+      if (from === to) continue;
+      const document = structuredClone(timeline);
+      const [moved] = document.segments.splice(from, 1);
+      document.segments.splice(to, 0, moved);
+      reflow(document);
+      validateTimeline(document, scenes); // Reach the semantic-order failure, not timing/schema validation.
+      assert.throws(() => validateFirstEpisodeTimeline(document, scenes), /anchors must retain their order/,
+        `${moved.id}: move ${from} to ${to}`);
+      permutations++;
+    }
+  }
+  assert.equal(permutations, 298);
+});
+
+test('implicit section-entry question cannot move after the information distinction', () => {
+  const document = structuredClone(timeline);
+  const questionIndex = document.segments.findIndex(segment => segment.id === 's07_question');
+  const [question] = document.segments.splice(questionIndex, 1);
+  const distinctionIndex = document.segments.findIndex(segment => segment.id === 's10_distinction');
+  document.segments.splice(distinctionIndex + 1, 0, question);
+  reflow(document);
+  validateTimeline(document, scenes);
+  assert.throws(() => validateFirstEpisodeTimeline(document, scenes), /anchors must retain their order/);
+});
+
+test('fixed episode rejects an extra unrendered semantic block in every section', () => {
+  for (const section of timeline.sections) {
+    const document = structuredClone(timeline);
+    const index = document.segments.findIndex(segment => segment.section === section.id);
+    const extra = structuredClone(document.segments[index]);
+    extra.id = 'extra_semantic_block';
+    document.segments.splice(index, 0, extra);
+    reflow(document);
+    validateTimeline(document, scenes);
+    assert.throws(() => validateFirstEpisodeTimeline(document, scenes), /only its supported semantic anchors/);
   }
 });
 
@@ -235,7 +300,7 @@ test('fixed sections, anchor ownership and walkthrough order reject silent chang
   [choice.id, score.id] = [score.id, choice.id];
   for (const field of ['voiceover', 'text', 'lines', 'breath_points']) [choice[field], score[field]] = [score[field], choice[field]];
   validateTimeline(reversed, scenes);
-  assert.throws(() => validateFirstEpisodeTimeline(reversed, scenes), /matrix cues must be unique choice\/reveal pairs/);
+  assert.throws(() => validateFirstEpisodeTimeline(reversed, scenes), /anchors must retain their order/);
 
   const declared = structuredClone(timeline);
   declared.visual_contract.matrix_reveal_order.reverse();
@@ -246,7 +311,7 @@ test('recap layout anchor stays in recap before the paired summaries', () => {
   validateFirstEpisodeTimeline(timeline, scenes);
   for (const [otherId, expected] of [
     ['s35_first_pair', /anchors must retain their order/],
-    ['s03_question', /anchor belongs in recap/],
+    ['s03_question', /anchor belongs in players/],
   ]) {
     const document = structuredClone(timeline);
     const intro = document.segments.find(segment => segment.id === 's34_intro');
@@ -272,12 +337,17 @@ test('production model and qa:data apply the first-episode contract before rende
     fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(temporary, 'node_modules'), 'dir');
     const runModel = () => spawnSync(process.execPath, ['production/src/model.mjs'], {cwd: temporary, encoding: 'utf8'});
     assert.equal(runModel().status, 0, 'The unchanged model loads without Canvas or fonts.');
-    for (const action of ['highlight_choices', 'reveal_scores', 'recap_anchor']) {
+    for (const action of ['highlight_choices', 'reveal_scores', 'recap_anchor', 'question_order']) {
       const document = structuredClone(timeline);
-      const expected = action === 'recap_anchor'
+      const expected = action === 'question_order' ? /anchors must retain their order/ : action === 'recap_anchor'
         ? /exactly one segment anchor: s34_intro/
         : new RegExp(`exactly one ${action} for RR`);
-      if (action === 'recap_anchor') document.segments.find(segment => segment.id === 's34_intro').id = 'renamed_recap';
+      if (action === 'question_order') {
+        const question = document.segments.find(segment => segment.id === 's07_question');
+        const distinction = document.segments.find(segment => segment.id === 's10_distinction');
+        [question.id, distinction.id] = [distinction.id, question.id];
+      }
+      else if (action === 'recap_anchor') document.segments.find(segment => segment.id === 's34_intro').id = 'renamed_recap';
       else document.segments.find(segment => segment.visual_cue.action === action && segment.visual_cue.matrix_cell === 'RR').visual_cue = {action: 'note'};
       validateTimeline(document, scenes);
       fs.writeFileSync(path.join(temporary, 'chapters/01-four-elements/narration/timeline.json'), JSON.stringify(document));

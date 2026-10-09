@@ -1,5 +1,5 @@
 export {timeline,content} from './model.mjs';
-import {timeline,content,sceneData} from './model.mjs';
+import {timeline,content,sceneData,resolveCastText} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
 import {hookState} from './hook-timing.mjs';
 import {fourQuestionsState} from './four-questions-timing.mjs';
@@ -11,7 +11,7 @@ import {proposalScale} from '../../design/canvas-geometry.mjs';
 import {beforeEnd} from './frame-time.mjs';
 import {createSubtitleElement} from './elements/subtitle.mjs';
 import {createPayoffMatrixElement} from './elements/payoff-matrix.mjs';
-import {TOKENS,C,clamp,ease,mix,ramp,span,tx,line,round,circle,arrow,group,reveal,person,badge,card,cardFlip,tag,desk,eye,resetRecords,setSceneTime,finishActorLayers,assertAssetsReady} from './primitives.mjs';
+import {TOKENS,C,clamp,ease,mix,ramp,span,tx,line,round,circle,arrow,group,reveal,person,badge,card,cardFlip,tag,desk,eye,records,resetRecords,setSceneTime,finishActorLayers,assertAssetsReady} from './primitives.mjs';
 export const W=TOKENS.canvas.width,H=TOKENS.canvas.height,FPS=TOKENS.canvas.fps,DURATION=timeline.duration;
 // The timeline end is exclusive. Use its Float64 predecessor only for an
 // endpoint/out-of-range request; every valid in-window time stays unchanged,
@@ -146,8 +146,17 @@ function payoffs(c,t){
  const ba={x:mix(330,565,move),y:mix(356,630,move)},bb={x:mix(1335,1211,move),y:mix(324,350,move)};
  badge(c,'A',ba.x,ba.y,25);badge(c,'B',bb.x,bb.y,25);
  group(c,oldExit,0,0,()=>{tx(c,'{{A}}',371,367,32,700);tx(c,'{{B}}',1376,335,32,700)});group(c,entry.names,0,0,()=>{tx(c,'{{A}}',565,699,32,700,C.ink,'center');tx(c,'{{B}}',1263,361,32,700)});
- card(c,'red',mix(408,707,move),mix(786,588,move),mix(105,82,move),{angle:mix(-.035,0,move)});card(c,'blue',mix(546,707,move),mix(786,758,move),mix(105,82,move));
- card(c,'red',mix(1370,1020,move),mix(786,426,move),mix(105,73,move));card(c,'blue',mix(1508,1500,move),mix(786,426,move),mix(105,73,move));
+ // Labels stay readable while decorative cards briefly retire during the
+ // converging paths; the first row rises before the label columns converge.
+ const axisCardAlpha=1-ramp(move,0,.015)+ramp(move,.985,.015);
+ ['red','blue'].forEach((kind,i)=>{
+  const rowX=mix(408+138*i,685,move),rowY=mix(786,588+170*i,move);
+  const colX=mix(1370+138*i,1020+480*i,move),colY=mix(786,426,move);
+  card(c,kind,rowX,rowY-14*move,mix(105,82,move),{label:false,alpha:axisCardAlpha,angle:i===0?mix(-.035,0,move):0});
+  card(c,kind,colX,colY-14*move,mix(105,73,move),{label:false,alpha:axisCardAlpha});
+  matrixAxisLabel(c,kind,mix(408+138*i,685,ramp(move,.15,.85)),i===0?mix(900,666,ramp(move,.025,.65)):mix(900,836,move));
+  matrixAxisLabel(c,kind,colX,mix(900,350,move));
+ });
  if(move>0)group(c,move,0,0,()=>{matrix(c,t,{progress:entry.grid});
   group(c,rows,0,0,()=>tx(c,'行',565,566,29,700,C.muted,'center'));
   group(c,cols,0,0,()=>tx(c,'列',1157,361,29,700,C.muted,'right'));
@@ -165,16 +174,29 @@ function payoffs(c,t){
   reveal(c,t,T('s23_score_order'),()=>{tx(c,'数对顺序：',786,899,30,400,C.muted);tx(c,'（{{A}}得分，{{B}}得分）',958,899,32,700)});
  }
 }
+// Axis names are teaching content, not the decorative text baked into a
+// shrinking card. Keep them at a native 31px and record their measured ink.
+function matrixAxisLabel(c,kind,x,y){
+ const text=resolveCastText(kind==='red'?'{{red}}':'{{blue}}');
+ tx(c,text,x,y,31,700,C.ink,'center',{role:'matrix-axis'});
+ // Reject unsupported names rather than silently shrinking meaningful text.
+ const ink=records.at(-1);
+ if(ink?.role==='matrix-axis'&&ink.width>132)throw Error(`Matrix axis strategy label exceeds 132px at 31px: ${text}`);
+}
 function recap(c,t){
  const state=recapState(t,timeline),p=state.move;
  // The same complete matrix changes geometry, without old/new text crossfades.
  const x=mix(780,1190,p),y=mix(503,522,p),cw=mix(480,267,p),ch=mix(170,137,p);
  matrix(c,SEC('recap').start-.001,{geometry:{x,y,cw,ch},fontSize:mix(64,48,p)});
- badge(c,'A',mix(565,1035,p),mix(630,661,p),24);badge(c,'B',mix(1211,1409,p),mix(350,430,p),24);
- tx(c,'{{A}}',mix(565,1035,p),mix(699,723,p),30,700,C.ink,'center');tx(c,'{{B}}',mix(1263,1461,p),mix(361,441,p),30,700);
- const cardAlpha=1-ramp(p,.45,.3),wordAlpha=ramp(p,.98,.02);
- ['red','blue'].forEach((k,i)=>{card(c,k,mix(707,1136,p),mix(588+170*i,590.5+137*i,p),mix(82,70,p),{alpha:cardAlpha});card(c,k,mix(1020+480*i,1323.5+267*i,p),mix(426,462,p),73,{alpha:cardAlpha});
- group(c,wordAlpha,0,0,()=>{tx(c,k==='red'?'{{red}}':'{{blue}}',1136,602+137*i,31,700,C.ink,'center');tx(c,k==='red'?'{{red}}':'{{blue}}',1323.5+267*i,492,31,700,C.ink,'center')});});
+ badge(c,'A',mix(565,1000,p),mix(630,661,p),24);badge(c,'B',mix(1211,1409,p),mix(350,430,p),24);
+ tx(c,'{{A}}',mix(565,1100,clamp(p*1.3)),699+7*ramp(p,0,.15)-30*ramp(p,.5,.5),30,700,C.ink,'center');tx(c,'{{B}}',mix(1263,1461,p),mix(361,441,p),30,700);
+ const cardAlpha=1-ramp(p,0,.12);
+ ['red','blue'].forEach((k,i)=>{
+  card(c,k,mix(685,1136,p),mix(574+170*i,576.5+137*i,p),mix(82,70,p),{alpha:cardAlpha,label:false});
+  card(c,k,mix(1020+480*i,1323.5+267*i,p),mix(412,448,p),73,{alpha:cardAlpha,label:false});
+  matrixAxisLabel(c,k,mix(685,1118,p),mix(666+170*i,602+137*i,ramp(p,.15,.85)));
+  matrixAxisLabel(c,k,mix(1020+480*i,1323.5+267*i,p)+(i===1?40*Math.sin(Math.PI*p):0),mix(350,492,ramp(p,.15,.85)));
+ });
  group(c,state.rows,0,0,()=>{
   line(c,959,359,959,849,C.light,2);tx(c,'同一轮游戏',1448,381,31,400,C.muted,'center');
   tx(c,'（{{A}}得分，{{B}}得分）',1457,853,28,400,C.muted,'center');

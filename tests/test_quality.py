@@ -263,19 +263,45 @@ class FontRecoveryTests(unittest.TestCase):
             for kind, weight in checksums:
                 (output / f'Noto{kind}CJKSC-{weight}.otf').write_bytes(payload)
             manifest = output / 'prepared_font_manifest.json'
-            entries = {f'Noto{kind}CJKSC-{weight}.otf':{'sha256':checksum} for kind,weight in checksums}
+            def verified_metadata(target, kind, weight, required_characters=None):
+                return {'family': f'Noto {kind} CJK SC',
+                        'weight': 400 if weight == 'Regular' else 700,
+                        'version': [f'Version {setup_fonts.EXPECTED_VERSIONS[kind]}; controlled fixture'],
+                        'glyph_count': 65535, 'sha256': checksum}
+
+            # This positive fixture represents a complete prepared manifest.
+            # Hash-only entries are intentionally invalid under canonical verification.
+            entries = {}
+            for kind, weight in checksums:
+                entries[f'Noto{kind}CJKSC-{weight}.otf'] = {
+                    **verified_metadata(None, kind, weight),
+                    'source_kind': 'official_pinned_otf', 'source_sha256': checksum,
+                    'face_index': None,
+                    'source': f'{setup_fonts.BASE}/{setup_fonts.COMMITS[kind]}/{kind}/OTF/SimplifiedChinese/Noto{kind}CJKsc-{weight}.otf',
+                }
             entries['preserve'] = 'original provenance'
             import json
             manifest.write_text(json.dumps(entries) + '\n', encoding='utf-8')
             before = manifest.read_bytes()
             with patch.object(sys, 'argv', ['setup_fonts.py','--output-dir',str(output),'--verify-only']), \
                  patch.object(setup_fonts, 'OFFICIAL_SHA256', checksums), \
-                 patch.object(setup_fonts, 'verify', return_value={'sha256':checksum}), \
-                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                 patch.object(setup_fonts, 'verify', side_effect=verified_metadata), \
+                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as errors:
                 self.assertEqual(setup_fonts.main(), 0)
                 self.assertEqual(manifest.read_bytes(), before)
+                valid = entries['NotoSansCJKSC-Regular.otf']
+                entries['NotoSansCJKSC-Regular.otf'] = {'sha256': checksum}
+                manifest.write_text(json.dumps(entries) + '\n', encoding='utf-8')
+                malformed = manifest.read_bytes()
+                self.assertEqual(setup_fonts.main(), 1)
+                self.assertIn('manifest does not match independently verified provenance', errors.getvalue())
+                self.assertEqual(manifest.read_bytes(), malformed)
+                entries['NotoSansCJKSC-Regular.otf'] = valid
+                manifest.write_bytes(before)
+                errors.seek(0); errors.truncate(0)
                 (output / 'NotoSansCJKSC-Regular.otf').write_bytes(payload + b'changed')
                 self.assertEqual(setup_fonts.main(), 1)
+                self.assertIn('pinned official', errors.getvalue())
                 self.assertEqual(manifest.read_bytes(), before)
 
     def test_local_ttc_manifest_cannot_certify_a_different_extracted_target(self):

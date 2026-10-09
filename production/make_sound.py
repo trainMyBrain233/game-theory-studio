@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Original sparse, restrained UI/physical cues; no speech or borrowed audio."""
 from dataclasses import asdict
+import io
 import json
 import math
 from pathlib import Path
+import sys
 import wave
 
-import numpy as np
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+from narration_io import write_products
 
 from sound_plan import plan_cues
 
@@ -15,6 +18,8 @@ SR = 48000
 
 
 def synthesize(timeline):
+    import numpy as np
+
     # Validate the entire semantic plan before allocating audio or touching outputs.
     plan = plan_cues(timeline)
     out = np.zeros((round(timeline['duration'] * SR), 2), dtype=np.float64)
@@ -38,18 +43,32 @@ def synthesize(timeline):
     return out, plan
 
 
+def publish_sound(directory, pcm_bytes, manifest):
+    """Stage both products, rolling back ordinary publication failures.
+
+    The shared publisher excludes symlinks and special files. This is not an
+    atomic multi-file snapshot or crash-durable; callers exclude concurrent writers.
+    """
+    wav = io.BytesIO()
+    with wave.open(wav, 'wb') as audio:
+        audio.setnchannels(2)
+        audio.setsampwidth(2)
+        audio.setframerate(SR)
+        audio.writeframes(pcm_bytes)
+    write_products(directory, {
+        'output/original_sparse_sfx.wav': wav.getvalue(),
+        'qa/sound_manifest.json': json.dumps(manifest, indent=2),
+    })
+
+
 def main():
+    import numpy as np
+
     timeline = json.loads((ROOT.parent / 'chapters/01-four-elements/narration/timeline.json').read_text(encoding='utf-8'))
     out, plan = synthesize(timeline)
     peak = float(np.max(np.abs(out)))
     pcm = (np.clip(out, -1, 1) * 32767).astype('<i2')
-    (ROOT / 'output').mkdir(exist_ok=True)
-    with wave.open(str(ROOT / 'output/original_sparse_sfx.wav'), 'wb') as audio:
-        audio.setnchannels(2)
-        audio.setsampwidth(2)
-        audio.setframerate(SR)
-        audio.writeframes(pcm.tobytes())
-    (ROOT / 'qa/sound_manifest.json').write_text(json.dumps({
+    publish_sound(ROOT, pcm.tobytes(), {
         'source': 'original synthesis in make_sound.py',
         'timing_contract': 'semantic-segment-offset:1',
         'alignment': 'manual-reference',
@@ -60,7 +79,7 @@ def main():
         'duration': timeline['duration'],
         'peak_dbfs': 20 * math.log10(peak),
         'events': [asdict(event) for event in plan],
-    }, indent=2), encoding='utf-8')
+    })
     print(f'Original SFX complete, peak={20 * math.log10(peak):.2f} dBFS, {len(plan)} sparse cues.')
 
 

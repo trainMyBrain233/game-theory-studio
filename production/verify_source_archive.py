@@ -29,6 +29,15 @@ WINDOWS_RESERVED_NAMES = {'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} | {
 # Match the public-source guard without importing source code before verification.
 MAX_SOURCE_BYTES = 1024 * 1024
 HASH_CHUNK_BYTES = 64 * 1024
+# Independent pre-import copy of QA's credential patterns: path validation must
+# reject credential-shaped names before reading files or loading the guard.
+CREDENTIAL_PATTERNS = (
+    re.compile(r'-----BEGIN (?:[A-Z ]+)?PRIVATE' + r' KEY-----'),
+    re.compile(r'\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b'),
+    re.compile(r'\b(?:AKIA|ASIA)[A-Z0-9]{16}\b'),
+    re.compile(r'\bxox[baprs]-[A-Za-z0-9-]{20,}\b'),
+    re.compile(r'\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{30,}\b'),
+)
 # Metadata has its own explicit uncompressed ceiling; never trust its file list
 # to supply a read bound. This matches the producer's public ZIP size budget.
 MAX_MANIFEST_BYTES = 15 * 1024 * 1024
@@ -52,6 +61,8 @@ def portable_path_collision(name, seen):
 def validate_source_path(name):
     """Match pack_source's pre-extraction filename contract without importing it."""
     require(isinstance(name, str) and bool(name), 'Unsafe manifest path')
+    require(not any(pattern.search(name) for pattern in CREDENTIAL_PATTERNS),
+            'Credential-like manifest path')
     relative = PurePosixPath(name)
     require(not relative.is_absolute() and not PureWindowsPath(name).drive and
             not any(character in '<>:"\\|?*' for character in name) and

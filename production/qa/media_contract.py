@@ -26,7 +26,7 @@ def video_frame_count(seconds, fps=30):
     return count
 
 
-def validate_streams(info, duration, fps=30):
+def validate_streams(info, duration, fps=30, *, expected_width=None):
     count = video_frame_count(duration, fps)
     streams = info.get('streams') if isinstance(info, dict) else None
     if not isinstance(streams, list):
@@ -68,8 +68,15 @@ def validate_streams(info, duration, fps=30):
         raise ValueError('Video frame count mismatch')
     if not abs(float(info['format']['duration']) - expected) < .06:
         raise ValueError('Container duration mismatch')
-    if (int(video['width']), int(video['height'])) not in [(1920, 1080), (3840, 2160)]:
+    dimensions = (int(video['width']), int(video['height']))
+    if dimensions not in [(1920, 1080), (3840, 2160)]:
         raise ValueError('Expected 1920x1080 or 3840x2160 video')
+    if expected_width is not None:
+        if type(expected_width) is not int or expected_width not in (1920, 3840):
+            raise ValueError('Expected width must be 1920 or 3840')
+        expected_dimensions = (expected_width, expected_width * 9 // 16)
+        if dimensions != expected_dimensions:
+            raise ValueError(f'Expected {expected_dimensions[0]}x{expected_dimensions[1]} video for this artifact; got {dimensions[0]}x{dimensions[1]}')
     if video['pix_fmt'] != 'yuv420p' or video.get('sample_aspect_ratio') != '1:1':
         raise ValueError('Expected yuv420p video with square pixels')
     if video.get('color_range') != 'tv':

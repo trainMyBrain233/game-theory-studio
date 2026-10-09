@@ -13,14 +13,16 @@ export async function load(url,context,nextLoad){
   import {ramp} from ${JSON.stringify(new URL('./motion.mjs',url).href)};
   export {TOKENS} from ${JSON.stringify(new URL('./model.mjs',url).href)};
   export {clamp,ease,mix,ramp,span} from ${JSON.stringify(new URL('./motion.mjs',url).href)};
-  export const C={},calls=[];
+  // This pure fixture records calls, not font metrics. Native axis tests
+  // own actual ink measurement; expose its collection without inventing bounds.
+  export const C={},calls=[],records=[];
   // These narrow scene/time fixtures model an explicit completed preparation;
   // the native readiness regression exercises actual assets and failure paths.
   let prepared=false;
   export async function prepareAssets(){prepared=true;}
   export function assertAssetsReady(){if(!prepared)throw Error('Fixture assets are unprepared');}
   let alpha=1;
-  export const resetRecords=()=>{calls.length=0;alpha=1;};
+  export const resetRecords=()=>{calls.length=0;records.length=0;alpha=1;};
   export const setSceneTime=t=>calls.push(['time',t]);
   export const tx=(c,text,x,y,...rest)=>calls.push(['text',text,x,y,alpha,...rest]);
   export const line=(c,...args)=>calls.push(['line',...args]);

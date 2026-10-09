@@ -105,14 +105,17 @@ export function validateTimeline(timeline, scenes) {
   close(timeline.sections.at(-1).end, timeline.duration);
 }
 
-// Only the fixed first-episode renderer has these lookups. Generic chapters and
-// the two-block scaffold deliberately use validateTimeline instead.
+// The fixed first-episode renderer is a complete semantic sequence, not just
+// its literal ID lookups: section-start states also draw the question/setup
+// segments, and matrix focus consumes the choice cues. Generic chapters and
+// the two-block scaffold deliberately use validateTimeline instead. Retiming
+// and A/B event storage order are flexible; semantic block order is not.
 const FIRST_EPISODE_ANCHORS = {
   intro: ['s01_hook', 's02_four_questions'],
-  players: ['s05_goal', 's06_definition'],
-  information: ['s08_known_unknown', 's09_simultaneous', 's10_distinction', 's11_timing'],
-  strategy: ['s13_options', 's14_simple_case', 's15_definition', 's16_comparison_intro', 's17_comparison_example', 's18_return_single_round'],
-  payoffs: ['s19_question', 's20_definition', 's21_rows', 's22_columns', 's23_score_order', 's25_rr_score', 's27_rb_score', 's29_br_score', 's31_bb_score', 's32_joint_choices', 's33_beyond_money'],
+  players: ['s03_question', 's04_setup', 's05_goal', 's06_definition'],
+  information: ['s07_question', 's08_known_unknown', 's09_simultaneous', 's10_distinction', 's11_timing'],
+  strategy: ['s12_question', 's13_options', 's14_simple_case', 's15_definition', 's16_comparison_intro', 's17_comparison_example', 's18_return_single_round'],
+  payoffs: ['s19_question', 's20_definition', 's21_rows', 's22_columns', 's23_score_order', 's24_rr_select', 's25_rr_score', 's26_rb_select', 's27_rb_score', 's28_br_select', 's29_br_score', 's30_bb_select', 's31_bb_score', 's32_joint_choices', 's33_beyond_money'],
   recap: ['s34_intro', 's35_first_pair', 's36_second_pair', 's37_closing'],
 };
 const FIRST_EPISODE_SCORES = {RR: 's25_rr_score', RB: 's27_rb_score', BR: 's29_br_score', BB: 's31_bb_score'};
@@ -131,6 +134,8 @@ export function validateFirstEpisodeTimeline(timeline, scenes) {
       assert(segment.start > previous, `${id}: first-episode anchors must retain their order`);
       previous = segment.start;
     }
+    assert.deepEqual(timeline.segments.filter(segment => segment.section === section).map(segment => segment.id), ids,
+      `${section}: first-episode section must contain only its supported semantic anchors`);
   }
   const cells = Object.keys(FIRST_EPISODE_SCORES);
   assert.deepEqual(timeline.visual_contract.matrix_reveal_order, cells, 'First episode matrix reveal order must match its fixed walkthrough');

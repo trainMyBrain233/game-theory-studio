@@ -10,12 +10,15 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parent.parent
 MAX_SOURCE_BYTES = 1024 * 1024
 forbidden_suffixes = {'.otf', '.ttf', '.ttc', '.woff', '.woff2', '.mp4', '.mov', '.webm', '.wav', '.mp3', '.zip', '.png', '.jpg', '.jpeg', '.webp', '.pem', '.key', '.p12', '.pfx'}
-patterns = {
+credential_patterns = {
     'private key': re.compile(r'-----BEGIN (?:[A-Z ]+)?PRIVATE' + r' KEY-----'),
     'GitHub credential': re.compile(r'\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b'),
     'AWS access credential': re.compile(r'\b(?:AKIA|ASIA)[A-Z0-9]{16}\b'),
     'Slack credential': re.compile(r'\bxox[baprs]-[A-Za-z0-9-]{20,}\b'),
     'OpenAI credential': re.compile(r'\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{30,}\b'),
+}
+patterns = {
+    **credential_patterns,
     'machine workspace path': re.compile(
         # A standalone Unix root, not a URL path or repository-relative suffix.
         # The first component can end at a delimiter or EOF, without a slash.
@@ -142,6 +145,8 @@ def validate_source_path(name):
     """
     if not isinstance(name, str) or not name:
         raise ValueError('Unsafe public source filename')
+    if any(pattern.search(name) for pattern in credential_patterns.values()):
+        raise ValueError('Credential-like public source filename')
     relative = PurePosixPath(name)
     if (relative.is_absolute() or PureWindowsPath(name).drive or
             any(character in '<>:"\\|?*' for character in name) or
@@ -164,7 +169,9 @@ def scan_sources(root, files):
         try:
             validate_source_path(relative)
         except ValueError as error:
-            errors.append((repr(relative), str(error)))
+            # Rejected paths are untrusted output, including malformed paths
+            # that may contain a credential. Never echo their raw spelling.
+            errors.append(('[redacted filename]', str(error)))
             continue
         if portable_path_collision(relative, portable_paths):
             errors.append((repr(relative), 'Public source filenames collide after portable normalization'))

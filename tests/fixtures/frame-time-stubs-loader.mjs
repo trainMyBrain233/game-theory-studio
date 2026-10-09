@@ -11,13 +11,14 @@ export async function load(url,context,nextLoad){
  if(url.endsWith('/production/src/primitives.mjs'))return source(`
   export {TOKENS} from ${JSON.stringify(new URL('./model.mjs',url).href)};
   export {clamp,ease,mix,ramp,span} from ${JSON.stringify(new URL('./motion.mjs',url).href)};
-  export const C={},calls=[];
+  // No glyph bounds are synthesized at this pre-drawing boundary.
+  export const C={},calls=[],records=[];
   // These narrow scene/time fixtures model an explicit completed preparation;
   // the native readiness regression exercises actual assets and failure paths.
   let prepared=false;
   export async function prepareAssets(){prepared=true;}
   export function assertAssetsReady(){if(!prepared)throw Error('Fixture assets are unprepared');}
-  export const resetRecords=()=>calls.push(['resetRecords']);
+  export const resetRecords=()=>{records.length=0;calls.push(['resetRecords']);};
   export const setSceneTime=t=>calls.push(['setSceneTime',t]);
   const draw=()=>{throw Error('Unexpected drawing boundary');};
   export {draw as tx,draw as line,draw as round,draw as circle,draw as arrow,
