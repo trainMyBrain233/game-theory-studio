@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {ROOT, pythonCommand} from '../scripts/python.mjs';
-import {readJSON, validateTimeline} from '../scripts/validate-data.mjs';
+import {readJSON, validateTimeline, validateFirstEpisodeTimeline} from '../scripts/validate-data.mjs';
 
 const scenes = readJSON(path.join(ROOT, 'design/scenes.json'));
 const timeline = readJSON(path.join(ROOT, 'chapters/01-four-elements/narration/timeline.json'));
@@ -44,7 +44,7 @@ for (const name of ['default', 'rebuilt changed']) {
   test(`${name} timeline enforces score action and payload together`, async t => {
     const fixture = name === 'default' ? {scenes, timeline} : changedCase();
     await t.test('all four complete reveals accept either storage order and speech-window boundaries', () => {
-      validateTimeline(fixture.timeline, fixture.scenes);
+      validateFirstEpisodeTimeline(fixture.timeline, fixture.scenes);
       assert.deepEqual(cells.map(cell => scoreSegment(fixture.timeline, cell).visual_cue.scores), fixture.scenes.payoffs.flat());
       for (const reverse of [false, true]) {
         const document = structuredClone(fixture.timeline);
@@ -54,18 +54,39 @@ for (const name of ['default', 'rebuilt changed']) {
           segment.visual_cue.score_reveals[1].offset = segment.spoken_duration;
           if (reverse) segment.visual_cue.score_reveals.reverse();
         }
-        validateTimeline(document, fixture.scenes);
+        validateFirstEpisodeTimeline(document, fixture.scenes);
       }
     });
-    await t.test('note cues without scores remain valid with or without choices and matrix cells', () => {
+    await t.test('notes without score, choice or matrix payloads remain valid', () => {
       const document = structuredClone(fixture.timeline);
       document.segments[0].visual_cue = {action: 'note', note: '只显示说明。'};
-      for (const segment of document.segments.filter(segment => segment.visual_cue.action === 'highlight_choices')) {
-        segment.visual_cue.action = 'note';
-      }
-      validateTimeline(document, fixture.scenes);
+      validateFirstEpisodeTimeline(document, fixture.scenes);
     });
     for (const cell of cells) {
+      for (const action of ['note', 'show_two_actions']) {
+        await t.test(`${cell} rejects choices carried by ${action}`, () => {
+          const document = structuredClone(fixture.timeline);
+          const segment = document.segments.find(segment => segment.visual_cue.action === 'highlight_choices' && segment.visual_cue.matrix_cell === cell);
+          segment.visual_cue.action = action;
+          assert.throws(() => validateTimeline(document, fixture.scenes), /choices require action highlight_choices/);
+        });
+      }
+      for (const action of ['highlight_choices', 'reveal_scores']) {
+        await t.test(`${cell} requires one ${action}, even when its entire cue is removed`, () => {
+          const document = structuredClone(fixture.timeline);
+          const segment = document.segments.find(segment => segment.visual_cue.action === action && segment.visual_cue.matrix_cell === cell);
+          segment.visual_cue = {action: 'note'};
+          validateTimeline(document, fixture.scenes); // Still a valid generic chapter.
+          assert.throws(() => validateFirstEpisodeTimeline(document, fixture.scenes), new RegExp(`exactly one ${action} for ${cell}`));
+        });
+        await t.test(`${cell} rejects duplicated ${action} under a different segment ID`, () => {
+          const document = structuredClone(fixture.timeline);
+          const segment = document.segments.find(segment => segment.visual_cue.action === action && segment.visual_cue.matrix_cell === cell);
+          document.segments[0].visual_cue = structuredClone(segment.visual_cue);
+          validateTimeline(document, fixture.scenes);
+          assert.throws(() => validateFirstEpisodeTimeline(document, fixture.scenes), new RegExp(`exactly one ${action} for ${cell}`));
+        });
+      }
       for (const action of ['note', 'highlight_choices']) {
         for (const payload of ['scores and events', 'scores only', 'events only']) {
           await t.test(`${cell} rejects ${action} with ${payload}`, () => {
@@ -81,6 +102,27 @@ for (const name of ['default', 'rebuilt changed']) {
         }
       }
     }
+    await t.test('matrix-only notes cannot silently change first-episode focus', () => {
+      const document = structuredClone(fixture.timeline);
+      document.segments[0].visual_cue = {action: 'note', matrix_cell: 'RR'};
+      validateTimeline(document, fixture.scenes);
+      assert.throws(() => validateFirstEpisodeTimeline(document, fixture.scenes), /matrix cues must be unique choice\/reveal pairs/);
+    });
+    await t.test('valid retiming and reordered score events retain the fixed semantic structure', () => {
+      const document = structuredClone(fixture.timeline);
+      const scale = 1.3;
+      document.duration *= scale;
+      for (const section of document.sections) {
+        section.start *= scale;
+        section.end *= scale;
+      }
+      for (const segment of document.segments) {
+        for (const field of ['start', 'end', 'voiceover_end', 'spoken_duration', 'pause_after', 'display_duration']) segment[field] *= scale;
+        for (const event of segment.visual_cue.score_reveals ?? []) event.offset *= scale;
+        segment.visual_cue.score_reveals?.reverse();
+      }
+      validateFirstEpisodeTimeline(document, fixture.scenes);
+    });
     for (const [label, mutate] of [
       ['missing cell', cue => { delete cue.matrix_cell; }],
       ['missing scores', cue => { delete cue.scores; }],
@@ -104,3 +146,119 @@ for (const name of ['default', 'rebuilt changed']) {
     }
   });
 }
+
+test('highlight_choices requires its complete payload in any chapter', () => {
+  for (const field of ['choices', 'matrix_cell']) {
+    const document = structuredClone(timeline);
+    delete document.segments.find(segment => segment.visual_cue.action === 'highlight_choices').visual_cue[field];
+    assert.throws(() => validateTimeline(document, scenes), /highlight_choices requires|choices need a matrix cell/);
+  }
+});
+
+test('generic two-block chapters remain valid without the first-episode matrix walkthrough', () => {
+  const original = readJSON(path.join(ROOT, 'chapters/00-original-example/narration/timeline.json'));
+  validateTimeline(original, scenes);
+  assert.equal(original.segments.filter(segment => segment.visual_cue.action === 'reveal_scores').length, 1);
+  const withoutScores = structuredClone(original);
+  withoutScores.segments[1].visual_cue = {action: 'note'};
+  validateTimeline(withoutScores, scenes);
+});
+
+// Read literal consumers without importing any Canvas/font/character modules.
+const rendererAnchors = [...new Set([
+  'production/src/scenes.mjs', 'production/src/choreography.mjs',
+  'production/src/character_adapter.mjs', 'production/src/checkpoints.mjs'
+].flatMap(relative => [...fs.readFileSync(path.join(ROOT, relative), 'utf8').matchAll(/'(s\d\d_[a-z_]+)'/g)].map(match => match[1])))];
+
+test('every actual renderer/checkpoint anchor rejects omission, renaming and duplicate IDs', () => {
+  assert(rendererAnchors.length >= 20, 'The audit must inspect the real literal consumers.');
+  for (const id of rendererAnchors) {
+    const renamed = structuredClone(timeline);
+    renamed.segments.find(segment => segment.id === id).id = 'renamed_anchor';
+    validateTimeline(renamed, scenes);
+    assert.throws(() => validateFirstEpisodeTimeline(renamed, scenes), new RegExp(`exactly one segment anchor: ${id}`));
+
+    const missing = structuredClone(timeline);
+    const index = missing.segments.findIndex(segment => segment.id === id);
+    const [removed] = missing.segments.splice(index, 1);
+    const next = missing.segments[index];
+    if (next?.section === removed.section) {
+      next.start = removed.start;
+      next.spoken_duration = next.voiceover_end - next.start;
+      next.display_duration = next.end - next.start;
+    } else {
+      const previous = missing.segments[index - 1];
+      previous.end = removed.end;
+      previous.pause_after = previous.end - previous.voiceover_end;
+      previous.display_duration = previous.end - previous.start;
+    }
+    validateTimeline(missing, scenes);
+    assert.throws(() => validateFirstEpisodeTimeline(missing, scenes), new RegExp(`exactly one segment anchor: ${id}`));
+
+    const duplicate = structuredClone(timeline);
+    duplicate.segments.find(segment => segment.id !== id).id = id;
+    assert.throws(() => validateFirstEpisodeTimeline(duplicate, scenes), /Duplicate segment ids/);
+  }
+});
+
+test('fixed sections, anchor ownership and walkthrough order reject silent changes', () => {
+  for (const section of timeline.sections) {
+    const document = structuredClone(timeline);
+    document.sections.find(item => item.id === section.id).id = 'renamed_section';
+    for (const segment of document.segments.filter(item => item.section === section.id)) segment.section = 'renamed_section';
+    validateTimeline(document, scenes);
+    assert.throws(() => validateFirstEpisodeTimeline(document, scenes), /six supported sections/);
+  }
+  const reordered = structuredClone(timeline);
+  const a = reordered.segments.find(segment => segment.id === 's08_known_unknown');
+  const b = reordered.segments.find(segment => segment.id === 's09_simultaneous');
+  [a.id, b.id] = [b.id, a.id];
+  assert.throws(() => validateFirstEpisodeTimeline(reordered, scenes), /anchors must retain their order/);
+
+  const wrongSection = structuredClone(timeline);
+  const hook = wrongSection.segments.find(segment => segment.id === 's01_hook');
+  const goal = wrongSection.segments.find(segment => segment.id === 's05_goal');
+  [hook.id, goal.id] = [goal.id, hook.id];
+  assert.throws(() => validateFirstEpisodeTimeline(wrongSection, scenes), /anchor belongs in intro/);
+
+  const reversed = structuredClone(timeline);
+  const choice = reversed.segments.find(segment => segment.visual_cue.action === 'highlight_choices');
+  const score = scoreSegment(reversed, 'RR');
+  [choice.visual_cue, score.visual_cue] = [score.visual_cue, choice.visual_cue];
+  [choice.id, score.id] = [score.id, choice.id];
+  validateTimeline(reversed, scenes);
+  assert.throws(() => validateFirstEpisodeTimeline(reversed, scenes), /matrix cues must be unique choice\/reveal pairs/);
+
+  const declared = structuredClone(timeline);
+  declared.visual_contract.matrix_reveal_order.reverse();
+  assert.throws(() => validateFirstEpisodeTimeline(declared, scenes), /matrix reveal order/);
+});
+
+test('production model and qa:data apply the first-episode contract before rendering or rebuilding', () => {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'episode-model-contract-'));
+  try {
+    for (const relative of ['production/src/model.mjs', 'production/cast.json', 'production/content.json', 'production/tokens.json',
+      'production/schema/cast.schema.json', 'production/schema/content.schema.json', 'production/schema/tokens.schema.json',
+      'design/scenes.json', 'design/tokens.json', 'schemas/scenes.schema.json', 'schemas/timeline.schema.json', 'schemas/tokens.schema.json', 'schemas/chapter.schema.json',
+      'scripts/qa-data.mjs', 'scripts/chapters.mjs', 'scripts/validate-data.mjs', 'scripts/python.mjs', 'scripts/text-contract.mjs', 'scripts/unicode-text-15.0.0.json',
+      'chapters/01-four-elements/chapter.json', 'chapters/01-four-elements/narration/timeline.json']) {
+      fs.mkdirSync(path.dirname(path.join(temporary, relative)), {recursive: true});
+      fs.copyFileSync(path.join(ROOT, relative), path.join(temporary, relative));
+    }
+    fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(temporary, 'node_modules'), 'dir');
+    const runModel = () => spawnSync(process.execPath, ['production/src/model.mjs'], {cwd: temporary, encoding: 'utf8'});
+    assert.equal(runModel().status, 0, 'The unchanged model loads without Canvas or fonts.');
+    for (const action of ['highlight_choices', 'reveal_scores']) {
+      const document = structuredClone(timeline);
+      document.segments.find(segment => segment.visual_cue.action === action && segment.visual_cue.matrix_cell === 'RR').visual_cue = {action: 'note'};
+      fs.writeFileSync(path.join(temporary, 'chapters/01-four-elements/narration/timeline.json'), JSON.stringify(document));
+      for (const script of ['production/src/model.mjs', 'scripts/qa-data.mjs']) {
+        const result = spawnSync(process.execPath, [script], {cwd: temporary, encoding: 'utf8'});
+        assert.notEqual(result.status, 0);
+        assert.match(result.stderr, new RegExp(`exactly one ${action} for RR`));
+      }
+    }
+  } finally {
+    fs.rmSync(temporary, {recursive: true, force: true});
+  }
+});

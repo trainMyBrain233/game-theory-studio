@@ -88,7 +88,7 @@ class SourceArchivePathTests(unittest.TestCase):
         for name in [name for name in unsafe_names() if name and chr(0) not in name]:
             with self.subTest(name=name):
                 output = b'ordinary.txt\0' + name.encode('utf-8') + b'\0'
-                with patch.object(Path, 'is_file', side_effect=AssertionError('must validate before file access')):
+                with patch.object(Path, 'lstat', side_effect=AssertionError('must validate before file access')):
                     with self.assertRaises(ValueError):
                         pack.source_candidates(Path('.'), output)
         with self.assertRaisesRegex(ValueError, 'filenames must be UTF-8'):
@@ -99,8 +99,7 @@ class SourceArchivePathTests(unittest.TestCase):
             root = Path(temporary)
             for name in ['b.txt', 'a.txt']:
                 (root / name).write_text('synthetic original source', encoding='utf-8')
-            (root / 'directory').mkdir()
-            self.assertEqual(pack.source_candidates(root, b'b.txt\0a.txt\0missing.txt\0directory\0a.txt\0'),
+            self.assertEqual(pack.source_candidates(root, b'b.txt\0a.txt\0a.txt\0'),
                              ['a.txt', 'b.txt'])
 
     def test_unsafe_names_match_verifier_contract_without_reading_targets(self):
@@ -165,7 +164,7 @@ class SourceArchivePathTests(unittest.TestCase):
                     seen = {}
                     self.assertFalse(module.portable_path_collision(names[0], seen))
                     self.assertTrue(module.portable_path_collision(names[1], seen))
-                with patch.object(Path, 'is_file', side_effect=AssertionError('must reject before file access')):
+                with patch.object(Path, 'lstat', side_effect=AssertionError('must reject before file access')):
                     with self.assertRaisesRegex(ValueError, 'collide after portable normalization'):
                         pack.source_candidates(Path('.'), b'\0'.join(name.encode('utf-8') for name in names) + b'\0')
         for module in [pack, verifier]:

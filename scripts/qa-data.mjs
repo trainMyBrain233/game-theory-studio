@@ -4,7 +4,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {ROOT, runPython} from './python.mjs';
 import {chapterDirectories, chapterConfig} from './chapters.mjs';
-import {readJSON, validateSchema, validateScenes, validateTimeline} from './validate-data.mjs';
+import {readJSON, validateSchema, validateScenes, validateTimeline, validateFirstEpisodeTimeline} from './validate-data.mjs';
 
 const read = relative => readJSON(path.join(ROOT, relative));
 const scenes = read('design/scenes.json');
@@ -19,7 +19,7 @@ for (const directory of chapterDirectories()) {
   assert(!ids.has(config.id)); ids.add(config.id);
   const narration = path.join(directory, 'narration');
   const timeline = readJSON(path.join(narration, 'timeline.json'));
-  validateTimeline(timeline, scenes);
+  (config.id === '01-four-elements' ? validateFirstEpisodeTimeline : validateTimeline)(timeline, scenes);
   assert.equal(config.title, timeline.title);
   assert.equal(config.caseId, scenes.caseId);
   assert.equal(config.stage, 'prototype', 'Current schema 2.1 is not audio-aligned');

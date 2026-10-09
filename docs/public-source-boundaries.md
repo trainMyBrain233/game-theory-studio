@@ -90,6 +90,47 @@ metadata or normalized in memory; only valid archives are extracted, inside
 contained temporary test directories. Filename errors do not echo the unsafe
 name or its contents.
 
+## Producer integrity and complete source snapshots
+
+Every candidate returned by Git must exist as a regular file. The writer checks
+all path components with `lstat` before any source reads and rejects dangling,
+file, directory, or parent symlinks/junctions, FIFOs and other special files,
+directories, and missing candidates. Nothing is silently filtered out. If a
+tracked source was intentionally deleted, stage that deletion before packaging
+(for example, `git add -u`); the resulting dirty source archive records that state.
+
+The writer checks the public boundary on both the live candidates and the exact
+captured payload bytes. Before publication it rereads candidate membership,
+provenance, regular-file status and bytes, rejecting any observed change. A clean
+successful archive includes every Git candidate and can be verified after
+extraction; the producer's commit field uses the verifier's SHA-1 contract.
+A reproducibility claim independently compares the complete captured membership
+and raw Git blob content hashes with the recorded HEAD tree (ignoring replacement
+refs), rather than trusting
+index flags, cached file sizes/mtimes, or `git status` alone. Valid snapshots that
+differ from HEAD remain publishable with `working_tree_dirty: true` and
+`reproducible_from_commit: false`, even when Git status hides those differences.
+No index flags or working-tree files are changed by this check. This is a raw-byte
+contract: checkout filters or line-ending conversion can also make a snapshot
+differ from HEAD and therefore mark it dirty.
+
+CRC validation, unique/exact ZIP membership, complete payload/manifest byte
+read-back, and the exclusive 15 MiB archive limit are explicit runtime checks.
+They run under normal Python, `-O`, `-OO`, and `PYTHONOPTIMIZE`. Any rejection
+removes the temporary ZIP and preserves the existing regular archive. Publication
+uses atomic replacement only after every check succeeds.
+
+Every output directory component must be a nonsymlinked directory contained in
+the checkout. Existing output symlinks/junctions and nonregular destinations are
+rejected; an existing regular destination is atomically replaced, never edited
+in place. Output containment is checked before temporary-ZIP creation and again
+before replacement.
+
+This workflow assumes a nonhostile local filesystem. These path checks are not
+descriptor-relative race protection against a concurrent adversary swapping
+symlinks, mounts or paths between checks. Do not package while another process
+is maliciously changing the checkout or output directories.
+
 ## Extracted archive verification
 
 `python3 production/verify_source_archive.py [directory]` verifies a manifest and
@@ -115,6 +156,7 @@ cannot establish its own trustworthiness.
 Run the dependency-free regression suite with:
 
 ```sh
+python3 -m unittest discover -s tests -p test_source_archive_integrity.py
 python3 -m unittest discover -s tests -p test_source_archive_paths.py
 python3 -m unittest discover -s tests -p test_public_source_boundaries.py
 python3 -m unittest discover -s tests -p test_source_svg_safety.py

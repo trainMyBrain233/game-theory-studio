@@ -10,6 +10,7 @@ import {assertAppliedFont} from '../typography/font-contract.mjs';
 import {validateScenes,validateSchema} from '../scripts/validate-data.mjs';
 import {checkTextLayout} from '../scripts/layout.mjs';
 import {proposalScale} from './canvas-geometry.mjs';
+import {COMPARISON_BOARD,comparisonBoardTextPlan} from './comparison-board-text.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 export const TOKENS=JSON.parse(fs.readFileSync(path.join(HERE,'tokens.json')));
 export const DATA=JSON.parse(fs.readFileSync(path.join(HERE,'scenes.json')));
@@ -178,18 +179,22 @@ export function drawScene(canvas,styleId,sceneId,override={}){
 export function drawComparisonHeader(canvas,styleId){
  c=canvas.getContext('2d');S=TOKENS.styles[styleId];if(!S)throw Error('Unknown style');
  bounds.length=0;
- rect(0,0,canvas.width,canvas.height,S.paper);txt(S.name,84,83,62,700,S.ink,'left',S.titleFamily);txt(S.subtitle,3756,83,38,400,S.muted,'right');line(84,155,3756,155,S.line,2);
- return [...bounds];
+ rect(0,0,canvas.width,canvas.height,S.paper);
+ for(const run of comparisonBoardTextPlan(S))txt(run.text,run.x,run.y,run.size,run.weight,run.color,run.align,run.family);
+ line(84,155,3756,155,S.line,2);
+ const result=[...bounds];checkTextLayout(result,canvas.width,Math.min(canvas.height,COMPARISON_BOARD.headerHeight),{collisions:true});return result;
 }
 async function main(){
+ // Reject every style before creating directories or writing any scene/board.
+ for(const id of Object.keys(TOKENS.styles))drawComparisonHeader(createCanvas(COMPARISON_BOARD.width,COMPARISON_BOARD.headerHeight),id);
  fs.mkdirSync(path.join(HERE,'qa'),{recursive:true});fs.mkdirSync(path.join(HERE,'frames'),{recursive:true});fs.mkdirSync(path.join(HERE,'boards'),{recursive:true});
  const manifest={generatedAt:new Date().toISOString(),width:1920,height:1080,renderer:'@napi-rs/canvas',images:[]};
  for(const id of Object.keys(TOKENS.styles)){
   for(const scene of DATA.frames){const canvas=createCanvas(1920,1080);const textBounds=drawScene(canvas,id,scene.id);let file=`frames/${id}_${scene.id}_1920x1080.png`;fs.writeFileSync(path.join(HERE,file),canvas.toBuffer('image/png'));manifest.images.push({style:id,scene:scene.id,file,textBounds});console.log(file)}
   // Comparison board uses two native 1080p frames without raster upscaling.
-  const board=createCanvas(3840,1320);drawComparisonHeader(board,id);
-  for(const [i,scene] of DATA.frames.entries()){let im=await loadImage(path.join(HERE,`frames/${id}_${scene.id}_1920x1080.png`));c.drawImage(im,i*1920,200);}
-  txt('场景一 · 参与者',84,181,25,700);txt('场景二 · 收益矩阵',2004,181,25,700);fs.writeFileSync(path.join(HERE,`boards/${id}_comparison_3840x1320.png`),board.toBuffer('image/png'));
+  const board=createCanvas(COMPARISON_BOARD.width,COMPARISON_BOARD.height);drawComparisonHeader(board,id);
+  for(const [i,scene] of DATA.frames.entries()){let im=await loadImage(path.join(HERE,`frames/${id}_${scene.id}_1920x1080.png`));c.drawImage(im,i*1920,COMPARISON_BOARD.headerHeight);}
+  fs.writeFileSync(path.join(HERE,`boards/${id}_comparison_3840x1320.png`),board.toBuffer('image/png'));
  }
  fs.writeFileSync(path.join(HERE,'qa/render-manifest.json'),JSON.stringify(manifest,null,2));
 }

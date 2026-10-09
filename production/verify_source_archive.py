@@ -58,13 +58,19 @@ def validate_source_path(name):
 
 
 def regular_source(root, relative):
-    """Reject symlinks (including parent directories) before reading any bytes."""
+    """Reject missing/nonregular components and symlinks before any source read."""
     target = root
-    for part in relative.parts:
+    for index, part in enumerate(relative.parts):
         target = target / part
-        require(not target.is_symlink(), 'Missing or symlinked archive source')
-    require(target.resolve().is_relative_to(root), 'Archive source escapes its root')
-    require(target.is_file(), 'Missing or symlinked archive source')
+        try:
+            info = target.lstat()
+        except FileNotFoundError:
+            raise ArchiveValidationError('Missing archive source') from None
+        require(not stat.S_ISLNK(info.st_mode) and
+                not getattr(info, 'st_file_attributes', 0) & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0),
+                'Symlinked archive source or parent')
+        require(stat.S_ISREG(info.st_mode) if index == len(relative.parts) - 1 else stat.S_ISDIR(info.st_mode),
+                'Nonregular archive source or parent')
     return target
 
 

@@ -1,4 +1,4 @@
-import {readJSON,validateScenes,validateTimeline,validateSchema} from '../../scripts/validate-data.mjs';
+import {readJSON,validateScenes,validateFirstEpisodeTimeline,validateSchema} from '../../scripts/validate-data.mjs';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 const read=relative=>readJSON(new URL(relative,import.meta.url));
@@ -6,7 +6,7 @@ export const sceneData=read('../../design/scenes.json');
 const design=read('../../design/tokens.json');
 validateScenes(sceneData);validateSchema('tokens',design);
 export const timeline=read('../../chapters/01-four-elements/narration/timeline.json');
-validateTimeline(timeline,sceneData);
+validateFirstEpisodeTimeline(timeline,sceneData);
 const ajv=new Ajv2020({allErrors:true,strict:true});
 export const CAST=read('../cast.json');
 const validateCast=ajv.compile(read('../schema/cast.schema.json'));

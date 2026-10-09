@@ -6,12 +6,20 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
+import stat
 import subprocess
 import tempfile
 import unicodedata
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+MAX_ARCHIVE_BYTES = 15 * 1024 * 1024
+MAX_SOURCE_BYTES = 1024 * 1024
+
+
+class ArchiveBuildError(ValueError):
+    """A public archive failed a publication check; the previous ZIP is retained."""
 
 
 # Win32 resolves these names as devices even when an extension is appended.
@@ -42,16 +50,16 @@ def validate_source_path(name):
     module before checking its bytes. Regression tests enforce contract parity.
     """
     if not isinstance(name, str) or not name:
-        raise ValueError('Unsafe public source filename')
+        raise ArchiveBuildError('Unsafe public source filename')
     relative = PurePosixPath(name)
     if (relative.is_absolute() or PureWindowsPath(name).drive or
             any(character in '<>:"\\|?*' for character in name) or
             any(part in {'', '.', '..'} or part.endswith((' ', '.')) for part in name.split('/')) or
             any(ord(character) < 32 for character in name) or relative.as_posix() != name or
             any(part.partition('.')[0].rstrip(' ').upper() in WINDOWS_RESERVED_NAMES for part in name.split('/'))):
-        raise ValueError('Unsafe public source filename')
+        raise ArchiveBuildError('Unsafe public source filename')
     if name.split('/')[0].casefold() == 'source_manifest.json':
-        raise ValueError('Reserved public source manifest filename')
+        raise ArchiveBuildError('Reserved public source manifest filename')
 
 
 def source_candidates(root, git_output):
@@ -59,24 +67,140 @@ def source_candidates(root, git_output):
     try:
         candidates = sorted({item.decode('utf-8') for item in git_output.split(b'\0') if item})
     except UnicodeDecodeError:
-        raise ValueError('Public source filenames must be UTF-8') from None
+        raise ArchiveBuildError('Public source filenames must be UTF-8') from None
     portable_paths = {}
     for name in candidates:
         validate_source_path(name)
         if portable_path_collision(name, portable_paths):
-            raise ValueError('Public source filenames collide after portable normalization')
-    return [name for name in candidates if (root / name).is_file()]
+            raise ArchiveBuildError('Public source filenames collide after portable normalization')
+    for name in candidates:
+        regular_source(root, name)
+    return candidates
 
 
-def source_provenance(root):
-    """Do not equate a Git HEAD with uncommitted source candidate bytes."""
+
+def regular_source(root, name):
+    """Check every component with lstat; never follow a source symlink/junction."""
+    target = root
+    parts = PurePosixPath(name).parts
+    for index, part in enumerate(parts):
+        target = target / part
+        try:
+            info = target.lstat()
+        except FileNotFoundError:
+            raise ArchiveBuildError('Missing public source candidate; stage intentional deletions before packing') from None
+        if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0):
+            raise ArchiveBuildError('Symlinked public source candidate or parent')
+        if not (stat.S_ISREG(info.st_mode) if index == len(parts) - 1 else stat.S_ISDIR(info.st_mode)):
+            raise ArchiveBuildError('Nonregular public source candidate or parent')
+    if info.st_size > MAX_SOURCE_BYTES:
+        raise ArchiveBuildError('Public source file exceeds 1 MiB')
+    return target
+
+
+def read_payloads(root, files):
+    payloads = {}
+    for name in files:
+        target = regular_source(root, name)
+        with target.open('rb') as stream:
+            data = stream.read(MAX_SOURCE_BYTES + 1)
+        if len(data) > MAX_SOURCE_BYTES:
+            raise ArchiveBuildError('Public source file exceeds 1 MiB')
+        payloads[name] = data
+    return payloads
+
+
+def check_payload_boundary(guard, payloads):
+    # Validate the captured bytes, not a potentially changed live working tree.
+    with tempfile.TemporaryDirectory(prefix='public-source-snapshot-') as temporary:
+        snapshot = Path(temporary)
+        for name, data in payloads.items():
+            target = snapshot / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+        errors, _ = guard.scan_sources(snapshot, sorted(payloads))
+    if errors:
+        raise ArchiveBuildError('\n'.join(f'{name}: {reason}' for name, reason in errors))
+
+
+def output_destination(root, create=True):
+    target = root
+    for part in ('production', 'output'):
+        target = target / part
+        try:
+            info = target.lstat()
+        except FileNotFoundError:
+            if not create:
+                raise ArchiveBuildError('Archive output directory changed during packaging') from None
+            target.mkdir()
+            info = target.lstat()
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode) or
+                getattr(info, 'st_file_attributes', 0) & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0)):
+            raise ArchiveBuildError('Archive output parent must be a nonsymlinked directory')
+    if not target.resolve().is_relative_to(root.resolve()):
+        raise ArchiveBuildError('Archive output escapes the checkout')
+    destination = target / 'game_theory_studio_public_source.zip'
+    try:
+        info = destination.lstat()
+    except FileNotFoundError:
+        return destination
+    if (not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode) or
+            getattr(info, 'st_file_attributes', 0) & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0)):
+        raise ArchiveBuildError('Existing archive destination must be a regular nonsymlinked file')
+    return destination
+
+
+def verify_written_archive(path, expected):
+    if Path(path).stat().st_size >= MAX_ARCHIVE_BYTES:
+        raise ArchiveBuildError('Public archive must be smaller than 15 MiB')
+    with zipfile.ZipFile(path) as archive:
+        if archive.testzip() is not None:
+            raise ArchiveBuildError('Public archive CRC validation failed')
+        names = archive.namelist()
+        if len(names) != len(set(names)):
+            raise ArchiveBuildError('Public archive has duplicate members')
+        if set(names) != set(expected):
+            raise ArchiveBuildError('Public archive has missing or unexpected members')
+        if any(archive.read(name) != data for name, data in expected.items()):
+            raise ArchiveBuildError('Public archive bytes differ from the verified source snapshot')
+
+
+def matches_head_snapshot(root, commit, payloads):
+    """Compare captured membership and raw Git blob identities, not index stat data."""
+    output = subprocess.check_output(['git', '--no-replace-objects', 'ls-tree', '-r', '--full-tree', '-z', commit], cwd=root)
+    tree = {}
+    for entry in output.split(b'\0'):
+        if not entry:
+            continue
+        metadata, name = entry.split(b'\t', 1)
+        mode, kind, identity = metadata.split(b' ', 2)
+        if kind != b'blob' or mode not in {b'100644', b'100755'} or name in tree:
+            return False
+        tree[name] = identity
+    if set(tree) != {name.encode('utf-8') for name in payloads}:
+        return False
+    for name, data in payloads.items():
+        # SHA-1 repositories identify a blob by its length-prefixed raw bytes.
+        blob = b'blob ' + str(len(data)).encode('ascii') + b'\0' + data
+        if hashlib.sha1(blob, usedforsecurity=False).hexdigest().encode('ascii') != tree[name.encode('utf-8')]:
+            return False
+    return True
+
+
+def source_provenance(root, payloads):
+    """A clean reproducibility claim additionally requires an independent HEAD match."""
     commit = subprocess.run(['git', 'rev-parse', '--verify', 'HEAD'], cwd=root, capture_output=True, text=True)
     status = subprocess.check_output(['git', 'status', '--porcelain=v1', '--untracked-files=all', '-z'], cwd=root)
     dirty = bool(status)
-    return {'commit': commit.stdout.strip() if commit.returncode == 0 else None,
-            'working_tree_dirty': dirty,
-            'reproducible_from_commit': commit.returncode == 0 and not dirty,
+    identity = commit.stdout.strip() if commit.returncode == 0 else None
+    if identity is not None and re.fullmatch(r'[0-9a-f]{40}', identity) is None:
+        raise ArchiveBuildError('Unsupported Git commit provenance; expected SHA-1')
+    if identity is not None and not matches_head_snapshot(root, identity, payloads):
+        dirty = True
+    return {'commit': identity, 'working_tree_dirty': dirty,
+            'reproducible_from_commit': identity is not None and not dirty,
             'scope': 'Git-tracked and nonignored source candidate bytes; ignored private media and font caches excluded'}
+
 
 def source_versions(payloads):
     read = lambda file: json.loads(payloads[file].decode('utf-8'))
@@ -101,43 +225,48 @@ def main():
     spec = importlib.util.spec_from_file_location('source_guard', ROOT / 'scripts/qa_source.py')
     guard = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(guard)
-    repository = subprocess.run(['git', 'rev-parse', '--show-toplevel'], cwd=ROOT, capture_output=True, text=True)
-    if repository.returncode or Path(repository.stdout.strip()).resolve() != ROOT.resolve():
-        raise SystemExit('Source packaging requires a Git checkout; exported ZIP supports integrity inspection only. Use git clone for development/repacking.')
-    output = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT)
     try:
-        files = source_candidates(ROOT, output)
-    except ValueError as error:
-        # A filename may itself contain private data or terminal controls.
-        raise SystemExit(str(error)) from None
-    errors, _ = guard.scan_sources(ROOT, files)
+        build_source_archive(ROOT, guard)
+    except (ValueError, OSError, KeyError, TypeError, zipfile.BadZipFile, RuntimeError) as error:
+        message = str(error) if isinstance(error, ArchiveBuildError) else 'Public archive build failed; existing archive preserved'
+        raise SystemExit(message) from None
+
+
+def build_source_archive(root, guard):
+    repository = subprocess.run(['git', 'rev-parse', '--show-toplevel'], cwd=root, capture_output=True, text=True)
+    if repository.returncode or Path(repository.stdout.strip()).resolve() != root.resolve():
+        raise SystemExit('Source packaging requires a Git checkout; exported ZIP supports integrity inspection only. Use git clone for development/repacking.')
+    output = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=root)
+    files = source_candidates(root, output)
+    errors, _ = guard.scan_sources(root, files)
     if errors:
         raise SystemExit('\n'.join(f'{file}: {reason}' for file, reason in errors))
     if any('private_characters' in Path(file).parts for file in files):
         raise SystemExit('Private character paths cannot be packaged.')
-    provenance = source_provenance(ROOT)
-    payloads = {file: (ROOT / file).read_bytes() for file in files}
+    payloads = read_payloads(root, files)
+    check_payload_boundary(guard, payloads)
+    provenance = source_provenance(root, payloads)
     manifest = {'manifest_schema_version': '1.0',
                 'source': provenance, 'versions': source_versions(payloads),
                 'distribution': 'public_source_original_svg_only', 'font_binaries_included': False,
                 'character_art_included': False,
                 'files': [{'path': file, 'bytes': len(payloads[file]),
                            'sha256': hashlib.sha256(payloads[file]).hexdigest()} for file in files]}
-    destination = ROOT / 'production/output/game_theory_studio_public_source.zip'
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    expected = {'game-theory-studio/' + name: data for name, data in payloads.items()}
+    expected['game-theory-studio/SOURCE_MANIFEST.json'] = json.dumps(manifest, ensure_ascii=False, indent=2).encode('utf-8')
+    destination = output_destination(root)
     handle, temporary = tempfile.mkstemp(suffix='.zip', dir=destination.parent)
-    os.close(handle)
     try:
+        os.close(handle)
         with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-            for file in files:
-                archive.writestr('game-theory-studio/' + file, payloads[file])
-            archive.writestr('game-theory-studio/SOURCE_MANIFEST.json', json.dumps(manifest, ensure_ascii=False, indent=2))
-        with zipfile.ZipFile(temporary) as archive:
-            assert archive.testzip() is None
-            assert len(archive.namelist()) == len(set(archive.namelist()))
-        if source_provenance(ROOT) != provenance or any((ROOT / file).read_bytes() != data for file, data in payloads.items()):
-            raise SystemExit('Source changed during packaging; existing archive preserved. Retry from a stable checkout.')
-        assert Path(temporary).stat().st_size < 15 * 1024 * 1024
+            for name, data in expected.items():
+                archive.writestr(name, data)
+        verify_written_archive(temporary, expected)
+        current = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=root)
+        if (source_candidates(root, current) != files or source_provenance(root, payloads) != provenance or
+                read_payloads(root, files) != payloads):
+            raise ArchiveBuildError('Source changed during packaging; existing archive preserved. Retry from a stable checkout.')
+        output_destination(root, create=False)
         os.replace(temporary, destination)
     finally:
         Path(temporary).unlink(missing_ok=True)

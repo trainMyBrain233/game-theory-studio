@@ -15,6 +15,17 @@ metadata QA's `video_frame_count` in `media_contract.py` use the same contract:
 4. Metadata checks derive their expected duration from `frames / FPS`, matching
    the encoder loop. The requested duration remains the input to quantization.
 
+## Supported production scope
+
+The production renderer configuration and media-acceptance CLI support only
+30 FPS: `production/schema/tokens.schema.json` fixes the configured rate at 30,
+and `verify_media.py` uses that rate without a configurable FPS option. The
+fractional-FPS fixtures below validate only the generic counting helpers'
+arithmetic; they do not establish support for rendering or validating media at
+those rates. Any future extension needs an explicit metadata-rate comparison
+contract and stream tests, preserving the distinction between decimal 29.97
+(`2997/100`) and `30000/1001` rather than treating them as the same rate.
+
 Python's ties-to-even `round` does not implement this contract. Neither does
 `floor(product + 0.5)`: the addition can round a just-below-half value upward and
 can push the maximum safe integer out of range. The Python implementation splits

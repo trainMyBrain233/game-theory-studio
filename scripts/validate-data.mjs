@@ -57,8 +57,12 @@ export function validateTimeline(timeline, scenes) {
     }
     if (cue.matrix_cell) assert(Object.hasOwn(values, cue.matrix_cell), `${s.id}: unknown matrix cell`);
     if (cue.choices) {
+      assert.equal(cue.action, 'highlight_choices', `${s.id}: choices require action highlight_choices`);
       assert(cue.matrix_cell, `${s.id}: choices need a matrix cell`);
       assert.deepEqual(cue.choices, {A: scenes.strategies[cue.matrix_cell[0] === 'R' ? 0 : 1].label, B: scenes.strategies[cue.matrix_cell[1] === 'R' ? 0 : 1].label});
+    }
+    if (cue.action === 'highlight_choices') {
+      assert(cue.matrix_cell && cue.choices, `${s.id}: highlight_choices requires a matrix cell and both choices`);
     }
     if (cue.scores || cue.score_reveals) {
       assert.deepEqual(cue.scores, values[cue.matrix_cell], `${s.id}: scores do not match the matrix`);
@@ -78,4 +82,54 @@ export function validateTimeline(timeline, scenes) {
   }
   close(timeline.sections[0].start, 0);
   close(timeline.sections.at(-1).end, timeline.duration);
+}
+
+// Only the fixed first-episode renderer has these lookups. Generic chapters and
+// the two-block scaffold deliberately use validateTimeline instead.
+const FIRST_EPISODE_ANCHORS = {
+  intro: ['s01_hook', 's02_four_questions'],
+  players: ['s05_goal', 's06_definition'],
+  information: ['s08_known_unknown', 's09_simultaneous', 's10_distinction', 's11_timing'],
+  strategy: ['s13_options', 's14_simple_case', 's15_definition', 's16_comparison_intro', 's17_comparison_example', 's18_return_single_round'],
+  payoffs: ['s19_question', 's20_definition', 's21_rows', 's22_columns', 's23_score_order', 's25_rr_score', 's27_rb_score', 's29_br_score', 's31_bb_score', 's32_joint_choices', 's33_beyond_money'],
+  recap: ['s35_first_pair', 's36_second_pair', 's37_closing'],
+};
+const FIRST_EPISODE_SCORES = {RR: 's25_rr_score', RB: 's27_rb_score', BR: 's29_br_score', BB: 's31_bb_score'};
+
+/** Validate every fixed lookup in scenes, choreography, actors and checkpoints. */
+export function validateFirstEpisodeTimeline(timeline, scenes) {
+  validateTimeline(timeline, scenes);
+  assert.deepEqual(timeline.sections.map(section => section.id), Object.keys(FIRST_EPISODE_ANCHORS), 'First episode requires the six supported sections in order');
+  for (const [section, ids] of Object.entries(FIRST_EPISODE_ANCHORS)) {
+    let previous = -1;
+    for (const id of ids) {
+      const matches = timeline.segments.filter(segment => segment.id === id);
+      assert.equal(matches.length, 1, `First episode requires exactly one segment anchor: ${id}`);
+      const segment = matches[0];
+      assert.equal(segment.section, section, `${id}: first-episode anchor belongs in ${section}`);
+      assert(segment.start > previous, `${id}: first-episode anchors must retain their order`);
+      previous = segment.start;
+    }
+  }
+  const cells = Object.keys(FIRST_EPISODE_SCORES);
+  assert.deepEqual(timeline.visual_contract.matrix_reveal_order, cells, 'First episode matrix reveal order must match its fixed walkthrough');
+  const summary = timeline.segments.find(segment => segment.id === 's32_joint_choices');
+  const order = timeline.segments.find(segment => segment.id === 's23_score_order');
+  const expected = [];
+  for (const cell of cells) {
+    for (const action of ['highlight_choices', 'reveal_scores']) {
+      const matches = timeline.segments.filter(segment => segment.visual_cue.action === action && segment.visual_cue.matrix_cell === cell);
+      assert.equal(matches.length, 1, `First episode requires exactly one ${action} for ${cell}`);
+      const segment = matches[0];
+      assert.equal(segment.section, 'payoffs', `${segment.id}: matrix walkthrough belongs in payoffs`);
+      assert(segment.start >= order.end && segment.end <= summary.start, `${segment.id}: matrix walkthrough must follow score order and finish before summary`);
+      if (action === 'reveal_scores') assert.equal(segment.id, FIRST_EPISODE_SCORES[cell], `${cell}: score reveal must match its checkpoint anchor`);
+      expected.push([action, cell]);
+    }
+  }
+  // currentCell uses every matrix_cell, so even a payload-free note with a cell
+  // would change focus. Require the same unique choice/reveal sequence it draws.
+  const actual = timeline.segments.filter(segment => segment.visual_cue.matrix_cell)
+    .map(segment => [segment.visual_cue.action, segment.visual_cue.matrix_cell]);
+  assert.deepEqual(actual, expected, 'First episode matrix cues must be unique choice/reveal pairs in walkthrough order');
 }

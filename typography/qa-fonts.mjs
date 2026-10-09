@@ -8,6 +8,7 @@ import {registerFonts, canvasFont, FONT_FAMILY, SERIF_FAMILY, CJK_REGRESSION} fr
 import {assertAppliedFont} from './font-contract.mjs';
 import {chapterDirectories} from '../scripts/chapters.mjs';
 import {currentPresentationTextRuns} from './text-inventory.mjs';
+import {comparisonBoardTextPlan} from '../design/comparison-board-text.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 assert.equal(process.env.DISABLE_SYSTEM_FONTS_LOAD, '1', 'Use the isolated-fonts preload');
 assert.throws(() => canvasFont(32), /registerFonts/);
@@ -57,7 +58,8 @@ const timelines = chapterDirectories().map(directory => JSON.parse(fs.readFileSy
 const {drawScene, TOKENS, DATA} = await import('../design/render-proposals.mjs');
 const templateRuns=[];
 for(const style of Object.keys(TOKENS.styles))for(const scene of DATA.frames)templateRuns.push(...drawScene(createCanvas(1920,1080),style,scene.id).map(b=>b.text));
-const textRuns = [...templateRuns, ...currentPresentationTextRuns(), CJK_REGRESSION, ...lines,
+const comparisonRuns=Object.values(TOKENS.styles).flatMap(style=>comparisonBoardTextPlan(style).map(run=>run.text));
+const textRuns = [...templateRuns, ...comparisonRuns, ...currentPresentationTextRuns(), CJK_REGRESSION, ...lines,
   ...scenes.frames.flatMap(f => [f.title, f.lead, f.subtitle, f.section]),
   ...timelines.flatMap(timeline => [timeline.title, ...timeline.segments.flatMap(s => [s.text, s.voiceover]), ...timeline.sections.map(s => s.title)])];
 fs.writeFileSync(path.join(out, 'text-runs.json'), JSON.stringify({textRuns}, null, 2) + '\n');

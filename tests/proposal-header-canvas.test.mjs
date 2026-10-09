@@ -1,4 +1,4 @@
-// Bounded real-font regression: three 3840x180 header strips, no scene assets.
+// Bounded real-font regression: three 3840x200 header strips, no scene assets.
 import '../scripts/isolated-fonts.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +7,7 @@ import {TOKENS,drawComparisonHeader} from '../design/render-proposals.mjs';
 
 const pixels=(canvas,x=70,y=20,width=1000,height=110)=>Buffer.from(canvas.getContext('2d').getImageData(x,y,width,height).data);
 function expectedHeading(style,family){
- const canvas=createCanvas(3840,180),context=canvas.getContext('2d');
+ const canvas=createCanvas(3840,200),context=canvas.getContext('2d');
  context.fillStyle=style.paper;context.fillRect(0,0,canvas.width,canvas.height);
  // Independent request and readback, not canvasFont() or the renderer's bounds.
  context.font=`700 62px "${TOKENS.font[family]}"`;
@@ -20,7 +20,7 @@ function expectedHeading(style,family){
 test('comparison headings honor default and changed families in applied fonts and actual glyph pixels',()=>{
  for(const id of ['textbook','editorial','bright']){
   const style=TOKENS.styles[id],original=style.titleFamily,alternate=original==='serif'?'sans':'serif';
-  const canvas=createCanvas(3840,180),context=canvas.getContext('2d'),drawn=[];
+  const canvas=createCanvas(3840,200),context=canvas.getContext('2d'),drawn=[];
   const fillText=context.fillText.bind(context);
   context.fillText=function(text,...args){drawn.push({text,font:this.font});return fillText(text,...args);};
   try{
@@ -40,4 +40,18 @@ test('comparison headings honor default and changed families in applied fonts an
    assert.deepEqual(snapshots[0].subtitle,snapshots[1].subtitle,`${id}: the subtitle remains Sans`);
   }finally{style.titleFamily=original;}
  }
+});
+
+test('comparison header rejects clipped and colliding authored text at its actual font size',()=>{
+ const style=TOKENS.styles.textbook,original={...style};
+ try{
+  for(const mutation of [
+   {name:'甲'.repeat(100)},
+   {subtitle:'甲'.repeat(110)},
+   {name:'甲'.repeat(35),subtitle:'乙'.repeat(50)},
+  ]){
+   Object.assign(style,original,mutation);
+   assert.throws(()=>drawComparisonHeader(createCanvas(3840,1320),'textbook'),/Text outside canvas|Text collision/);
+  }
+ }finally{Object.assign(style,original);}
 });
