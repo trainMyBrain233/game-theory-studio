@@ -32,8 +32,9 @@ test('direct drawFrame retains finite-time validation, clamping and uniform vali
   assert.throws(()=>drawFrame(canvas,time),/Frame time must be a finite number/);
   assert.deepEqual(calls,[]);
  }
+ const bits=new DataView(new ArrayBuffer(8));bits.setFloat64(0,DURATION);bits.setBigUint64(0,bits.getBigUint64(0)-1n);const lastTime=bits.getFloat64(0);
  for(const [width,height] of [[1920,1080],[3840,2160],[960,540],[1280,720]]){
-  for(const [time,expected] of [[-1,0],[0,0],[12.5,12.5],[DURATION-1/30,DURATION-1/30],[DURATION,DURATION-1/30],[Number.MAX_VALUE,DURATION-1/30],[-Number.MAX_VALUE,0]]){
+  for(const [time,expected] of [[-1,0],[0,0],[12.5,12.5],[DURATION-1/30,DURATION-1/30],[DURATION,lastTime],[Number.MAX_VALUE,lastTime],[-Number.MAX_VALUE,0]]){
    calls.length=0;
    const context={save(){calls.push(['save']);},setTransform(...args){calls.push(['setTransform',...args]);},fillRect(...args){calls.push(['fillRect',...args]);}};
    const canvas={width,height,getContext(kind){calls.push(['getContext',kind]);return context;}};

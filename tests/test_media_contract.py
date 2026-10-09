@@ -21,13 +21,13 @@ class MediaContract(unittest.TestCase):
         for field, value in [('start_time', '.1'), ('duration', '1.2'), ('sample_rate', '44100')]:
             broken = copy.deepcopy(info)
             broken['streams'][1][field] = value
-            with self.assertRaises(AssertionError): module.validate_streams(broken, 1)
+            with self.assertRaises(ValueError): module.validate_streams(broken, 1)
 
     def test_range_rate_and_each_stream_timing(self):
         for field, value in [('color_range', 'pc'), ('avg_frame_rate', '60/1'), ('start_time', '.1'), ('duration', '0.5')]:
             info = self.fixture()
             info['streams'][0][field] = value
-            with self.assertRaises(AssertionError): module.validate_streams(info, 1)
+            with self.assertRaises(ValueError): module.validate_streams(info, 1)
 
     def test_shared_encoder_frame_count_contract(self):
         cases = json.loads((Path(__file__).parent / 'fixtures/video-frame-count-contract.json').read_text(encoding='utf-8'))
@@ -54,5 +54,5 @@ class MediaContract(unittest.TestCase):
                 info['streams'][0].update(nb_frames=str(frames), duration=str(frames / 30))
                 self.assertEqual(module.validate_streams(info, seconds)[2], frames)
                 info['streams'][0]['nb_frames'] = str(frames - 1)
-                with self.assertRaises(AssertionError):
+                with self.assertRaises(ValueError):
                     module.validate_streams(info, seconds)

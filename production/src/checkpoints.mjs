@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {isDeepStrictEqual} from 'node:util';
+import {beforeEnd} from './frame-time.mjs';
 
 export const TIMELINE_PATH = 'chapters/01-four-elements/narration/timeline.json';
 export const STILLS_MANIFEST = 'stills-manifest.json';
@@ -39,15 +40,6 @@ function anchor(timeline, kind, id) {
 function inside(time, item, id) {
   if (!Number.isFinite(time) || time < item.start || time >= item.end) throw Error(`Checkpoint lies outside its current anchor: ${id}`);
   return time;
-}
-// All anchor ends are finite and positive. The preceding Float64 stays inside
-// even a one-ULP segment, unlike a fixed frame/epsilon subtraction. This also
-// keeps a rounded midpoint from accidentally selecting the next segment.
-function beforeEnd(end) {
-  const bits = new DataView(new ArrayBuffer(8));
-  bits.setFloat64(0, end);
-  bits.setBigUint64(0, bits.getBigUint64(0) - 1n);
-  return bits.getFloat64(0);
 }
 
 export function checkpointPlan(timeline) {

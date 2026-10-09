@@ -134,6 +134,21 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **仍待完成：** 最终修补 head 的完整干净双平台 CI 与复审仍待确认；没有新增私有角色、完整影片、编码/解码、真人声画对齐或平台播放验收结论。
 
+## PR #4 `8d16056`：绿色 CI 后自动复审新增 4 项
+
+记录日期：2026-10-09（UTC）。`8d16056e89f2b7c518d7c82f59e09596f5e9d99d` 的完整 [Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37892446751) 已通过，Ubuntu/macOS 各 665 项 JS、95 项 Python；579 字符字体覆盖、案例复用、公开渲染/episode、素材路由和最终源码检查通过，联系图按工作流仅在 Ubuntu 执行并通过完整图片解码。该 head 的[手动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#issuecomment-6075549155)与[手动安全复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#issuecomment-6075552420)均无新项。随后 06:24:55 从 draft 改为 ready 实际触发了另一轮自动审查：自动安全于 06:32:51 完成且无新项，自动代码于 06:36:11 提出以下四项 P2。因此旧 green CI/clear review 仍是该次执行事实，不能覆盖后到的新发现，也不表示 PR 已合入 main。
+
+- **自动-1：字形检查的 `assert` 在优化模式下会消失。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4227338551)针对 `scripts/qa_glyphs.py`；普通 Python 下会拒绝的缺字、错误家族/字重、不完整字库或 checksum，原来可能在 `-O`、`-OO` 或 `PYTHONOPTIMIZE` 下漏过。冻结候选改用显式 `ValueError`，并同步审查 `production/qa/check_fonts.py` 和 `scripts/qa_font_provenance.py`：production 字体检查继续调用既有 `verify_cached`，provenance 回归自身必须拒绝伪造被接受、错误诊断、manifest 被改写及恢复失败，不能只测试正常退出。`tests/test_optimized_validation.py` 对四个 face 逐项改变 family/weight/subset/hash/cmap，验证错误不会写出新的成功报告，且这些拒绝在五种启动模式都存在。教训：扩大 inventory 与真实来源检查还不够，执行模式不应取消其拒绝分支；受控字体表/验证器替身证明控制流程，不能冒称新一轮真实字体光栅验收。
+- **自动-2：媒体元数据和完整解码检查同样不能依赖 `assert`。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4227338558)针对 `production/qa/media_contract.py` 与 `production/qa/verify_media.py`。冻结候选将视频/音轨数量、编码、帧率/帧数/时长、尺寸/像素比例/色彩、音频采样率/声道及流起止检查改为显式 `ValueError`；解码非零退出、stderr 或缺失/错误最终帧数用 `RuntimeError` 失败，不继续生成成功报告。`tests/test_optimized_validation.py` 用真实 QA 入口与受控 ffprobe/ffmpeg 输出覆盖五种启动模式的正反例，保留 1080p/4K、无音轨/mono/stereo 等支持情形；原媒体合同测试更新为明确异常类型。教训：必须证明执行到目标解码拒绝，不能用另一个前置错误替代；此处没有新编码或实际视频完整解码证据。
+- **自动-3：合法片尾子帧时间不能被夹到最后一个 30fps 采样点。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4227338570)针对 `production/src/scenes.mjs`：原实现把所有晚于 `DURATION - 1/30` 的时间压到同一点，即使输入仍在 `[0, DURATION)` 内。冻结候选逐值保留该区间的有限时间；负数取 0，等于/超过 DURATION 的有限值才取 `beforeEnd(DURATION)`，即结束点的 Float64 前驱。`production/src/frame-time.mjs` 与 checkpoint 共用该 helper，避免固定 epsilon 跨过纳秒或单 ULP 尾段；非有限/可强制转换输入及非法画布仍在触碰状态前拒绝。`tests/scene-tail-time.test.mjs` 与 recording loader 运行真实 drawFrame、subtitle、matrix 消费者，检查实际下传时间、字幕、alpha、进度线、manifest 身份和正/逆序重复状态；.02 秒、1ns、单 ULP 尾段及越界都覆盖。恢复旧 clamp 后五个消费者测试全部失败，helper 单测仍过，证明回归不是只测新 helper。教训：视频帧量化不能改写直接时间 API 的合法输入；记录式绘制检查不等于真实像素/字体或整片验收。
+- **自动-4：对照板 caption 的原尺寸过小，缩小后更不可读。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4227338577)针对 `design/comparison-board-text.mjs`：两条 scene caption 原为 25px，3840px 图缩至 1920px 宽只剩 12.5px。冻结候选改为 60px/700 的 GameTheory Noto Sans SC，半尺寸为 30px，基线 y165；分隔线移至 y125，200px header 和 3840×1320 board 尺寸不变。纯计划与真实 Canvas 回归检查全部三种样式、两种 title family，保留真实 `ctx.font`、独立字形/半尺寸像素、越界和文本碰撞负例。默认及明月/青禾、合作/退出、不对称收益、默认 BR 变体各输出三板，36 个场景/选择量测通过，12 张原尺寸/半尺寸截图已实际查看；caption 字形上沿 y138.1/139.1、下沿 y197.1，保持在 header 内，距分隔线下沿 y126 至少 12.1px。教训：字形存在与框不碰撞不能替代缩小阅读验收；字号改变后还要复核相邻图形与保留布局。此次只接受 caption 布局和文本边界证据，既有 changed-bright 得分框文字偏挤、editorial 行标签附近图形较近的观察未在此修补，不宣称全图形净空已验收。
+
+**已冻结专项证据：** 五个 Python QA/生产脚本的同一生产实现通过完整 Python suite 100 项（66.303 秒，Linux、Python 3.12.14）；随后仅补测试的 4K/mono 正例与安静输出，最终优化模式专项 5 项重新通过（2.121 秒），其中跨进程检查覆盖普通、`-O`、`-OO`、`PYTHONOPTIMIZE=1/2` 五种启动模式，每模式执行四套行为 fixture。该优化模式专项使用受控字体表、FFmpeg 与 setup verifier 替身，但真实执行文件 hash、manifest、报告及 QA 控制流程；专项自身没有跑真实字体/视频任务。尾时间与既有边界/比例/窗口/checkpoint 组合 26/26 通过（Linux 6.18.44 x86_64、Node 24.19.0），无原生渲染。Caption 的纯测试 3/3、真实 Canvas 测试 3/3 通过（Linux、Node 24.19.0），原尺寸/缩小截图与变体范围见自动-4。这些结果绑定基于 `8d16056` 源码的未提交候选，不能写为下一提交已通过。
+
+**补充集成执行边界：** 本地另有 28 项纯集成检查通过，default-textbook 半尺寸图已再次查看，无 caption 碰撞。随后完整 `qa:fonts` 实际退出 1：准备字体只读验证、真实 SC runtime/specimen 和重新刷新后的 579 字符四 face 覆盖已通过；进入 `qa_font_provenance` 后未出现该阶段成功或异常文字，也未进入 font-mutations，原因未明，不猜测或重复重型执行，不将整条命令记为通过。更早单独读取旧 text-runs 得到的 560 字符不作为最终覆盖结论；production `check_fonts` 单独运行缺少上游 `qa/checks.json`，属于不完整调用前置条件，既不是通过结果，也未据此认定代码缺陷。最终干净 CI 仍须按完整顺序覆盖 provenance、font-mutations 和 production 字体检查。
+
+**当前状态：** 四项候选代码与上述专项证据已冻结，外部审查项尚未记为关闭。最终新 head 的完整双平台 CI 与复审仍待重新绑定并完成；本次不新增私有角色、整片编码/解码、真人同步或播放端验收结论，也不表示 PR 已合入 main。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

@@ -105,7 +105,8 @@ test('real drawFrame rejects nonfinite or coercible times before any state or co
    assert.throws(()=>drawFrame(canvas,time),/Frame time must be a finite number/);
    assert.deepEqual(calls,[],'Invalid times cannot reset records, touch actors or obtain a drawing context.');
   }
-  for(const [time,expected] of [[-1,0],[0,0],[12.5,12.5],[DURATION-1/30,DURATION-1/30],[DURATION,DURATION-1/30],[Number.MAX_VALUE,DURATION-1/30],[-Number.MAX_VALUE,0]]){
+  const bits=new DataView(new ArrayBuffer(8));bits.setFloat64(0,DURATION);bits.setBigUint64(0,bits.getBigUint64(0)-1n);const lastTime=bits.getFloat64(0);
+  for(const [time,expected] of [[-1,0],[0,0],[12.5,12.5],[DURATION-1/30,DURATION-1/30],[DURATION,lastTime],[Number.MAX_VALUE,lastTime],[-Number.MAX_VALUE,0]]){
    calls.length=0;
    assert.throws(()=>drawFrame(canvas,time),/Context boundary reached/);
    assert.deepEqual(calls,[['resetRecords'],['setSceneTime',expected],['getContext']]);

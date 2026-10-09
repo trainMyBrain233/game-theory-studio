@@ -181,7 +181,7 @@ export function drawComparisonHeader(canvas,styleId){
  bounds.length=0;
  rect(0,0,canvas.width,canvas.height,S.paper);
  for(const run of comparisonBoardTextPlan(S))txt(run.text,run.x,run.y,run.size,run.weight,run.color,run.align,run.family);
- line(84,155,3756,155,S.line,2);
+ line(84,125,3756,125,S.line,2);
  const result=[...bounds];checkTextLayout(result,canvas.width,Math.min(canvas.height,COMPARISON_BOARD.headerHeight),{collisions:true});return result;
 }
 async function main(){
