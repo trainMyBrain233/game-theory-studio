@@ -25,6 +25,11 @@ function validateEditorialReferences(timeline){
   assert.deepEqual(tokens(block[field]),expected,`Editorial semantic contract: ${id}.${field} has wrong cell or owner references.`);
  };
  for(const [id,fields] of Object.entries({
+  zk01_b01:{voiceover:['series','A','B','gameLabel']},
+  zk01_b05:{voiceover:['A','B']},
+  zk01_b12:{voiceover:['red','blue']},
+  zk01_b13:{voiceover:['red','blue']},
+  zk01_b16:{voiceover:['red']},
   zk01_b21:{voiceover:['A'],spoken_emphasis:['A'],optional_breath_after:['A'],visual_intent:['A','red','blue']},
   zk01_b22:{voiceover:['B'],spoken_emphasis:['B'],optional_breath_after:['B'],visual_intent:['B','red','blue']},
   zk01_b23:{voiceover:['A','B'],spoken_emphasis:['A','B'],optional_breath_after:['A'],visual_intent:['A','B']},

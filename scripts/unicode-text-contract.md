@@ -48,7 +48,7 @@ for the distinction between Unicode data, the project's MIT code and Python tool
 `highlight_choices` and `reveal_scores` require positive evidence of the current
 case in speech and captions; equal counts of an absent token are insufficient.
 This is an explicit, machine-verifiable Chinese teaching-script contract, not a
-natural-language truth checker. Other actions retain free-form narration.
+natural-language truth checker. General definitions and explanations retain free-form narration; the identity-bearing actions below require positive evidence too.
 
 - Choice cues require a clause for each current named player with that owner's
   exact current strategy. Supported verbs are 选 / 选择, optionally preceded by
@@ -84,3 +84,30 @@ API only after its full-block template-reference contract has verified the exact
 current cell/owner token sequence; paired stale full-block speech/chunks fail that
 contract before expansion. Canonical builders and timeline QA always use the
 complete-segment API, with no opt-out flag.
+
+### Other current-case identity cues
+
+The canonical identity grammar also checks `introduce_players` (both current names
+joined by 和 / 与 / 、, in either order), `show_two_actions` (选 / 选择 followed
+by both current strategies, optionally suffixed by 牌 and joined by 或 / 或者 /
+或是 / 和 / 与 / 、 with an optional comma), and
+`map_actions_to_pure_strategies` (that strategy pair followed by 就是 / 是 / 作为,
+optional 两个 / 两种, then 纯策略). Introductory and surrounding prose is free.
+`show_multi_round_plan` checks 第一轮, optional comma, 选 / 选择 and the current
+first strategy; the later-round plan remains editorial prose.
+
+`introduce_matrix_rows` binds 行 to player A and `introduce_matrix_columns` binds
+列 to B: “行，是甲方的选择”, “行表示甲方的选择” and
+“甲方的选择对应行” illustrate the accepted 是 / 表示 / 代表 / 对应 and reverse
+在 / 对应 forms. `introduce_score_order` checks 先读 / 先看 A 的得分，
+再 / 然后 读 / 看 B 的得分 in that order. Axis and score-order bindings end at
+clause punctuation or the end of speech. Literal names and strategies remain
+escaped, and ordinary subtitle protections still prohibit splitting them.
+These finite patterns establish presence of the required identities and bindings,
+not the absence of every possible contradiction or arbitrary paraphrase.
+
+Editorial retains its separate full-block template-token contract: participant
+introductions, alternatives, pure strategies and first-round-plan blocks must
+retain their current data references, alongside the existing axis, score-order,
+choice and payoff blocks. Partial subtitle chunks do not individually have to
+repeat a full block's identities. Unreferenced general prose remains free-form.

@@ -1,4 +1,32 @@
 import path from 'node:path';
+import fs from 'node:fs';
+
+// Compare destinations through existing filesystem aliases, including an aliased
+// cwd (macOS /var -> /private/var) and output directories. Uncreated ancestors
+// retain their spelling below the closest existing, physically resolved parent.
+function outputDestination(file) {
+ // Preserve symlink/.. traversal until the filesystem resolves it.
+ const absolute=path.isAbsolute(file)?file:`${process.cwd()}${path.sep}${file}`;
+ let stat;
+ try{stat=fs.lstatSync(absolute);}catch(error){if(!['ENOENT','ENOTDIR'].includes(error.code))throw error;}
+ // encodeVideo renames over the final directory entry, not through a leaf
+ // symlink. Compare regular-file identities for case aliases/hard links only.
+ stat=stat?.isFile()?stat:null;
+ let current=path.dirname(absolute);const missing=[path.basename(absolute)];
+ while(true){
+  try{
+   const resolved=fs.realpathSync.native(current);
+   return {path:path.join(resolved,...missing),stat};
+  }catch(error){
+   if(!['ENOENT','ENOTDIR'].includes(error.code))throw error;
+   const parent=path.dirname(current);if(parent===current)throw error;
+   missing.unshift(path.basename(current));current=parent;
+  }
+ }
+}
+function sameDestination(a,b) {
+ return a.path===b.path||(a.stat&&b.stat&&a.stat.dev===b.stat.dev&&a.stat.ino===b.stat.ino);
+}
 
 /** One rounding contract shared by CLI validation and the encoder loop. */
 export function videoFrameCount(seconds,fps=30) {
@@ -43,6 +71,9 @@ export function renderOptions(args,duration,{fps=30,defaultTimes}={}) {
  // Full-window requests (even with explicit time flags) keep the default name.
  if(partial&&!preview&&output===undefined)throw Error('Partial video renders require an explicit --out separate from the full-film output.');
  const file=output??`output/${preview?'transition_preview':'game_theory_textbook_v2_clean'}_${width}.mp4`;
- if(partial&&[1920,3840].some(size=>path.resolve(file)===path.resolve(`output/game_theory_textbook_v2_clean_${size}.mp4`)))throw Error('Partial video renders cannot use a canonical full-film output; choose a separate --out.');
+ if(partial){
+  const destination=outputDestination(file);
+  if([1920,3840].some(size=>sameDestination(destination,outputDestination(`output/game_theory_textbook_v2_clean_${size}.mp4`))))throw Error('Partial video renders cannot use a canonical full-film output; choose a separate --out.');
+ }
  return {width,height:width*9/16,still,preview,start,duration:seconds,frameCount,times,explicitTimes,file};
 }

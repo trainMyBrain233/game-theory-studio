@@ -23,7 +23,15 @@ for kind in ['Sans', 'Serif']:
 print('Independent cmap proof: U+0639 and U+063A are absent from all four SC faces')
 `],options);
  assert.equal(probe.status,0,probe.stdout+probe.stderr);
- const collected=spawnSync(process.execPath,['--import','./scripts/isolated-fonts.mjs','typography/qa-fonts.mjs'],options);
+ const collected=spawnSync(process.execPath,['--import','./scripts/isolated-fonts.mjs','--input-type=module','-e',`
+import fs from 'node:fs';import assert from 'node:assert/strict';
+import {comparisonBoardTextPlan} from './design/comparison-board-text.mjs';
+import {currentGlyphInventory} from './typography/glyph-inventory.mjs';
+const tokens=JSON.parse(fs.readFileSync('design/tokens.json'));
+const textRuns=[...Object.values(tokens.styles).flatMap(style=>comparisonBoardTextPlan(style).map(run=>run.text)),currentGlyphInventory().characters.join('')];
+fs.mkdirSync('typography/qa',{recursive:true});fs.writeFileSync('typography/qa/text-runs.json',JSON.stringify({textRuns}));
+await assert.rejects(import('./typography/qa-fonts.mjs'),/missing Chinese glyphs.*ع.*غ/s);
+`],options);
  assert.equal(collected.status,0,collected.stdout+collected.stderr);
  const checked=spawnSync(pythonCommand(),['scripts/qa_glyphs.py'],options);
  assert.notEqual(checked.status,0,`Comparison-only glyphs escaped actual cmap QA:\n${checked.stdout}${checked.stderr}`);

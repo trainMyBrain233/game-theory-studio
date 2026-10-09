@@ -4,7 +4,7 @@ Default: extract/copy installed Noto CJK. --download opts into official download
 Requires Python 3 and fontTools (python -m pip install fonttools).
 """
 from pathlib import Path
-import argparse, hashlib, json, os, shutil, sys, tempfile, urllib.request
+import argparse, hashlib, json, os, shutil, subprocess, sys, tempfile, urllib.request
 try:
     from fontTools.ttLib import TTFont, TTCollection
 except ImportError:
@@ -24,7 +24,15 @@ EXPECTED_VERSIONS = {'Sans': '2.004', 'Serif': '2.003'}
 def names(font, name_id):
     return {n.toUnicode() for n in font['name'].names if n.nameID == name_id}
 
-def verify(file, kind, weight):
+def current_characters():
+    """Use the same native-free, byte-current inventory as registration and QA."""
+    result = subprocess.run([os.environ.get("NODE", "node"), str(ROOT / "typography/glyph-inventory.mjs")],
+                            check=True, capture_output=True, text=True, timeout=30)
+    return json.loads(result.stdout)["characters"]
+
+def verify(file, kind, weight, required_characters=None):
+    if required_characters is None:
+        required_characters = current_characters()
     with TTFont(str(file), lazy=True) as f:
         wanted = f'Noto {kind} CJK SC'
         families = names(f, 1) | names(f, 16)
@@ -40,7 +48,7 @@ def verify(file, kind, weight):
         # same real-glyph contract before preparation/registration as later QA.
         cmap = {code for code, name in (f.getBestCmap() or {}).items()
                 if name != '.notdef' and f.getGlyphID(name) != 0}
-        missing = [c for c in '博弈论入门参与者信息策略收益每种组合各得什么选择规则红蓝' if ord(c) not in cmap]
+        missing = [c for c in required_characters if ord(c) not in cmap]
         if missing:
             raise ValueError(f'{file}: missing Chinese glyphs: {missing}')
         # Full Noto CJK sources contain far more glyphs; reject tiny specimen subsets.
@@ -50,7 +58,7 @@ def verify(file, kind, weight):
                   'glyph_count':len(f.getGlyphOrder()),'sha256':hashlib.sha256(file.read_bytes()).hexdigest()}
         return result
 
-def prepare(source, target, kind, weight):
+def prepare(source, target, kind, weight, required_characters=None):
     temp = target.with_suffix('.tmp.otf')
     face_index = None
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
@@ -72,7 +80,7 @@ def prepare(source, target, kind, weight):
             raise ValueError('Individual SC OTF must match the pinned official checksum; unknown OTF is not accepted')
         shutil.copyfile(source, temp)
     try:
-        result = verify(temp, kind, weight)
+        result = verify(temp, kind, weight, required_characters)
         if hashlib.sha256(source.read_bytes()).hexdigest() != source_hash:
             raise ValueError('Font source changed during preparation')
         os.replace(temp, target)
@@ -82,11 +90,11 @@ def prepare(source, target, kind, weight):
                    'source_kind':'local_ttc_extraction' if face_index is not None else 'official_pinned_otf'})
     return result
 
-def verify_cached(target, kind, weight, previous):
+def verify_cached(target, kind, weight, previous, required_characters=None):
     actual = hashlib.sha256(target.read_bytes()).hexdigest()
     pinned = OFFICIAL_SHA256[(kind, weight)]
     if actual == pinned:
-        result = verify(target, kind, weight)
+        result = verify(target, kind, weight, required_characters)
         result.update({'source_kind':'official_pinned_otf','source_sha256':pinned,'face_index':None,
                        'source':f'{BASE}/{COMMITS[kind]}/{kind}/OTF/SimplifiedChinese/Noto{kind}CJKsc-{weight}.otf'})
         return result
@@ -99,7 +107,7 @@ def verify_cached(target, kind, weight, previous):
         raise ValueError('Local TTC source or prepared checksum changed; run explicit preparation after reviewing the source')
     # A manifest's self-reported target hash is insufficient: independently re-extract the source.
     with tempfile.TemporaryDirectory(prefix='noto-sc-verify-') as temporary:
-        derived = prepare(source, Path(temporary)/target.name, kind, weight)
+        derived = prepare(source, Path(temporary)/target.name, kind, weight, required_characters)
     if actual != derived['sha256'] or previous.get('face_index') != derived['face_index']:
         raise ValueError('Prepared font does not match the complete SC face re-extracted from its recorded TTC source')
     return derived
@@ -122,12 +130,13 @@ def main():
     manifest_path = a.output_dir/'prepared_font_manifest.json'
     previous = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {}
     report={}; missing=[]
+    required_characters = current_characters()
     for kind in ['Sans','Serif']:
         for weight in ['Regular','Bold']:
             target=a.output_dir/f'Noto{kind}CJKSC-{weight}.otf'
             if target.exists():
                 try:
-                    verified = verify_cached(target,kind,weight,previous.get(target.name,{}))
+                    verified = verify_cached(target,kind,weight,previous.get(target.name,{}),required_characters)
                 except Exception as error:
                     if not a.download and (a.verify_only or not a.source_dir):
                         missing.append(f'{target.name}: {error}'); continue
@@ -142,7 +151,7 @@ def main():
             candidates=[f'Noto{kind}CJK-{weight}.ttc',f'Noto{kind}CJKsc-{weight}.otf']
             source=next((files[n.lower()] for n in candidates if n.lower() in files),None)
             if source and not a.download:
-                report[target.name]=prepare(source,target,kind,weight)
+                report[target.name]=prepare(source,target,kind,weight,required_characters)
                 print('Prepared',target.name,'SC face',report[target.name]['face_index']); continue
             url=f'{BASE}/{COMMITS[kind]}/{kind}/OTF/SimplifiedChinese/Noto{kind}CJKsc-{weight}.otf'
             if a.download:
@@ -152,7 +161,7 @@ def main():
                         shutil.copyfileobj(response,output)
                     if hashlib.sha256(temporary.read_bytes()).hexdigest() != OFFICIAL_SHA256[(kind,weight)]:
                         raise ValueError('Official font checksum mismatch; existing target is preserved')
-                    report[target.name]=prepare(temporary,target,kind,weight)
+                    report[target.name]=prepare(temporary,target,kind,weight,required_characters)
                     report[target.name]['source']=url
                     temporary.unlink(); print('Downloaded and verified',target.name)
                 except Exception as e:

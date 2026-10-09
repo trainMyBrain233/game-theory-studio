@@ -255,7 +255,7 @@ test('build and check reject malformed editorial subtitles and inherited tokens 
 
 
 test('editorial full blocks reject paired stale speech/chunks even when current cues remain valid',()=>{
- for(const [number,voiceover] of [[26,'小A选红，小B选蓝。'],[27,'小A得零分，小B得五分。']]){
+ for(const [number,voiceover] of [[1,'假设小A和小B，开始游戏。'],[5,'小A和小B各自选牌。'],[12,'每人选红牌或蓝牌。'],[13,'红和蓝就是两种纯策略。'],[16,'第一轮选红；以后再决定。'],[21,'小A选的牌，决定看哪一行。'],[22,'小B选的牌，决定看哪一列。'],[23,'先读小A的分数，再读小B的分数。'],[26,'小A选红，小B选蓝。'],[27,'小A得零分，小B得五分。']]){
   withTemplateMutation(draft=>{
    const item=block(draft,number);item.voiceover=voiceover;
    item.subtitle_chunks=[draftChunk('stale',voiceover)];

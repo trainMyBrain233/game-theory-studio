@@ -30,7 +30,7 @@ class FontRegistrationVerifierTests(unittest.TestCase):
                         'manifestSha256': hashlib.sha256(manifest_bytes).hexdigest()}
             calls = []
 
-            def verify_cached(actual, kind, weight, previous):
+            def verify_cached(actual, kind, weight, previous, required_characters=None):
                 calls.append((actual, kind, weight, previous))
                 return {'sha256': digest, 'source_kind': 'local_ttc_extraction', 'source': str(source),
                         'source_sha256': 'wrong' if source_changed else hashlib.sha256(source.read_bytes()).hexdigest()}

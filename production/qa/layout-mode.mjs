@@ -11,9 +11,14 @@ export function expectsActorPixels(t,timeline){
  return timeline.sections.some(s=>['intro','players','information','strategy'].includes(s.id)&&t>=s.start+(s.id==='intro'?1.5:.5)&&t<s.end-.5);
 }
 
+/** The existence requirement belongs to the complete run, not each partition. */
+export function assertActorAlphaEvidence(summary,{required}){
+ if(required&&(!summary.nonempty_mask_samples||!summary.clearance_checks))throw Error('Actor alpha QA did not perform any text clearance checks against nonempty artwork masks.');
+}
+
 /** Fail closed when an explicitly requested mask check did not inspect artwork. */
 export function createActorAlphaAudit({required,width,height}){
- let nonemptySamples=0,expectedSamples=0,checks=0,currentNonempty=false,currentExpected=false,currentChecks=0;
+ let inspectedSamples=0,nonemptySamples=0,expectedSamples=0,checks=0,currentNonempty=false,currentExpected=false,currentChecks=0;
  const assertFrameChecks=()=>{if(required&&currentExpected&&!currentChecks)throw Error('Actor alpha QA did not perform text clearance checks on an expected-actor frame.');};
  return {
   inspect(mask,{expected=false,t}={}){
@@ -23,14 +28,16 @@ export function createActorAlphaAudit({required,width,height}){
    if(!mask||mask.width!==width||mask.height!==height||typeof mask.getContext!=='function')throw Error('Actor alpha QA requires a real canvas-sized RGBA mask on every sampled frame.');
    const data=mask.getContext('2d').getImageData(0,0,width,height).data;
    if(data.length!==width*height*4)throw Error('Actor alpha QA received an invalid RGBA mask.');
+   inspectedSamples++;
    for(let i=3;i<data.length;i+=4)if(data[i]>0){currentNonempty=true;nonemptySamples++;break;}
    if(expected){expectedSamples++;if(!currentNonempty)throw Error(`Actor alpha QA expected visible artwork at t=${t}, but its mask is empty.`);}
   },
   checked(){if(required&&currentNonempty){checks++;currentChecks++;}},
-  finish(){
+  finish({partial=false}={}){
    assertFrameChecks();
-   if(required&&(!nonemptySamples||!checks))throw Error('Actor alpha QA did not perform any text clearance checks against nonempty artwork masks.');
-   return {mode:required?'private_actor_alpha':'public_placeholder',nonempty_mask_samples:nonemptySamples,expected_actor_samples:expectedSamples,clearance_checks:checks};
+   const summary={mode:required?'private_actor_alpha':'public_placeholder',inspected_mask_samples:inspectedSamples,nonempty_mask_samples:nonemptySamples,expected_actor_samples:expectedSamples,clearance_checks:checks};
+   if(!partial)assertActorAlphaEvidence(summary,{required});
+   return summary;
   }
  };
 }

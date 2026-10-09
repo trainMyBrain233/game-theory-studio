@@ -18,16 +18,17 @@ test('both editorial metrics count pinned Unicode letters and numbers once per s
  const timeline=read(path.join(ROOT,'chapters/01-four-elements/narration/timeline.json'));
  const baseline=JSON.parse(currentProducts()[draftName]);
  const source=timeline.segments[0],oldSource=source.voiceover;
- const oldBlocks=structuredClone(template.blocks),oldDraft=baseline.blocks[0].voiceover;
- // Replace introductory speech only. All case-specific cues and the current
- // names, selection and asymmetric payoffs remain untouched.
+ const oldBlocks=structuredClone(template.blocks);
+ // Replace the generic source hook, but append to the identity-bearing draft
+ // introduction so its series/player/game references remain valid. The sample
+ // adds exactly eight readable scalars without weakening full-block semantics.
  try{
   source.voiceover=source.text=sample;source.lines=[sample];source.breath_points=[];
-  template.blocks[0].voiceover=sample;
+  template.blocks[0].voiceover+=sample;
   const draft=JSON.parse(resolveDraft({scene,presentation,timeline,sourceHash:'unicode-metrics-fixture'})[draftName]);
   assert.equal(readableCount(sample),8);
   assert.equal(draft.metrics.old_spoken_character_count,baseline.metrics.old_spoken_character_count-readableCount(oldSource)+8);
-  assert.equal(draft.metrics.draft_spoken_character_count,baseline.metrics.draft_spoken_character_count-readableCount(oldDraft)+8);
+  assert.equal(draft.metrics.draft_spoken_character_count,baseline.metrics.draft_spoken_character_count+8);
   assert.match(draft.metrics.definition,/Unicode 15\.0\.0/);
   assert.match(draft.metrics.definition,/逐码点/);
   assert.match(draft.metrics.definition,/不是真实语速|不是字素数、真实语速或片长预测/);
@@ -46,7 +47,7 @@ test('real narration and editorial rebuilds count accented and extended names an
   presentation.actors.A.name='𠀀é';presentation.actors.B.name='Ⅻe\u0301';
   fs.writeFileSync(presentationPath,JSON.stringify(presentation));
   const templatePath=path.join(root,relative,'blocks.template.json'),source=read(templatePath);
-  source.blocks[0].voiceover=sample;fs.writeFileSync(templatePath,JSON.stringify(source));
+  source.blocks[0].voiceover+=sample;fs.writeFileSync(templatePath,JSON.stringify(source));
   for(const args of [['scripts/build-narration.mjs'],[`${relative}/build.mjs`],[`${relative}/build.mjs`,'--check']]){
    const run=spawnSync(process.execPath,args,{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()}});
    assert.equal(run.status,0,run.stderr);
@@ -57,7 +58,9 @@ test('real narration and editorial rebuilds count accented and extended names an
   const oldText=timeline.segments.map(segment=>segment.voiceover).join('');
   assert(oldText.includes(scene.actors[0].label)&&oldText.includes(scene.actors[1].label));
   assert(spoken.includes(presentation.actors.A.name)&&spoken.includes(presentation.actors.B.name));
-  assert.equal(draft.blocks[0].voiceover,sample);
+  assert(draft.blocks[0].voiceover.endsWith(sample));
+  assert(draft.blocks[0].voiceover.includes(presentation.actors.A.name));
+  assert(draft.blocks[0].voiceover.includes(presentation.actors.B.name));
   assert.equal(draft.metrics.old_spoken_character_count,readableCount(oldText));
   assert.equal(draft.metrics.draft_spoken_character_count,readableCount(spoken));
   // Independent regression witness: the previous BMP/ASCII-only regex must

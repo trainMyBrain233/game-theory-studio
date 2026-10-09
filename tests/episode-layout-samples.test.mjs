@@ -73,3 +73,13 @@ test('lightweight runner aggregates every sample from multiple bounded renderer 
   assert.equal(report.status,'passed');assert.equal(report.issues.length,0);
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
+
+test('runner rejects a renderer-only timing override instead of publishing incomplete coverage',()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'layout-plan-mismatch-'));
+ try{
+  const output=path.join(directory,'report.json');
+  const result=spawnSync(process.execPath,['--loader',new URL('./fixtures/episode-alpha-stubs-loader.mjs',import.meta.url).pathname,new URL('../production/qa/layout-runner.mjs',import.meta.url).pathname,'--actor-alpha'],{encoding:'utf8',env:{...process.env,PYTHON:pythonCommand(),EPISODE_ALPHA_FIXTURE:'clear',EPISODE_ALPHA_DURATION:'12',EPISODE_ALPHA_SCENE_DURATION:'.5',EPISODE_LAYOUT_REPORT:output}});
+  assert.notEqual(result.status,0);assert.match(result.stdout+result.stderr,/Layout sampling plan mismatch between parent and renderer/);
+  assert(!fs.existsSync(output),'A mismatched plan must never publish a successful combined report.');
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Scan only this repository's candidate source files, never ignored/private folders."""
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import subprocess
 import sys
+import unicodedata
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -111,9 +112,64 @@ def svg_source_issue(text):
                 return issue
     return None
 
+
+# Win32 resolves these names as devices even when an extension is appended.
+WINDOWS_RESERVED_NAMES = {'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} | {
+    prefix + suffix for prefix in ('COM', 'LPT') for suffix in '123456789¹²³'
+}
+
+
+def portable_path_collision(name, seen):
+    """Reject NFC/case-folded member and directory aliases, including file/dir clashes."""
+    parts = name.split('/')
+    portable_parts = [unicodedata.normalize('NFC', unicodedata.normalize('NFC', part).casefold())
+                      for part in parts]
+    for count in range(1, len(parts) + 1):
+        prefix = '/'.join(parts[:count])
+        identity = (prefix, count == len(parts))
+        key = '/'.join(portable_parts[:count])
+        if key in seen and seen[key] != identity:
+            return True
+        seen[key] = identity
+    return False
+
+
+def validate_source_path(name):
+    """Portable checkout path contract, shared with the public source packer.
+
+    The standalone verifier keeps its independent pre-import implementation;
+    regression tests enforce parity without executing caller-supplied code.
+    """
+    if not isinstance(name, str) or not name:
+        raise ValueError('Unsafe public source filename')
+    relative = PurePosixPath(name)
+    if (relative.is_absolute() or PureWindowsPath(name).drive or
+            any(character in '<>:"\\|?*' for character in name) or
+            any(part in {'', '.', '..'} or part.endswith((' ', '.')) for part in name.split('/')) or
+            any(ord(character) < 32 for character in name) or relative.as_posix() != name or
+            any(part.partition('.')[0].rstrip(' ').upper() in WINDOWS_RESERVED_NAMES for part in name.split('/'))):
+        raise ValueError('Unsafe public source filename')
+    if name.split('/')[0].casefold() == 'source_manifest.json':
+        raise ValueError('Reserved public source manifest filename')
+
+
 def scan_sources(root, files):
     errors = []
     total = 0
+    # Consume iterators once and reject the entire candidate namespace before
+    # inspecting any candidate, including otherwise harmless earlier entries.
+    files = list(files)
+    portable_paths = {}
+    for relative in files:
+        try:
+            validate_source_path(relative)
+        except ValueError as error:
+            errors.append((repr(relative), str(error)))
+            continue
+        if portable_path_collision(relative, portable_paths):
+            errors.append((repr(relative), 'Public source filenames collide after portable normalization'))
+    if errors:
+        return errors, total
     for relative in files:
         file = root / relative
         if file.is_symlink() or any(parent.is_symlink() for parent in file.parents if parent != root and root in parent.parents):
@@ -152,7 +208,10 @@ def main():
                          'Run python3 production/verify_source_archive.py on an unchanged extraction for integrity; '
                          'git clone --branch main https://github.com/trainMyBrain233/game-theory-studio.git for npm test.')
     output = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT)
-    files = sorted(set(x.decode('utf-8') for x in output.split(b'\0') if x))
+    try:
+        files = sorted(set(x.decode('utf-8') for x in output.split(b'\0') if x))
+    except UnicodeDecodeError:
+        raise SystemExit('Public source filenames must be UTF-8') from None
     errors, total = scan_sources(ROOT, files)
     if errors:
         for file, reason in errors: print(f'FAIL {file}: {reason}')

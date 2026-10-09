@@ -32,6 +32,7 @@ class CurrentNarrationSemanticsTests(unittest.TestCase):
                 rows, case = ('rows', 'CASE') if source == helpers.EPISODE else ('segments', 'case')
                 marker = f'validate_narration({rows}, {case})'
                 mutations = [
+                    ('show_two_actions', '每人选红牌或蓝牌。'),
                     ('reveal_scores', '小A得零分，小B得五分。'),
                     ('reveal_scores', '甲方得零分，乙方得五分。'),
                     ('reveal_scores', '小A得二十七分，小B得三十一分。'),
@@ -39,6 +40,13 @@ class CurrentNarrationSemanticsTests(unittest.TestCase):
                 ]
                 if source == helpers.EPISODE:
                     mutations.extend([
+                        ('introduce_players', '假设小A和小B，玩一轮积分游戏。'),
+                        ('introduce_matrix_rows', '行，是小A的选择。'),
+                        ('introduce_matrix_rows', '行，是乙方的选择。'),
+                        ('introduce_matrix_columns', '列，是小B的选择。'),
+                        ('introduce_score_order', '先读乙方的得分，再读甲方的得分。'),
+                        ('map_actions_to_pure_strategies', '红和蓝就是两个纯策略。'),
+                        ('show_multi_round_plan', '第一轮选红；以后再决定。'),
                         ('highlight_choices', '小A选红，小B选红。'),
                         ('highlight_choices', '甲方选红，乙方选红。'),
                         ('highlight_choices', '小A选合作，小B选合作。'),
@@ -51,6 +59,21 @@ class CurrentNarrationSemanticsTests(unittest.TestCase):
                     for mode in helpers.MODES:
                         with self.subTest(source=source, mode=mode, stale=stale):
                             self.check_rejected_without_writes(builder, mode, 'narration missing current-case')
+
+    def test_all_default_builders_accept_in_all_modes(self):
+        for source in [helpers.EPISODE, helpers.ORIGINAL, 'templates/chapter/build_narration.py']:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                builder = self.fixture(root, source)
+                baseline = None
+                for mode in helpers.MODES:
+                    result = self.run_builder(builder, mode, root / 'valid-products')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    produced = {str(path.relative_to(root / 'valid-products')): path.read_bytes()
+                                for path in (root / 'valid-products').rglob('*') if path.is_file()}
+                    if baseline is None:
+                        baseline = produced
+                    self.assertEqual(produced, baseline)
 
     def test_all_builders_accept_changed_case_and_custom_clauses_in_all_modes(self):
         for source in [helpers.EPISODE, helpers.ORIGINAL, 'templates/chapter/build_narration.py']:

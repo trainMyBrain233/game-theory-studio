@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Archive the unified public source candidate list after the same source guard as CI."""
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath
 import argparse
 import hashlib
 import importlib.util
@@ -9,8 +9,8 @@ import os
 import re
 import stat
 import subprocess
+import sys
 import tempfile
-import unicodedata
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,44 +22,25 @@ class ArchiveBuildError(ValueError):
     """A public archive failed a publication check; the previous ZIP is retained."""
 
 
-# Win32 resolves these names as devices even when an extension is appended.
-WINDOWS_RESERVED_NAMES = {'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} | {
-    prefix + suffix for prefix in ('COM', 'LPT') for suffix in '123456789¹²³'
-}
-
-
-def portable_path_collision(name, seen):
-    """Reject NFC/case-folded member and directory aliases, including file/dir clashes."""
-    parts = name.split('/')
-    portable_parts = [unicodedata.normalize('NFC', unicodedata.normalize('NFC', part).casefold())
-                      for part in parts]
-    for count in range(1, len(parts) + 1):
-        prefix = '/'.join(parts[:count])
-        identity = (prefix, count == len(parts))
-        key = '/'.join(portable_parts[:count])
-        if key in seen and seen[key] != identity:
-            return True
-        seen[key] = identity
-    return False
+# Reuse this checkout's self-contained guard; never import a guard from an
+# archive or caller-supplied source directory. The verifier remains independent.
+_spec = importlib.util.spec_from_file_location('packing_source_guard', ROOT / 'scripts/qa_source.py')
+_source_guard = importlib.util.module_from_spec(_spec)
+_previous_bytecode = sys.dont_write_bytecode
+try:
+    sys.dont_write_bytecode = True
+    _spec.loader.exec_module(_source_guard)
+finally:
+    sys.dont_write_bytecode = _previous_bytecode
+portable_path_collision = _source_guard.portable_path_collision
 
 
 def validate_source_path(name):
-    """Match the verifier's canonical path contract before writing any ZIP entry.
-
-    Kept dependency-free so an extracted verifier need not import another source
-    module before checking its bytes. Regression tests enforce contract parity.
-    """
-    if not isinstance(name, str) or not name:
-        raise ArchiveBuildError('Unsafe public source filename')
-    relative = PurePosixPath(name)
-    if (relative.is_absolute() or PureWindowsPath(name).drive or
-            any(character in '<>:"\\|?*' for character in name) or
-            any(part in {'', '.', '..'} or part.endswith((' ', '.')) for part in name.split('/')) or
-            any(ord(character) < 32 for character in name) or relative.as_posix() != name or
-            any(part.partition('.')[0].rstrip(' ').upper() in WINDOWS_RESERVED_NAMES for part in name.split('/'))):
-        raise ArchiveBuildError('Unsafe public source filename')
-    if name.split('/')[0].casefold() == 'source_manifest.json':
-        raise ArchiveBuildError('Reserved public source manifest filename')
+    """Keep the packer's public error type while sharing QA's path contract."""
+    try:
+        _source_guard.validate_source_path(name)
+    except ValueError as error:
+        raise ArchiveBuildError(str(error)) from None
 
 
 def source_candidates(root, git_output):
@@ -222,9 +203,7 @@ def main():
     parser.add_argument('--public', action='store_true', required=True,
                         help='Only public source packaging is supported; private artwork is never included.')
     parser.parse_args()
-    spec = importlib.util.spec_from_file_location('source_guard', ROOT / 'scripts/qa_source.py')
-    guard = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(guard)
+    guard = _source_guard
     try:
         build_source_archive(ROOT, guard)
     except (ValueError, OSError, KeyError, TypeError, zipfile.BadZipFile, RuntimeError) as error:

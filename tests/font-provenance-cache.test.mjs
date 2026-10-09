@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {withSourceFixture} from '../scripts/source-fixture.mjs';
+import {pythonCommand} from '../scripts/python.mjs';
 
 test('proof caching keys actual font, manifest, verifier and TTC-source bytes, without Canvas or FontTools',()=>{
  withSourceFixture(root=>{
@@ -39,10 +40,13 @@ assert.throws(()=>verifyPreparedFonts(['Sans']),/fixture provenance rejected/);a
 fs.writeFileSync(source,'source-1');mock.reject=false;
 fs.appendFileSync('scripts/setup_fonts.py','\\n');verifyPreparedFonts(['Sans']);assert.equal(mock.calls,8);
 fs.appendFileSync('typography/verify-fonts.py','\\n');verifyPreparedFonts(['Sans']);assert.equal(mock.calls,9);
+const config='design/experiments/tabletop/presentation.json',data=JSON.parse(fs.readFileSync(config));data.actors.A.name='𠀀';fs.writeFileSync(config,JSON.stringify(data));
+verifyPreparedFonts(['Sans']);assert.equal(mock.calls,10);assert(mock.last.expected.inventory.characters.includes('𠀀'));
+verifyPreparedFonts(['Sans']);assert.equal(mock.calls,10);
 assert.equal(fs.readFileSync(manifest,'utf8'),'{}  ','Verification must not rewrite provenance');
 fs.unlinkSync(regular);assert.throws(()=>verifyPreparedFonts(['Sans']),/Required SC font is missing/);
 `;
-  const run=spawnSync(process.execPath,['--loader','./tests/fixtures/font-provenance-stubs-loader.mjs','--input-type=module','-e',code],{cwd:root,encoding:'utf8'});
+  const run=spawnSync(process.execPath,['--loader','./tests/fixtures/font-provenance-stubs-loader.mjs','--input-type=module','-e',code],{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()}});
   assert.equal(run.status,0,run.stdout+run.stderr);
  });
 });

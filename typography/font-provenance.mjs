@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {currentGlyphInventory} from './glyph-inventory.mjs';
 import {runPython} from '../scripts/python.mjs';
 
 const DIRECTORY=fileURLToPath(new URL('./fonts',import.meta.url));
@@ -28,7 +29,7 @@ function snapshot(kinds) {
   if(!fs.existsSync(filename))throw new Error(`Required SC font is missing: ${filename}`);
   return {kind,weight,sha256:fileDigest(filename)};
  }));
- return {fonts,manifestSha256:fileDigest(path.join(DIRECTORY,'prepared_font_manifest.json')),
+ return {fonts,inventory:currentGlyphInventory(),manifestSha256:fileDigest(path.join(DIRECTORY,'prepared_font_manifest.json')),
   verifierSha256:fileDigest(VERIFIER),setupSha256:fileDigest(SETUP)};
 }
 

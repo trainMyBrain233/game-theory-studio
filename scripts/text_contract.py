@@ -121,8 +121,40 @@ def clauses_stay_whole(clauses, lines, voiceover):
     return all(sum(line.count(clause) for line in lines) == voiceover.count(clause) for clause in clauses)
 
 
-def validate_cue_narration(lines, voiceover, players, cue=None, role='Subtitle'):
+def validate_cue_narration(lines, voiceover, players, cue=None, role='Subtitle', strategies=()):
     cue = cue or {}
+
+    def identity(pattern, description):
+        if not re.search(pattern, voiceover):
+            raise ValueError(f'{role}: narration missing current-case {description} clause')
+
+    def pair(first, second, join):
+        return rf'(?:{first}(?:牌)?{join}{second}(?:牌)?|{second}(?:牌)?{join}{first}(?:牌)?)'
+
+    a, b = map(re.escape, players)
+    r, c = map(re.escape, strategies) if len(strategies) == 2 else ('', '')
+    alternatives = pair(r, c, '，?(?:或者|或是|或|和|与|、)')
+    action = cue.get('action')
+    if action == 'introduce_players':
+        identity(pair(a, b, '，?(?:和|与|、)'), 'players')
+        return
+    if action == 'show_two_actions':
+        identity(rf'(?:选择|选){alternatives}', 'strategy alternatives')
+        return
+    if action == 'map_actions_to_pure_strategies':
+        identity(rf'{alternatives}(?:就是|是|作为)(?:两个|两种)?纯策略', 'pure strategies')
+        return
+    if action == 'show_multi_round_plan':
+        identity(rf'第一轮(?:，)?(?:选择|选){r}(?:牌)?(?=$|[{BREAKS}])', 'first-round strategy')
+        return
+    if action in ('introduce_matrix_rows', 'introduce_matrix_columns'):
+        axis = '行' if action == 'introduce_matrix_rows' else '列'
+        owner = a if axis == '行' else b
+        identity(rf'(?:{axis}，?(?:是|表示|代表|对应){owner}的选择|{owner}的选择(?:在|对应){axis})(?=$|[{BREAKS}])', f'matrix {axis} owner')
+        return
+    if action == 'introduce_score_order':
+        identity(rf'先(?:读|看){a}的得分，(?:然后|再)(?:读|看){b}的得分(?=$|[{BREAKS}])', 'score order')
+        return
     if cue.get('action') not in ('highlight_choices', 'reveal_scores'):
         return
 
@@ -166,4 +198,4 @@ def validate_subtitle_chunk(lines, voiceover, players, strategies, cue=None, rol
 
 def validate_subtitle_lines(lines, voiceover, players, strategies, cue=None, role='Subtitle'):
     validate_subtitle_chunk(lines, voiceover, players, strategies, cue, role)
-    validate_cue_narration(lines, voiceover, players, cue, role)
+    validate_cue_narration(lines, voiceover, players, cue, role, strategies)

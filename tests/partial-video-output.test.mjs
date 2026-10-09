@@ -69,3 +69,42 @@ test('real renderer publishes explicit partial videos through the real encoder h
   }
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('real renderer resolves actual cwd/output-directory aliases, even before canonical movie files exist',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'partial-video-alias-'));
+ try{
+  const real=path.join(dir,'real'),alias=path.join(dir,'alias');fs.mkdirSync(real);fs.symlinkSync(real,alias,'dir');
+  const outputAlias=path.join(dir,'output-alias');
+  fs.mkdirSync(path.join(real,'nested'));const nestedAlias=path.join(dir,'nested-alias');fs.symlinkSync(path.join(real,'nested'),nestedAlias,'dir');
+  const run=(cwd,args)=>spawnSync(process.execPath,['--loader',path.join(ROOT,'tests/fixtures/render-boundary-stubs-loader.mjs'),path.join(ROOT,'production/render.mjs'),...args],{cwd,env:{...process.env,PYTHON:pythonCommand()},encoding:'utf8'});
+  // No output directory exists yet: resolve the nearest existing ancestor.
+  let result=run(alias,['--duration','.1','--out',path.join(alias,full(1920))]);
+  assert.notEqual(result.status,0);assert.match(result.stderr,/canonical full-film output/);assert.doesNotMatch(result.stderr,/boundary reached/);
+  assert.equal(fs.existsSync(path.join(real,'output')),false);
+  fs.mkdirSync(path.join(real,'output'));fs.symlinkSync(path.join(real,'output'),outputAlias,'dir');
+  for(const existing of [false,true]){
+   if(existing)for(const width of [1920,3840])fs.writeFileSync(path.join(real,full(width)),`full-film sentinel ${width}`);
+   for(const width of [1920,3840])for(const target of [path.join(alias,full(width)),path.join(real,full(width)),path.join(outputAlias,path.basename(full(width))),`${nestedAlias}/../${full(width)}`]){
+    result=run(alias,['--duration','.1','--out',target]);
+    assert.ifError(result.error);assert.notEqual(result.status,0);
+    assert.match(result.stderr,/canonical full-film output/,target);
+    assert.doesNotMatch(result.stderr,/boundary reached/);
+   }
+   for(const width of [1920,3840]){
+    if(existing)assert.equal(fs.readFileSync(path.join(real,full(width)),'utf8'),`full-film sentinel ${width}`);
+    else assert.equal(fs.existsSync(path.join(real,full(width))),false);
+   }
+  }
+  // Same-file identities protect case aliases on case-insensitive filesystems;
+  // hard links exercise this identity branch on every supported filesystem.
+  const hardlink=path.join(real,'same-film.mp4');fs.linkSync(path.join(real,full(1920)),hardlink);
+  result=run(alias,['--duration','.1','--out',hardlink]);assert.match(result.stderr,/canonical full-film output/);assert.doesNotMatch(result.stderr,/boundary reached/);
+  const caseAlias=path.join(real,full(1920).toUpperCase());
+  if(fs.existsSync(caseAlias)){
+   result=run(alias,['--duration','.1','--out',caseAlias]);assert.match(result.stderr,/canonical full-film output/);assert.doesNotMatch(result.stderr,/boundary reached/);
+  }
+  result=run(alias,['--duration','.1','--out',path.join(outputAlias,'independent-segment.mp4')]);
+  assert.match(result.stderr,/Encoder boundary reached/,'A genuinely independent aliased output passes option validation.');
+  assert.doesNotMatch(result.stderr,/canonical full-film output/);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

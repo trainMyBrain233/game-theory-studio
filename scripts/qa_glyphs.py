@@ -4,6 +4,7 @@ from pathlib import Path
 from fontTools.ttLib import TTFont
 import hashlib
 import json
+from setup_fonts import current_characters
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -12,7 +13,7 @@ def main(root=ROOT):
     font_dir = root / 'typography/fonts'
     manifest = json.loads((font_dir / 'prepared_font_manifest.json').read_text(encoding='utf-8'))
     runs = json.loads((root / 'typography/qa/text-runs.json').read_text(encoding='utf-8'))['textRuns']
-    chars = {c for c in ''.join(runs) if not c.isspace()}
+    chars = set(current_characters()) | {c for c in ''.join(runs) if not c.isspace()}
     results = []
     for kind in ['Sans', 'Serif']:
         for weight, number in [('Regular', 400), ('Bold', 700)]:

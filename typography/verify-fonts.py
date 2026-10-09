@@ -36,7 +36,7 @@ def main():
             raise ValueError(f'{filename}: font bytes changed during verification')
         # Includes official pins OR independent TTC extraction, SC family,
         # version, real weight, required glyphs and complete-font size checks.
-        verified = setup_fonts.verify_cached(target, kind, weight, previous)
+        verified = setup_fonts.verify_cached(target, kind, weight, previous, required_characters=expected.get('inventory', {}).get('characters'))
         if verified['sha256'] != previous.get('sha256'):
             raise ValueError(f'{filename}: manifest does not match independently verified font bytes')
         if verified['source_kind'] == 'local_ttc_extraction':

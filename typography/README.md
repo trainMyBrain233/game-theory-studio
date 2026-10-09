@@ -38,3 +38,25 @@ SC完整OTF与从TTC提取的SC在容器结构/校验值上可以不同。需要
 基础模板为原生1920×1080、40px字幕、30px左右重要标签，普通正文对底色至少4.5:1。正确SC字体、足够字号与字重优先于盲目提高分辨率或码率。字体与路径直接在目标像素绘制，不先生成小位图再放大。
 
 完整视频的编码后抽帧、压缩字体边缘、转场字幕停留和播放端效果仍须在完整导出后验证。
+
+### Current repertoire before first use
+
+Preparation, cached provenance verification, and native font registration share
+`glyph-inventory.mjs`. It reads current authored scene/presentation/production
+JSON and chapter timelines/templates from an explicit input list, plus the renderer
+source repertoire, without
+importing Canvas or a font-aware renderer. Generated QA/review JSON is excluded
+from both the repertoire and its signature. The repertoire is a conservative upper
+bound, not a claim that every checked character is drawn: source comments and
+non-rendered JSON strings are also included. An unsupported character added only
+to such text can therefore fail the gate; investigate its source rather than
+weakening the face/provenance checks. New rendering entrypoints outside the listed
+source trees must be added to this inventory.
+
+The inventory uses Unicode code points (including supplementary-plane characters)
+and is recomputed only after its source-content SHA256 changes. Registration proof
+keys include this signature and repertoire in addition to font, manifest, verifier,
+and setup bytes; current text edits cannot reuse a stale proof. Repeated checks
+still read/hash source bytes, rather than trusting mtimes. Setup derives the shared
+inventory once for all four faces. Font QA additionally checks measured text runs;
+no stale generated QA report is used to authorize first registration.

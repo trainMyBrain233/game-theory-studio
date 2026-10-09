@@ -16,6 +16,7 @@ withSourceFixture(root=>{
  for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm'])fs.writeFileSync(path.join(directory,`${id}_${part}.png`),image.toBuffer('image/png'));
  const loader=path.join(root,'alpha-native-loader.mjs');
  fs.writeFileSync(loader,`export async function load(url,context,next){
+ if(url.endsWith('/production/qa/layout-samples.mjs'))return {format:'module',shortCircuit:true,source:'export function createLayoutSamples(){return {times:[0],intervals:[],maxStep:.1,fps:30};}'};
  if(url.endsWith('/production/src/scenes.mjs'))return {format:'module',shortCircuit:true,source:\`import * as real from '\${url}?native';
  export const content=real.content,DURATION=.5,timeline={...real.timeline,segments:[],sections:[{id:"players",start:-1,end:1}]};
  export function drawFrame(canvas){const players=real.timeline.sections.find(s=>s.id==='players');real.drawFrame(canvas,(players.start+players.end)/2);}\`};
@@ -26,7 +27,7 @@ withSourceFixture(root=>{
  const privateRun=run(['--actor-alpha']);
  assert.equal(privateRun.status,0,privateRun.stdout+privateRun.stderr);
  const report=JSON.parse(fs.readFileSync(path.join(root,'production/qa/checks.json')));
- assert.equal(report.actor_alpha.mode,'private_actor_alpha');assert.equal(report.actor_alpha.nonempty_mask_samples,1);assert.equal(report.actor_alpha.expected_actor_samples,1);assert(report.actor_alpha.clearance_checks>0);
+ assert.equal(report.actor_alpha.mode,'private_actor_alpha');assert.equal(report.actor_alpha.inspected_mask_samples,1);assert.equal(report.actor_alpha.nonempty_mask_samples,1);assert.equal(report.actor_alpha.expected_actor_samples,1);assert.equal(report.actor_alpha.clearance_checks,10);assert.equal(report.samples,1);
  console.log('Native npm private alpha original-RGBA proof:',JSON.stringify(report.actor_alpha));
  // Public images must be skipped privately, but used by the default npm path.
  const publicRun=run([]);assert.notEqual(publicRun.status,0);assert.match(publicRun.stderr,/Unsupported image type/);

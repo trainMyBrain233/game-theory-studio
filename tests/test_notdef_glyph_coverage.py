@@ -30,6 +30,7 @@ spec = importlib.util.spec_from_file_location('notdef_check_fonts', ROOT / 'prod
 check_fonts = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check_fonts)
 TARGET = '龘'
+CURRENT = ''.join(setup_fonts.current_characters())
 TEXT = TARGET + '博弈论入门参与者信息策略收益每种组合各得什么选择规则红蓝小A小B'
 
 
@@ -40,7 +41,7 @@ def make_face(kind, weight, *, notdef=False):
     order = (['zero', '.notdef', 'ink'] if notdef else ['.notdef', 'zero', 'ink'])
     order += [f'empty{i}' for i in range(20000 - len(order))]
     builder.setupGlyphOrder(order)
-    cmap = {ord(c): 'ink' for c in TEXT}
+    cmap = {ord(c): 'ink' for c in TEXT + CURRENT}
     if notdef:
         cmap[ord(TARGET)] = '.notdef'
     builder.setupCharacterMap(cmap)

@@ -89,7 +89,32 @@ function clausesStayWhole(clauses, lines, voiceover) {
     return lines.reduce((sum, line) => sum + count(line), 0) === count(voiceover);
   });
 }
-export function validateCueNarration(lines, voiceover, players, cue = {}, role = 'Subtitle') {
+export function validateCueNarration(lines, voiceover, players, cue = {}, role = 'Subtitle', strategies = []) {
+  // Bounded positive identity/binding evidence, not general Chinese NLP.
+  const identity = (pattern, description) => {
+    requireText(new RegExp(pattern, 'u').test(voiceover), `${role}: narration missing current-case ${description} clause`);
+  };
+  const [a, b] = players.map(escapeRegex), [r, c] = strategies.map(escapeRegex);
+  const pair = (first, second, join) => `(?:${first}(?:牌)?${join}${second}(?:牌)?|${second}(?:牌)?${join}${first}(?:牌)?)`;
+  const alternatives = pair(r, c, '，?(?:或者|或是|或|和|与|、)');
+  switch (cue.action) {
+    case 'introduce_players':
+      identity(pair(a, b, '，?(?:和|与|、)'), 'players'); return;
+    case 'show_two_actions':
+      identity(`(?:选择|选)${alternatives}`, 'strategy alternatives'); return;
+    case 'map_actions_to_pure_strategies':
+      identity(`${alternatives}(?:就是|是|作为)(?:两个|两种)?纯策略`, 'pure strategies'); return;
+    case 'show_multi_round_plan':
+      identity(`第一轮(?:，)?(?:选择|选)${r}(?:牌)?(?=$|[${BREAKS}])`, 'first-round strategy'); return;
+    case 'introduce_matrix_rows':
+    case 'introduce_matrix_columns': {
+      const axis = cue.action === 'introduce_matrix_rows' ? '行' : '列';
+      const owner = axis === '行' ? a : b;
+      identity(`(?:${axis}，?(?:是|表示|代表|对应)${owner}的选择|${owner}的选择(?:在|对应)${axis})(?=$|[${BREAKS}])`, `matrix ${axis} owner`); return;
+    }
+    case 'introduce_score_order':
+      identity(`先(?:读|看)${a}的得分，(?:然后|再)(?:读|看)${b}的得分(?=$|[${BREAKS}])`, 'score order'); return;
+  }
   if (!['highlight_choices', 'reveal_scores'].includes(cue.action)) return;
   const requireClause = (subjects, predicate, description) => {
     const clauses = matchingClauses(voiceover, subjects, predicate);
@@ -130,5 +155,5 @@ export function validateSubtitleChunk(lines, voiceover, players, strategies, cue
 /** A complete cue-bearing spoken segment needs every current owner/predicate. */
 export function validateSubtitleLines(lines, voiceover, players, strategies, cue = {}, role = 'Subtitle') {
   validateSubtitleChunk(lines, voiceover, players, strategies, cue, role);
-  validateCueNarration(lines, voiceover, players, cue, role);
+  validateCueNarration(lines, voiceover, players, cue, role, strategies);
 }
