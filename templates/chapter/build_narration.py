@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from narration_io import write_products
 from case_data import Case
+from text_contract import readable_count
 case = Case(ROOT)
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -26,11 +27,12 @@ segments = []
 time = 0.0
 for key, text, spoken, pause, cue in rows:
     if not case.is_original:
-        spoken = max(spoken, round(sum(char.isalnum() for char in text) / 3.8, 1))
+        spoken = max(spoken, round(readable_count(text) / 3.8, 1))
     voiceover_end = round(time + spoken, 3)
     end = round(voiceover_end + pause, 3)
-    segments.append({'id': key, 'section': 'example', 'text': text, 'voiceover': text,
-                     'spoken_duration': spoken, 'pause_after': pause, 'lines': case.lines(text),
+    lines = case.lines(text, cue)
+    segments.append({'id': key, 'section': 'example', 'text': '\n'.join(lines), 'voiceover': text,
+                     'spoken_duration': spoken, 'pause_after': pause, 'lines': lines,
                      'visual_cue': cue, 'breath_points': [], 'start': time,
                      'voiceover_end': voiceover_end, 'end': end,
                      'display_duration': round(end-time, 3), 'speech_plan_note': '人工口播参考，录音后再对齐。'})

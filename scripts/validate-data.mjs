@@ -3,6 +3,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import Ajv from 'ajv';
 import {ROOT} from './python.mjs';
+import {normalizedLabel, validateSubtitleLines} from './text-contract.mjs';
 
 const ajv = new Ajv({allErrors: true, strict: true});
 const validators = new Map();
@@ -20,10 +21,11 @@ export function validateScenes(scenes) {
   assert.deepEqual(scenes.frames.map(x => x.id), ['participants', 'payoff']);
   assert.equal(scenes.selected.actorA, scenes.strategies[scenes.selected.row].id);
   assert.equal(scenes.selected.actorB, scenes.strategies[scenes.selected.column].id);
-  assert.equal(new Set(scenes.actors.map(x => x.label)).size, 2, 'Player labels must differ');
-  assert.equal(new Set(scenes.strategies.map(x => x.label)).size, 2, 'Strategy labels must differ');
+  assert.equal(new Set(scenes.actors.map(x => normalizedLabel(x.label, 'Player'))).size, 2, 'Player visible labels must differ');
+  assert.equal(new Set(scenes.strategies.map(x => normalizedLabel(x.label, 'Strategy'))).size, 2, 'Strategy visible labels must differ');
 }
 export function validateTimeline(timeline, scenes) {
+  validateScenes(scenes);
   validateSchema('timeline', timeline);
   const labels = scenes.actors.map(actor => actor.label);
   const values = Object.fromEntries(['RR', 'RB', 'BR', 'BB'].map((key, i) => [key, scenes.payoffs[Math.floor(i / 2)][i % 2]]));
@@ -41,8 +43,7 @@ export function validateTimeline(timeline, scenes) {
     close(s.display_duration, s.end - s.start);
     if (i) close(timeline.segments[i - 1].end, s.start);
     assert.equal(s.lines.join('\n'), s.text);
-    assert.equal(s.text.replace(/\s/g, ''), s.voiceover.replace(/\s/g, ''));
-    assert(s.lines.every(line => [...line.matchAll(/[\u4e00-\u9fffA-Za-z0-9]/g)].length <= 22));
+    validateSubtitleLines(s.lines, s.voiceover, labels, scenes.strategies.map(strategy => strategy.label), s.visual_cue, s.id);
     assert(s.breath_points.every(breath => s.voiceover.includes(breath)), `${s.id}: breath point not in voiceover`);
     const section = timeline.sections.find(section => section.id === s.section);
     assert(section && s.start >= section.start && s.end <= section.end);

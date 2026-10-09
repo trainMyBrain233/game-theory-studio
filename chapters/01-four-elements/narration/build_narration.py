@@ -1,8 +1,9 @@
 from pathlib import Path
-import argparse,json,re,sys
+import argparse,json,sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[3]/'scripts'))
 from narration_io import write_products
 from case_data import Case
+from text_contract import readable_count
 CASE=Case(Path(__file__).resolve().parents[3])
 PAYOFFS=CASE.values
 sys.stdout.reconfigure(encoding='utf-8')
@@ -13,15 +14,17 @@ OUT.mkdir(parents=True,exist_ok=True)
 # Speech estimates are authored per semantic unit; they are not character-rate allocation.
 # Only revised text is re-estimated; unchanged original reference windows stay fixed.
 def revised_speech(text,previous):
-    return max(previous,round(len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',text))/3.8,1))
+    return max(previous,round(readable_count(text)/3.8,1))
 rows=[]
 def add(section,key,text,spoken_duration,pause,lines=None,cue=None,breaths=None):
     text=CASE.score_text(cue['matrix_cell']) if cue and cue.get('action')=='reveal_scores' else CASE.text(text)
-    lines=[CASE.text(line) for line in lines] if lines else CASE.lines(text)
-    if any(len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',line))>22 for line in lines):lines=CASE.lines(text)
-    if not CASE.is_original:spoken_duration=max(spoken_duration,round(len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',text))/3.8,1))
+    adapted_cue=CASE.cue(cue or {})
+    lines=[CASE.text(line) for line in lines] if lines else CASE.lines(text, adapted_cue)
+    if any(readable_count(line)>22 for line in lines):lines=CASE.lines(text, adapted_cue)
+    CASE.validate_lines(lines, text, adapted_cue)
+    if not CASE.is_original:spoken_duration=max(spoken_duration,round(readable_count(text)/3.8,1))
     breaths=[CASE.text(breath) for breath in (breaths or []) if CASE.text(breath) in text]
-    rows.append(dict(section=section,key=key,text=text,voiceover=text,spoken_duration=spoken_duration,pause_after=pause,lines=lines,visual_cue=CASE.cue(cue or {}),breath_points=breaths))
+    rows.append(dict(section=section,key=key,text=text,voiceover=text,spoken_duration=spoken_duration,pause_after=pause,lines=lines,visual_cue=adapted_cue,breath_points=breaths))
 add('intro','hook','两个人都想多拿分，为什么还得琢磨对方怎么选？',5.7,.8,['两个人都想多拿分，','为什么还得琢磨对方怎么选？'],{'action':'show_shared_game','note':'同一桌面、同一对角色和红蓝牌；第一句不抢先解释。'},['多拿分，'])
 add('intro','four_questions','看懂一场博弈，先问四个问题。',3.9,.8,cue={'action':'introduce_four_questions','note':'四个卡片有序出现，仅突出总标题。'},breaths=['一场博弈，'])
 add('players','question','第一，谁在做决定？',2.5,.7,cue={'action':'focus_question','question':1})
@@ -114,11 +117,11 @@ for s in sections:
     parts.append('\n'.join(r['voiceover'] for r in rows if r['section']==s['id'])+'\n')
 voiceover_text='\n'.join(parts)
 # Operational QA: CJK/letter/digit characters, punctuation excluded. Reference metrics, not speech standards.
-def chars(s): return len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]',s))
+def chars(s): return readable_count(s)
 assert all(len(r['lines'])<=2 and max(map(chars,r['lines']))<=22 for r in rows)
 assert all(r['end']>r['start'] and r['voiceover_end']<=r['end'] for r in rows)
 assert all(abs(rows[i]['end']-rows[i+1]['start'])<.0001 for i in range(len(rows)-1))
-assert all(re.sub(r'\s','',r['text'])==re.sub(r'\s','',r['voiceover']) for r in rows)
+assert all(''.join(r['lines'])==r['voiceover'] for r in rows)
 for row in rows:
     cue=row['visual_cue']
     if 'matrix_cell' in cue:

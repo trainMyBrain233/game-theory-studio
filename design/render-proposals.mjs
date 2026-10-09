@@ -9,6 +9,7 @@ import {registerFonts,canvasFont,FONT_FAMILY,SERIF_FAMILY} from '../typography/f
 import {assertAppliedFont} from '../typography/font-contract.mjs';
 import {validateScenes,validateSchema} from '../scripts/validate-data.mjs';
 import {checkTextLayout} from '../scripts/layout.mjs';
+import {proposalScale} from './canvas-geometry.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 export const TOKENS=JSON.parse(fs.readFileSync(path.join(HERE,'tokens.json')));
 export const DATA=JSON.parse(fs.readFileSync(path.join(HERE,'scenes.json')));
@@ -157,6 +158,7 @@ function brightPayoff(scene){const f=focus();
  rect(1123,769,190,69,S.accent,S.ink,4);rect(1525,769,190,69,'#DAD4EA',S.ink,4);txt(`${actorLabel('A')} · ${f.a}分`,1218,801,34,700,S.ink,'center');txt(`${actorLabel('B')} · ${f.b}分`,1620,801,34,700,S.ink,'center');
 }
 export function drawScene(canvas,styleId,sceneId,override={}){
+ const scale=proposalScale(canvas.width,canvas.height);
  c=canvas.getContext('2d');S=TOKENS.styles[styleId];if(!S)throw Error('Unknown style');
  STATE={...DATA,...override.data};
  STATE.selected={...STATE.selected,...override.selected};
@@ -167,7 +169,7 @@ export function drawScene(canvas,styleId,sceneId,override={}){
  const variables={actorA:actorLabel('A'),actorB:actorLabel('B'),strategyA:strategyLabel(f.kindA),strategyB:strategyLabel(f.kindB),scoreA:f.a,scoreB:f.b};
  for(const key of ['title','lead','subtitle'])scene[key]=scene[key].replace(/\{([^}]+)\}/g,(_,name)=>{if(!Object.hasOwn(variables,name))throw Error(`Unknown scene text variable: ${name}`);return variables[name]});
  bounds.length=0;
- c.save();c.fillStyle=S.paper;c.fillRect(0,0,canvas.width,canvas.height);c.scale(canvas.width/1920,canvas.height/1080);c.lineJoin='round';
+ c.save();c.fillStyle=S.paper;c.fillRect(0,0,canvas.width,canvas.height);c.scale(scale,scale);c.lineJoin='round';
  header(scene,styleId);
  const fn={editorial:{participants:editorialPlayers,payoff:editorialPayoff},textbook:{participants:textbookPlayers,payoff:textbookPayoff},bright:{participants:brightPlayers,payoff:brightPayoff}}[styleId][sceneId];fn(scene);footer(scene);c.restore();
  const result=[...bounds];checkTextLayout(result,canvas.width,canvas.height,{collisions:true});return result;

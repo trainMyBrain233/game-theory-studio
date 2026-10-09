@@ -1,8 +1,10 @@
 # 贡献指南
 
-先阅读 [AGENTS.md](AGENTS.md)、[工程与配置契约](docs/project-structure.md) 和 [第三方内容边界](docs/third-party-content.md)。保留原 MIT LICENSE，使用功能分支提交草稿PR。当前main仅LICENSE，按根README检出infra/quality-pipeline或对应评审分支后再运行工程命令。
+先阅读 [AGENTS.md](AGENTS.md)、[工程与配置契约](docs/project-structure.md) 和 [第三方内容边界](docs/third-party-content.md)。保留原 MIT LICENSE，使用功能分支提交草稿PR。基础源码以 `main` 为长期开发入口。按根 README 获取 `main` 上已合入的源码；评审未合入的改动时请检出对应 PR 的 head。公开基础工程的检查不替代私有生产素材、完整影片和实际音轨验收。
 
 ## 从干净依赖开始
+
+需要 Node 22+、npm 和 Python 3.12+，项目 `.venv` 也需使用 Python 3.12+。本轮将最低 Python 从 3.10 提升至 3.12，不再支持 3.10/3.11；CI 使用 Python 3.12 系列。
 
 ```sh
 npm ci --ignore-scripts
@@ -10,6 +12,8 @@ npm run setup:python
 npm run setup:fonts -- --download
 npm test
 ```
+
+跨 JavaScript/Python 的文本契约固定采用 Unicode 15.0 字符范围：先拒绝表外字符，再调用标准 NFKC 归一化。Python 需提供 Unicode 15.0 或更新的数据库；升级运行时不能自动扩大项目字符范围，修改该范围需要同步更新两端契约和回归测试。
 
 `test:core` 现包含真实 Canvas 像素检查，必须在字体准备之后运行；不要把它当作无字体阶段。CI 顺序为显式下载固定官方字体 → 字体校验 → core/负例。`npm test` 先验证本地字体，缺失时明确失败，不自动下载。
 
@@ -50,7 +54,7 @@ npm test
 
 运行 `npm test` 与 `git diff --check`，目视查看 B 两个模板、SC 字形板和改动涉及的中间帧。按 [交付检查单](docs/delivery-checklist.md) 记录范围与未覆盖项。生成的 PNG、视频、字体、本机 manifest 和机器 QA 报告不提交。
 
-PR 描述包含触发问题、结果行为、实际验证、已知限制与相关审查链接。CI 必须属于当前 head commit。基础建设阶段的叠加 PR 以 `setup/studio-foundation` 为 base；不要自行合并或直接写 main。GitHub/Codex Auto review 的连接和配置由独立任务管理。
+PR 描述包含触发问题、结果行为、实际验证、已知限制与相关审查链接。CI 必须属于当前 head commit。新功能和修复 PR 以 `main` 为 base；评审确需叠加分支时，在 PR 中明确临时 base 及依赖关系。不要自行合并或直接写 main。GitHub/Codex Auto review 的连接和配置由独立任务管理。
 
 复发问题记入[质量回归记录](docs/quality-regressions.md)：写触发输入、可见影响、修复契约和能失败的负样本。桌牌支撑、腕点/手姿、真实接触与自然动作保持 OPEN，直到对应真实素材和中间帧完成验收；公共 fixture 或零 IK 误差不能关闭它们。
 

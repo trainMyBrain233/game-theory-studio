@@ -61,6 +61,24 @@ jobs:
         run: npm run render:smoke
       - name: Full-episode original placeholder smoke and intermediate layouts
         run: npm run test:episode
+      - name: Actual custom and default still contact sheets
+        if: ${{ matrix.os == 'ubuntu-24.04' }}
+        run: |
+          npm run setup:media
+          npm run make:episode:boards
+          npm run render:episode:stills -- --placeholder-cast
+          npm run make:episode:boards
+          node scripts/python.mjs - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          output = Path('production/output')
+          for name in ('custom_contact_sheet.png', 'keyframes_contact_sheet.png', 'transitions_contact_sheet.png'):
+              with Image.open(output / name) as image:
+                  image.load()
+                  assert image.format == 'PNG', f'{name}: expected PNG'
+                  assert image.width > 0 and image.height > 0, f'{name}: empty image'
+                  print(f'{name}: decoded {image.width}x{image.height}')
+          PY
       - name: Public source boundary and read-only validation
         run: |
           npm run qa:source

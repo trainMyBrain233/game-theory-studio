@@ -62,8 +62,19 @@ selection. Row focus is independently explicit.
 explicit A/B choices. Both owners are required and must match that cell; a
 focused phase must agree with it too. One resolved information state drives
 the information label, both card face colors and their reveal alphas. The four
-RR/RB/BR/BB combinations have independent actual owner-pixel tests. `conceal_choices` explicitly resets it. Concurrent/conflicting
-card transitions are invalid.
+RR/RB/BR/BB combinations have independent actual owner-pixel tests.
+`participants` narration promises a joint reveal and requires exactly one in
+its own subtitle window, even if all card events were omitted. Every reveal
+must complete strictly before its phase's exclusive end, leaving at least one
+fully visible integer frame inside that window; completion at `endFrame - 1`
+is valid, while completion at `endFrame` is not. Other narration forms do not
+require a card cycle. Any authored cycles must start hidden, alternate joint
+reveal and explicit `conceal_choices`, and finish hidden before the plan ends.
+Conceal must occur strictly after reveal completion. Cards may stay visible
+across later subtitle phases until that explicit conceal; conceal need not
+belong to the reveal's phase. Missing, reversed, duplicate or overlapping
+controls are invalid. Multiple card controls on the same frame are rejected
+regardless of their IDs or input array order.
 
 Subtitles are complete groups of one or two authored lines. Lines have at most
 22 readable Unicode letters/digits; their concatenation must equal the block's

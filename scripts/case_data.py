@@ -2,15 +2,8 @@
 import json
 import re
 
-
-def spoken_number(value):
-    if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value <= 99:
-        raise ValueError('The current teaching template supports integer scores 0..99')
-    digits = '零一二三四五六七八九'
-    if value < 10:
-        return digits[value]
-    tens, units = divmod(value, 10)
-    return (digits[tens] if tens > 1 else '') + '十' + (digits[units] if units else '')
+from text_contract import (BREAKS, normalized_label, readable_count, spoken_number,
+                           validate_subtitle_lines)
 
 
 class Case:
@@ -18,6 +11,11 @@ class Case:
         data = json.loads((root / 'design/scenes.json').read_text(encoding='utf-8'))
         self.players = [actor['label'] for actor in data['actors']]
         self.strategies = [strategy['label'] for strategy in data['strategies']]
+        for labels, role, limit in [(self.players, 'Player', 4), (self.strategies, 'Strategy', 2)]:
+            if len(labels) != 2 or any(not isinstance(label, str) or not 1 <= len(label) <= limit for label in labels):
+                raise ValueError(f'{role}: two labels of at most {limit} Unicode code points are required')
+            if len({normalized_label(label, role) for label in labels}) != 2:
+                raise ValueError(f'{role} visible labels must differ')
         self.values = dict(zip(['RR', 'RB', 'BR', 'BB'], [pair for row in data['payoffs'] for pair in row]))
         for pair in self.values.values():
             for score in pair:
@@ -45,11 +43,19 @@ class Case:
             return f'两个人，各得{spoken_number(a)}分。'
         return f'{self.players[0]}得{spoken_number(a)}分，{self.players[1]}得{spoken_number(b)}分。'
 
-    def lines(self, text):
-        readable = lambda value: len(re.findall(r'[\u4e00-\u9fffA-Za-z0-9]', value))
-        if readable(text) <= 22:
+    def validate_lines(self, lines, text, cue=None):
+        validate_subtitle_lines(lines, text, self.players, self.strategies, cue)
+
+    def lines(self, text, cue=None):
+        if readable_count(text) <= 22:
+            self.validate_lines([text], text, cue)
             return [text]
         for index, char in enumerate(text):
-            if char in '，；。' and readable(text[:index+1]) <= 22 and readable(text[index+1:]) <= 22:
-                return [text[:index+1], text[index+1:]]
+            if char in BREAKS and index < len(text) - 1:
+                candidate = [text[:index + 1], text[index + 1:]]
+                try:
+                    self.validate_lines(candidate, text, cue)
+                    return candidate
+                except ValueError:
+                    continue
         raise ValueError('Subtitle needs more than two semantic lines; shorten the authored sentence')

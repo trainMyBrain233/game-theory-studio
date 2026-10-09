@@ -17,7 +17,9 @@
 | 中文 locale/CRLF | 源码与派生文本统一 UTF-8/LF；生成器先校验、暂存，再替换。非 UTF-8 locale 已有回归测试。不要靠手改成 GBK 或去掉字幕中文解决。 |
 | `PRIVATE_ASSET_MISSING` | 公开checkout用 `--placeholder-cast`；真实角色层在仓库外。不能把EA素材加进Git或静默换人来让生产模式通过。 |
 | FFmpeg/ffprobe 缺失 | 静帧/默认CI不需要编码器；视频与完整解码需要已有PATH上的FFmpeg/libx264和ffprobe。无效窗口/非原生宽度被明确拒绝。 |
-| 联系图缺少PNG/NumPy/Pillow | `setup:media` 安装固定可选包，先执行 `render:episode:stills -- --placeholder-cast` 默认全部时间点；五帧CI烟测不足以制作全部联系图。 |
+| 联系图缺少PNG/NumPy/Pillow | `setup:media` 安装固定可选包；先执行 `render:episode:stills -- --placeholder-cast`，从当前timeline生成默认22帧及共享manifest。带 `--times` 的五帧CI烟测只生成对应custom联系图，不补用旧默认帧。 |
+| 联系图manifest缺失/过期/元数据不一致 | 重渲染所需still set；联系图复用JS计划校验器，并比对timeline SHA、PNG SHA及PNG内检查点。不要手改时间/标签去复用旧图。图片只允许在当前output目录内；绝对路径、逃逸路径和目录外symlink会被拒绝。 |
+| 极短视频窗口被拒绝 | 窗口必须量化成至少1帧：统一使用 `Math.round(FPS * duration)`。30fps下0.01秒为零帧而被拒绝，0.02秒量化为1帧；这不是“所有不足一帧的正时长都拒绝”。 |
 | GitHub CI 红灯 | 打开当前 head 对应的 Quality run，先查看失败步骤。字体/安装错误与语义错误分开处理；复跑适用本机命令后提交修复。不要扩大 token 权限、增加秘密或改成 pull_request_target。 |
 
 macOS arm64 本机实际跑过完整链；Linux 与 macOS 远程结果以当前 commit 的 Actions 为准。Windows 的路径分支只经过代码检查，没有 Windows 实测或 CI，不能把它列为已验证环境。

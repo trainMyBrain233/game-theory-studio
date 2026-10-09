@@ -67,7 +67,7 @@ test('chapter scaffold creates reproducible original non-IP text in an isolated 
   const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'studio-chapter-'));
   try{
     fs.mkdirSync(path.join(temporary,'chapters'));fs.mkdirSync(path.join(temporary,'scripts'));
-    for(const script of ['narration_io.py','case_data.py'])fs.copyFileSync(path.join(ROOT,'scripts',script),path.join(temporary,'scripts',script));
+    for(const script of ['narration_io.py','case_data.py','text_contract.py','unicode-text-15.0.0.json'])fs.copyFileSync(path.join(ROOT,'scripts',script),path.join(temporary,'scripts',script));
     fs.cpSync(path.join(ROOT,'design/scenes.json'),path.join(temporary,'design/scenes.json'));
     const directory=createChapter('02-original-test','共同选择测试',temporary);
     const produced=readJSON(path.join(directory,'narration/timeline.json'));

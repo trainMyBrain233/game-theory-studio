@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import Ajv from 'ajv';
 import schema from '../../../schemas/animatic-plan.schema.json' with {type:'json'};
+import {normalizedLabel,validateSubtitleLine} from '../../../scripts/text-contract.mjs';
 
 const validate = new Ajv({allErrors:true,strict:true}).compile(schema);
 const compiledPlans = new WeakSet();
@@ -13,12 +14,7 @@ export function deepFreeze(value) {
   return value;
 }
 const compact = text => text.replace(/\s/gu,'');
-const readableCount = text => [...text.matchAll(/[\p{L}\p{N}]/gu)].length;
 const within = (frame, window) => frame >= window.startFrame && frame < window.endFrame;
-function normalizedLabel(label,role) {
-  assert(label.isWellFormed() && label.trim()===label && /[\p{L}\p{N}]/u.test(label) && !/[\p{C}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}]/u.test(label),`${role}: label must be trimmed, well-formed, visible and single-line without controls or default-ignorable characters`);
-  return label.normalize('NFKC').replace(/\s+/gu,' ');
-}
 export function choicesForCell(cell) {
   assert(CELLS.includes(cell),'Unknown semantic cell');
   return {A:cell[0]==='R'?'red':'blue',B:cell[1]==='R'?'red':'blue'};
@@ -54,6 +50,28 @@ export function narrationForPhase(caseData,phase) {
 function unique(items, label) {
   assert.equal(new Set(items.map(item=>item.id)).size,items.length,`${label}: duplicate ID`);
 }
+function validateCardCycles(phases,events) {
+  const cardEvents=events.filter(event=>['joint_reveal','conceal_choices'].includes(event.type));
+  // This narration form explicitly promises a joint reveal. Check its expectation
+  // independently of the events so deleting both ends cannot erase the contract.
+  // Choice/payoff/comparison/summary narration can legitimately have no cycle.
+  for(const phase of phases.filter(phase=>phase.narration.kind==='participants')) {
+    assert.equal(cardEvents.filter(event=>event.phaseId===phase.id && event.type==='joint_reveal').length,1,`${phase.id}: participants narration requires exactly one joint reveal in its window`);
+  }
+  let activeReveal=null,previous=null;
+  for(const event of cardEvents) {
+    if(previous)assert(event.frame>previous.frame+(previous.durationFrames||0),'Card phases cannot overlap or conflict on a frame');
+    if(event.type==='joint_reveal') {
+      assert.equal(activeReveal,null,'Joint reveal requires hidden cards after the previous conceal');
+      activeReveal=event;
+    } else {
+      assert(activeReveal,'Conceal requires a preceding joint reveal');
+      activeReveal=null;
+    }
+    previous=event;
+  }
+  assert.equal(activeReveal,null,'Every joint reveal requires a following conceal');
+}
 export function compilePlan(input) {
   assert(validate(input),`Animatic schema: ${JSON.stringify(validate.errors)}`);
   const plan = structuredClone(input), phases = plan.blocks.flatMap(block=>block.subtitles);
@@ -73,8 +91,7 @@ export function compilePlan(input) {
       assert.equal(phase.startFrame,captionCursor,'Subtitle windows must be continuous');
       assert(phase.endFrame > phase.startFrame && phase.endFrame <= block.endFrame,'Subtitle outside block');
       captionCursor = phase.endFrame;
-      assert(phase.lines.every(line=>readableCount(line)<=22),'Subtitle line exceeds 22 readable characters');
-      assert(phase.lines.every(line=>line.isWellFormed() && line.trim()===line && !/[\p{C}\p{Zl}\p{Zp}]/u.test(line)),'Subtitle lines must be explicit well-formed single lines without controls');
+      phase.lines.forEach((line,index)=>validateSubtitleLine(line,`${phase.id} subtitle line ${index+1}`));
       assert.equal(phase.lines.join(''),narrationForPhase(plan.caseData,phase),`Stale narration for ${phase.id}: rebuild from semantic case references`);
       for(const clause of narrationClausesForPhase(plan.caseData,phase)) {
         const occurrences=text=>text.split(clause).length-1;
@@ -139,11 +156,7 @@ export function compilePlan(input) {
   }
   const scopes=new Set(phases.map(phase=>phase.focus.scope).filter(scope=>scope!==null));
   for(const scope of scopes)assert.equal(events.filter(event=>event.phaseId===scope && event.type==='focus_cell').length,1,`Focused scope ${scope} requires exactly one activation`);
-  const cardEvents=events.filter(event=>['joint_reveal','conceal_choices'].includes(event.type));
-  for(let i=1;i<cardEvents.length;i++) {
-    const previous=cardEvents[i-1];
-    assert(cardEvents[i].frame>previous.frame+(previous.durationFrames||0),'Card phases cannot overlap or conflict on a frame');
-  }
+  validateCardCycles(phases,events);
   const compiled=deepFreeze({plan,phases,events});compiledPlans.add(compiled);return compiled;
 }
 

@@ -217,7 +217,7 @@ class NarrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             scripts = root / 'scripts'; scripts.mkdir()
-            for name in ['narration_io.py', 'case_data.py']:
+            for name in ['narration_io.py', 'case_data.py', 'text_contract.py', 'unicode-text-15.0.0.json']:
                 (scripts / name).write_bytes((ROOT / 'scripts' / name).read_bytes())
             design = root / 'design'; design.mkdir()
             (design / 'scenes.json').write_bytes((ROOT / 'design/scenes.json').read_bytes())

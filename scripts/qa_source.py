@@ -33,7 +33,10 @@ def svg_source_issue(text):
         if local_name(element.tag) in {'image', 'feimage', 'script', 'foreignobject'}:
             return 'SVG has script, embedded image, or foreign content'
         for name, value in element.attrib.items():
-            if local_name(name) == 'href' and value.strip() and not value.strip().startswith('#'):
+            attribute = local_name(name)
+            if attribute.startswith('on'):
+                return 'SVG has an event-handler attribute'
+            if attribute == 'href' and value.strip() and not value.strip().startswith('#'):
                 return 'SVG has a nonlocal resource reference'
         css = ' '.join([element.text or '', *element.attrib.values()])
         if re.search(r'@import\b', css, re.I):
@@ -72,7 +75,7 @@ def main():
     if repository.returncode or Path(repository.stdout.strip()).resolve() != ROOT.resolve():
         raise SystemExit('Source QA requires a Git checkout. Public ZIP is an archive, not a development checkout. '
                          'Run python3 production/verify_source_archive.py on an unchanged extraction for integrity; '
-                         'git clone --branch infra/quality-pipeline https://github.com/trainMyBrain233/game-theory-studio.git for npm test.')
+                         'git clone --branch main https://github.com/trainMyBrain233/game-theory-studio.git for npm test.')
     output = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT)
     files = sorted(set(x.decode('utf-8') for x in output.split(b'\0') if x))
     errors, total = scan_sources(ROOT, files)

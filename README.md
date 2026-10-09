@@ -13,14 +13,14 @@
 
 ## 开始使用
 
-当前工程仍在 [草稿PR #2](https://github.com/trainMyBrain233/game-theory-studio/pull/2) 的评审分支，`main` 未合并，仅含原MIT LICENSE。首次获取需明确检出工程分支（或对应评审分支）：
+基础源码以 `main` 为长期开发入口。以下命令获取 `main` 上已合入的源码；评审未合入的改动时请检出对应 PR 的 head。公开基础工程不代表私有生产素材、完整影片或音轨已经验收：
 
 ```sh
-git clone --branch infra/quality-pipeline https://github.com/trainMyBrain233/game-theory-studio.git
+git clone --branch main https://github.com/trainMyBrain233/game-theory-studio.git
 cd game-theory-studio
 ```
 
-Node 22+、npm、Python 3.10+；CI 固定 Node 24.19.0 / Python 3.12 系列。macOS/Linux 从仓库根目录运行同一组命令：
+Node 22+、npm、Python 3.12+；CI 固定 Node 24.19.0 / Python 3.12 系列。macOS/Linux 从仓库根目录运行同一组命令：
 
 ```sh
 npm ci --ignore-scripts
@@ -28,6 +28,8 @@ npm run setup:python
 npm run setup:fonts -- --download
 npm test
 ```
+
+本轮文本契约收紧了支持边界：最低 Python 从 3.10 提升至 3.12，已有项目 `.venv` 也必须使用 3.12+。跨 JavaScript/Python 的文本检查固定采用 Unicode 15.0 字符范围，先拒绝表外字符，再调用标准 NFKC 归一化；Python 需提供 Unicode 15.0 或更新的数据库，运行时升级不会自动扩大项目支持的字符范围。
 
 `test:core` 包含实际 Canvas 光栅回归，也需要先准备字体。CI 在 core 之前下载并校验固定官方 SC 字体；`npm test` 先只读验证已准备的字体再运行 core，不会自动下载或改用系统字体。
 
