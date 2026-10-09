@@ -29,7 +29,10 @@ def main(root=ROOT):
                 checksum = hashlib.sha256(source.read_bytes()).hexdigest()
                 if checksum != manifest[filename]['sha256']:
                     raise ValueError(f'{filename}: SHA256 mismatch')
-                missing = sorted(c for c in chars if ord(c) not in font.getBestCmap())
+                # A mapped code point is not covered when it resolves to the missing glyph.
+                covered = {point for point, name in (font.getBestCmap() or {}).items()
+                           if name != '.notdef' and font.getGlyphID(name) != 0}
+                missing = sorted(c for c in chars if ord(c) not in covered)
                 if missing:
                     raise ValueError(f'{filename}: missing characters {missing!r}')
                 results.append({'font': filename, 'family': family, 'weight': number,

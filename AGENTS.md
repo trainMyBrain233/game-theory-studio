@@ -14,6 +14,8 @@ Default QA must not overwrite tracked narration or archived SVG/JSON edits; rege
 
 Run the commands from README after a clean `npm ci --ignore-scripts`. Use `npm test` before delivery. Report the actual OS, runtime, command results and tested commit. Never copy an older pass count into a new verification claim.
 
+Every fixture or child Node process that loads font-aware code must inherit the selected project interpreter via `env: {...process.env, PYTHON: pythonCommand()}`. Verify that negative tests reach their intended failure, never an unrelated missing FontTools/package error from system Python.
+
 For configuration, font, timeline or renderer changes, retain negative/variation tests that fail when the implementation is broken. Do not replace a pixel or glyph check with an assertion on a declaration from the same code path.
 
 Supported case edits must pass build and QA. Run `test:case-reuse` for names, strategies, asymmetric payoffs and default BR. Compare rendering with the current valid case, not a hardcoded original matrix/selection; each negative mutation must actually contradict its current fixture. Recording guidance must also remain valid for changed Chinese names and scores.

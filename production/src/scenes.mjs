@@ -1,6 +1,7 @@
 export {timeline,content} from './model.mjs';
 import {timeline,content,sceneData} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
+import {comparisonState} from './comparison-timing.mjs';
 import {textTransitionState} from './motion.mjs';
 import {proposalScale} from '../../design/canvas-geometry.mjs';
 import {beforeEnd} from './frame-time.mjs';
@@ -92,19 +93,20 @@ function information(c,t){
  definition(c,'信息','行动顺序与决策时能观察到的内容',t,T('s11_timing'),{end:SEC('information').end});
 }
 function strategy(c,t){
- const spread=ramp(t,SEC('strategy').start,.9),multi=ramp(t,T('s16_comparison_intro'),1.05),back=ramp(t,T('s18_return_single_round')+2.5,1.1),m=multi*(1-back);
+ const comparison=comparisonState(t,timeline);
+ const spread=ramp(t,SEC('strategy').start,.9),{multi,back}=comparison,m=multi*(1-back);
  const sx=mix(260,115,spread),sy=mix(357,443.2,spread),ss=mix(.84,.66,spread);
  desk(c,1-m,760,mix(230,88,spread*(1-back)),mix(1688,1832,spread*(1-back)));
  // A stays physically present; B moves out of the comparison, then returns.
  person(c,'A',mix(mix(sx,110,multi),260,back),mix(mix(sy,470,multi),357,back),mix(mix(ss,.57,multi),.84,back));
  person(c,'B',mix(mix(mix(1284,1528,spread),1960,multi),1284,back),mix(mix(357,443.2,spread),357,back),mix(mix(.84,.66,spread),.84,back));
  const namesAlpha=1-ramp(t,T('s16_comparison_intro')-.3,.25);group(c,namesAlpha,0,0,()=>{badge(c,'A',mix(330,156,spread),mix(356,398,spread),24,{name:true});badge(c,'B',mix(1335,1570,spread),mix(324,398,spread),24,{name:true})});
- const compAlpha=ramp(t,T('s16_comparison_intro')+1.05,.4)*(1-ramp(t,T('s18_return_single_round')+2.05,.35));
+ const compAlpha=comparison.comparisonAlpha;
  group(c,compAlpha,0,0,()=>badge(c,'A',188,432,23,{name:true}));
- group(c,ramp(t,T('s18_return_single_round')+3.55,.25),0,0,()=>{badge(c,'A',330,356,24,{name:true});badge(c,'B',1335,324,24,{name:true})});
+ group(c,comparison.names,0,0,()=>{badge(c,'A',330,356,24,{name:true});badge(c,'B',1335,324,24,{name:true})});
  
  const rx=mix(mix(mix(470,830,spread),532,multi),408,back),ry=mix(mix(mix(786,581,spread),634,multi),786,back),rw=mix(mix(mix(105,147,spread),118,multi),105,back);
- const hide=ramp(t,T('s16_comparison_intro'),.55)*(1-ramp(t,T('s17_comparison_example'),.6));cardFlip(c,'red','back',rx,ry,rw,hide);
+ const hide=comparison.hidden;cardFlip(c,'red','back',rx,ry,rw,hide);
  group(c,(1-multi)*(1-back),0,0,()=>card(c,'blue',mix(1444,1090,spread),mix(786,581,spread)+multi*130,mix(105,147,spread)));
  group(c,back,0,0,()=>{card(c,'blue',546,786,105);card(c,'red',1370,786,105);card(c,'blue',1508,786,105)});
  const baseText=1-ramp(t,T('s16_comparison_intro')-.45,.3);
@@ -118,16 +120,16 @@ function strategy(c,t){
  });
  group(c,compAlpha,0,0,()=>{
   tag(c,'如果改成多轮：概念对照',591,350,738,{size:33});
-  reveal(c,t,T('s17_comparison_example'),()=>{tx(c,'第一轮',532,513,35,700,C.ink,'center');tx(c,'选{{red}}',532,766,34,700,C.ink,'center')});
-  const plan=ramp(t,T('s17_comparison_example')+1.55,.7);
+  group(c,comparison.first,0,(1-comparison.first)*12,()=>{tx(c,'第一轮',532,513,35,700,C.ink,'center');tx(c,'选{{red}}',532,766,34,700,C.ink,'center')});
+  const plan=comparison.plan;
   group(c,plan,0,0,()=>{
    arrow(c,632,632,795,632,plan);round(c,828,559,308,147,14,C.faint,C.light,2);tx(c,'从第二轮起',982,613,34,700,C.ink,'center');tx(c,'看对方上一轮',982,666,32,400,C.ink,'center');
    line(c,1136,632,1220,632,C.ink,3);line(c,1220,527,1220,732,C.ink,3);arrow(c,1220,527,1336,527);arrow(c,1220,732,1336,732);
   });
-  reveal(c,t,T('s17_comparison_example')+2.2,()=>{tx(c,'对方选{{red}}',1250,468,30,700,C.ink,'center');card(c,'red',1430,527,100);tx(c,'自己选{{red}}',1570,539,33,700)});
-  reveal(c,t,T('s17_comparison_example')+3.0,()=>{tx(c,'对方选{{blue}}',1250,806,30,700,C.ink,'center');card(c,'blue',1430,732,100);tx(c,'自己选{{blue}}',1570,744,33,700)});
+  group(c,comparison.red,0,(1-comparison.red)*12,()=>{tx(c,'对方选{{red}}',1250,468,30,700,C.ink,'center');card(c,'red',1430,527,100);tx(c,'自己选{{red}}',1570,539,33,700)});
+  group(c,comparison.blue,0,(1-comparison.blue)*12,()=>{tx(c,'对方选{{blue}}',1250,806,30,700,C.ink,'center');card(c,'blue',1430,732,100);tx(c,'自己选{{blue}}',1570,744,33,700)});
  });
- group(c,ramp(t,T('s18_return_single_round')+3.4,.4)*(1-ramp(t,SEC('strategy').end-.3,.25)),0,0,()=>{tx(c,'回到本片',960,483,33,400,C.muted,'center');tx(c,'仍然只玩一轮',960,570,43,700,C.ink,'center')});
+ group(c,comparison.single*(1-comparison.singleExit),0,0,()=>{tx(c,'回到本片',960,483,33,400,C.muted,'center');tx(c,'仍然只玩一轮',960,570,43,700,C.ink,'center')});
 }
 function payoffs(c,t){
  const move=ramp(t,T('s21_rows')+.1,1.2),rows=ramp(t,T('s21_rows')+1.5,.45),cols=ramp(t,T('s22_columns'),.65),oldExit=1-ramp(t,T('s21_rows')-.45,.42);

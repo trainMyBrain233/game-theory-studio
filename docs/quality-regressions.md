@@ -215,6 +215,27 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** 四项候选及上述最终定向集成已冻结；新 head 的完整 case-reuse、双平台 CI 和复审仍待完成，此前浮点/长姓名 fixture 与具名报告包装修正一并保留未暂存。PR 未记为合并，不新增私有素材或完整影片接受结论。
 
+### `bdcceaa` CI：新原生 fixture 也必须继承项目解释器
+
+`bdcceaa992297265afb5ffd270272cedeb210da7` 的 [Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37904890336) 双平台 JS 均为 761 项、760 通过、1 失败：`tests/renderer-asset-readiness.test.mjs` 的隔离子进程未传递项目选定的 Python，导入字体模块时回落到缺少 FontTools 的系统解释器并报 `Missing fontTools`。该失败未证明产品字体验证错误，不能通过放宽字体/provenance 检查解决；Python 及其后阶段在这次 CI 中尚未到达。
+
+修补仅让 readiness fixture 子进程显式使用 `env: {...process.env, PYTHON: pythonCommand()}`，并在 `AGENTS.md` 固定所有字体相关 fixture/child 的解释器传播要求。`tests/renderer-asset-interpreter.test.mjs` 检查默认项目 venv、显式 PYTHON，并对两种选择分别删除传播，要求命中指定的边界错误；原生 readiness 回归另在系统 `python3` 哨兵下实际运行通过，确认使用项目解释器，避免 stub 通过掩盖真实缺依赖。上述选择、变异与原生运行均已通过；教训是临时源码副本不一定带有项目 venv，每个新增子进程都要明确继承依赖选择，负例还必须到达预期的资产/字体错误，而非任意缺包退出。
+
+**当前状态：** 该 fixture 修补已本地冻结，新远程 CI 尚待推送后执行；不能把定向成功当作最终完整 JS/Python、后续 QA 或复审通过，PR 未记为合并。
+
+## PR #4 `bdcceaa` 新增 4 项：路径终止、有效字形、淡像素与比较段窗口
+
+`bdcceaa992297265afb5ffd270272cedeb210da7` 的[自动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5467734059)于 2026-10-09 08:35:34 UTC 完成并提出四项 P2；同 head 安全复审于 08:39:40 完成，无新增安全项。上节 readiness fixture 的解释器传播修补保留；以下按实际入口与专项证据记录，不把安全无新增项或定向成功等同于完整工程验收。
+
+- **本轮-1：机器绝对路径不能依赖后续斜杠才被识别。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228226996)中 Unix 机器路径在用户/仓库组件后直接结束，旧规则因要求尾斜杠让 QA 与源码 ZIP 漏过。`scripts/qa_source.py` 候选扩充第一组件后的 EOF、斜杠及引号/反引号、空白、标点和 shell 结束分隔符；起点排除 URL 或相对路径内嵌片段，原 Windows/UNC 分支与精确 OS 根豁免保持。`tests/test_source_unix_paths.py` 覆盖直接匹配、合法近似输入与真实 QA/pack 控制流程，负例不回显路径且保留既有 ZIP；旧 Unix 分支反向试验能让审查中的两种终止路径进入实际 ZIP。教训：路径安全边界同时包含开头和结尾，修漏检时应保留合法 URL/相对文本，并验证发布生产者实际拒绝。
+- **本轮-2：cmap 有键不等于有可绘制字形。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228227001)中本地 TTC face 可通过来源、family/weight/version/hash 等检查，却把可见字符映射到 `.notdef` 或 glyph ID 0。`scripts/qa_glyphs.py` 与 `production/qa/check_fonts.py` 现在只把名称非 `.notdef` 且真实 `getGlyphID(name) != 0` 的映射算作覆盖，保留准备/缓存来源验证。`tests/test_notdef_glyph_coverage.py` 用原创合成 TTC、真实 FontTools 与 `prepare`/`verify_cached` 流程，证明磁盘非零 ID 的 `.notdef` 映射旧逻辑误过、新逻辑拒绝且不写成功报告，并保留合法四 face 正例；ID 0 别名另用真实内存 TTFont 表和 glyph-ID 查询检查，因为 FontTools 磁盘解码会丢弃该映射，不能把两种反例合称磁盘覆盖。教训：来源可信与字符可用是独立合同，存在于映射表仍可能指向缺字占位符；该专项不是实际 Noto 字形外观或完整影片验收。
+- **本轮-3：存档角色净距也必须计入所有非零 alpha。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228227004)中 opacity=.1 的真实 SVG 像素被 `<30` cutoff 丢弃，导致视觉侵入仍报 ≥32px。`assets/characters/archive/proposals/check_clearance.mjs` 现在只忽略 alpha=0，保留原测距与 32px 要求。`tests/cast-faint-alpha.test.mjs` 经真实 Canvas 和 QA 报告验证：原九个 SVG/六个标签正常，完全透明侵入不改变报告；opacity=.1 与 1/255 两种侵入均命中实际净距失败，反向恢复旧 cutoff 则误过。子进程显式继承所选 Python，不能把导入缺包当作净距拒绝。教训：生产淡字检查与存档角色像素检查是不同入口，修一处 alpha 门槛不能宣称另一处已覆盖；原创存档素材回归不代表真实私有角色净距接受。
+- **本轮-4：概念比较的兄弟阶段必须共享当前段落窗口。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228227008)中合法 0.3 倍重定时的 `s17_comparison_example` 仅约 1.77 秒，固定 +2.2/+3.0 秒分支到下一段字幕出现后才显现。`production/src/comparison-timing.mjs` 冻结候选把 intro/example/return 的人物移动、隐藏牌、首轮/计划/红蓝分支、回归姓名与单轮提示交给同一状态计划；分别使用 1.65/4/4.8 秒预算，足够长窗口保留旧绝对 ramp，短窗按实际 window 归一化，段前/段后显式夹到端点并留段内稳定停留。`scenes.mjs` 消费这些阶段，不只单独提前红蓝标签。教训：合法 retime 需要约束所有关联动画及退出/回归，不能只修被审查的一条延迟；有限短窗可保持顺序边界，不证明真人口播或自然阅读节奏。
+
+**已取得专项证据：** 字形专项 4/4 通过，包含普通/`-O`/`-OO` 子运行，原优化模式专项 5/5 通过；存档 alpha 原生专项 1/1 通过（13.8 秒，Linux、Node 24.19.0）。路径最终专项 5/5（41.951 秒）、已有公开边界 21/21、SVG 7/7 与全仓源码 QA 通过（Linux、Python 3.12.14）；新路径专项经普通/`-O`/`-OO`/`PYTHONOPTIMIZE=1/2` 实际 QA/pack 验证，verifier 共用 guard，但本轮未新增其专属 CLI 试验。比较段纯专项 9/9、与片尾/选择 cue/淡字记录组合 24/24 通过，全仓源码 QA 扫描 313 文件通过；默认和 1.3 倍逐样本保持旧状态，0.3 倍/极短窗口、单 ULP/零宽防非有限值、预算阈值两侧及乱序另有检查，零宽仅测试 helper 防御而不声明时间轴合法。真实 scene 的受控记录确认 s17 90% 时四个分支标签 alpha=1 且比较字幕仍在。原生阶段完成并实际查看 0.3 倍的 20 张 1920×1080 placeholder 帧：s16/s17 各九张，s18 的 50%/90% 两张分别独立进程退出 0，后两张带 PNG hash、时间和文字测量；退场/返回过程及最终双人、四牌、单轮标签未见新重叠。默认 27 对运行时像素 SHA 断言通过且有日志，但未逐对落盘对照 hash；此前完整批次两次 SIGKILL/137，原因未确认，不称 OOM，1.3 倍 native 与乱序像素复演未执行，不能称全套 native 变速通过。上述专项不能累加为完整测试套件通过数。
+
+**当前状态：** 四项代码候选及上述有界专项证据已冻结；新发布 head 的完整双平台 CI/复审仍待完成，PR 未记为合并，不新增真实私有素材、全片、编码或音频接受结论。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

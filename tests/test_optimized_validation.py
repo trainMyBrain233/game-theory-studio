@@ -79,6 +79,7 @@ class ValidationFixtures(unittest.TestCase):
                     raise KeyError(key)
                 def getGlyphOrder(self): return range(self.table['glyphs'])
                 def getBestCmap(self): return self.table['cmap']
+                def getGlyphID(self, name): return 0 if name == '.notdef' else 1
 
             with patch.object(qa_glyphs, 'TTFont', Face):
                 qa_glyphs.main(root)

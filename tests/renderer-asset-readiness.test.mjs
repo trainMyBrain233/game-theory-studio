@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import {pythonCommand} from '../scripts/python.mjs';
 import {withSourceFixture} from '../scripts/source-fixture.mjs';
 
 test('real drawFrame requires complete preparation across pending, failure, retry and private/public routing',()=>withSourceFixture(root=>{
@@ -55,6 +56,6 @@ test('real drawFrame requires complete preparation across pending, failure, retr
   assert.deepEqual(Object.keys(p.assets),[]);assert.equal(p.assetLoadReport.length,0);
   fs.writeFileSync(directory+'/b_forearm.png',image.toBuffer('image/png'));
   await p.prepareAssets(1);drawFrame(canvas,25);assert(p.records.length>0);
- `],{cwd:root,encoding:'utf8',timeout:120000});
+ `],{cwd:root,encoding:'utf8',timeout:120000,env:{...process.env,PYTHON:pythonCommand()}});
  assert.equal(result.status,0,result.stdout+result.stderr);
 }));

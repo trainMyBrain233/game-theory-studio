@@ -15,7 +15,10 @@ patterns = {
     'Slack credential': re.compile(r'\bxox[baprs]-[A-Za-z0-9-]{20,}\b'),
     'OpenAI credential': re.compile(r'\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{30,}\b'),
     'machine workspace path': re.compile(
-        r'/(?:workspace|home|Users|root)/[A-Za-z0-9_.-]+/'
+        # A standalone Unix root, not a URL path or repository-relative suffix.
+        # The first component can end at a delimiter or EOF, without a slash.
+        r'(?<![\w+./\\:~%-])/(?:workspace|home|Users|root)/[A-Za-z0-9_.-]+'
+        r'''(?:/|(?=$|[\s"'`,;:)\]}<>|&]))'''
         # A drive root, including JSON-escaped backslashes; not a URL scheme.
         r'|(?<![\w+./\\:-])[A-Za-z]:(?:\\+|/(?!/))'
         # Backslash UNC shares and extended/device paths, also JSON-escaped.
