@@ -15,6 +15,8 @@ Ignored `artifacts/tabletop-prototype/` contains three comparison boards and nat
 
 `presentation.json` / `presentation.schema.json` configure draft series, episode number/title and the names 普通僵尸/路障僵尸. The two-line candidate header is not confirmed copy. `presentationModel` returns the same names for labels, avatars and the [r2 editorial draft](../../../chapters/01-four-elements/editorial/zombie-kingdom-r2/README.md); it does not rewrite current narration/SRT or fit new speech into the old 174.1s timeline. Internal A/B keys remain row/column and payoff indices 0/1. No new chapter is commissioned or generated.
 
+At this entry point, player names also follow the shared [Unicode 15.0.0 visible-label contract](../../../scripts/unicode-text-contract.md): trimmed, assigned, visible single-line names, distinct after NFKC and space collapsing. Validation preserves each accepted name's authored spelling and code points; it never silently trims or normalizes the displayed text. The ten-code-point schema limit and avatar ownership checks still apply. `tests/presentation-unicode.test.mjs` covers whitespace, invisible/unsupported scalars, equivalent-name collisions and valid current-case identities.
+
 `avatar.mjs` accepts an already loaded head layer with explicit owner, measures actual alpha and fits its entire extent to a common box/bottom baseline. Body badges and matrix labels reuse the same public head source; visible letter marks are removed. Private production may supply its approved real head layer through this interface, retaining the full cone/hat; no PNG is embedded, copied or fetched here. Names use fixed 34–36px in the preview. Actual private head size, face legibility and clearance remain OPEN.
 
 | Option | Resting support | Tradeoff |

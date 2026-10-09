@@ -13,6 +13,22 @@ inline or stylesheet declarations. Quoted local URL fragments, numeric RGB/HSL
 colors, and numeric matrix/translate/scale/rotate/skew transforms are supported.
 Ordinary visible text is not interpreted as CSS.
 
+
+Every element must use either the exact, case-sensitive namespace URI
+`http://www.w3.org/2000/svg` or no namespace. Prefixes do not change that rule;
+foreign default namespaces, nested foreign namespace resets, and lookalike or
+case-modified namespace URIs are rejected. Nested resets to no namespace remain
+supported only for the same static element subset.
+
+The complete element allowlist is `svg`, `g`, `defs`, `symbol`, `use`, `path`,
+`rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `text`, `tspan`,
+`textPath`, `title`, `desc`, `style`, `linearGradient`, `radialGradient`, `stop`,
+`pattern`, `clipPath`, `mask`, and `marker`. Local element names are checked
+case-insensitively for compatibility with existing source fixtures. Every other
+element is rejected, even in the SVG namespace or with no namespace. This
+excludes HTML iframe/srcdoc payloads and unknown or future elements without
+relying on a growing list of dangerous tag names.
+
 The guard deliberately rejects CSS backslash escapes (including XML-decoded
 backslashes), CSS comments, all at-rules, and functions/parenthesized constructs
 outside that small numeric/local-URL subset. Unsupported CSS is rejected rather

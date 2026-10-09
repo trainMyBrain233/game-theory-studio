@@ -21,7 +21,6 @@ if not math.isfinite(duration) or not 0 < duration <= timeline['duration']:
     parser.error('Expected duration must be positive and inside the episode.')
 if not all(shutil.which(tool) for tool in ['ffmpeg', 'ffprobe']):
     parser.error('Install ffmpeg and ffprobe on PATH for encoded-media QA.')
-count = round(30 * duration)
 for path in args.paths or [ROOT / 'output/game_theory_textbook_v2_clean_1920.mp4']:
     info = json.loads(subprocess.check_output(['ffprobe', '-v', 'error', '-show_streams', '-show_format', '-of', 'json', str(path)]))
     video, audio, count = validate_streams(info, duration)

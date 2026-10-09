@@ -17,9 +17,19 @@
 
 SC完整OTF与从TTC提取的SC在容器结构/校验值上可以不同。需要逐像素复现时，保留同一字体manifest、同一字体文件和同一平台；跨Skia/操作系统版本不承诺完全相同的像素。字体二进制和本地manifest不随源码公开。
 
+## 渲染时注册边界
+
+静态模板和production共用的 `registerFonts()` 在首次注册前也执行只读来源验证，直接复用 `setup_fonts.verify_cached()` 的官方固定SHA／TTC独立重提、SC家族、版本、真实400/700、必要字形及完整字库合同；不依赖之前是否运行过 `qa:fonts`，也不会下载、修复字体或重写manifest。运行渲染仍需准备好的字体、原始TTC（如使用）及Python/fontTools。
+
+每次显式调用 `registerFonts()` 都重新读取字体、manifest与验证脚本的实际字节，并检查已证明的原TTC源字节；相同内容可复用进程内验证结果，不能仅凭路径、大小或mtime命中缓存。Canvas仅接收已核对SHA的内存buffer。`canvasFont()` 与逐帧绘制不做文件读取或Python验证，因此应在渲染任务开始时注册；已开始的任务保持注册时的字体快照。有效字体字节被替换后需启动新渲染进程，避免旧Canvas上下文保留旧typeface。
+
+两个公共family别名由本模块独占。预先存在的未持有FontKey的同名家族，即使有400/700，也明确拒绝。Canvas 1.0.10没有查询FontKey是否仍属于某别名的API；重复注册在边界移除本模块持有的keys，核对移除数量及别名已空后，重新注册同一已验证字节。外部移除、替换或混入同名字体均失败；不改写Canvas全局方法，也不清空其他家族。所有入口继续通过 `--import ./scripts/isolated-fonts.mjs` 在Canvas加载前关闭系统字体。
+
 ## 自检
 
 `npm run qa:fonts`：验证4个SC字体；关闭系统自动加载；验证两家族均有400/700，拒绝未注册500；独立检查实际ctx.font的字号、字重和完整家族；同一段文字的400/700和Sans/Serif像素必须不同；强制regular、8px、Sans负例须失败；生成中文字形板；检查实际模板与所有被发现章节文字的cmap覆盖，确认缓存符合独立来源合同。真实字体负例验证“元数据仍合法、文件+manifest同时改hash”不能通过官方pin或TTC重提；临时TTC测试不联网、也不留下字体产物。
+
+`node --test tests/font-registration.test.mjs tests/font-provenance-cache.test.mjs` 使用纯模拟／受控子进程，检查注册所有权、失败回滚及同大小／同mtime修改的缓存失效，不加载Canvas/fontTools。`tests/font-registration-provenance.test.mjs` 随 `test:core` 在字体准备后运行真实负例，覆盖静态／production直接入口、字体与manifest共同伪改、外部同名别名及原TTC来源变更。
 
 输出 `qa/sc-specimen.png`、`qa/text-runs.json`与`qa/glyphs.json`均为本地生成物。缺字检查只能确认字符存在；仍需查看实际字形、字号、重叠和缩小显示可读性。
 

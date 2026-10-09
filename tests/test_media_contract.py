@@ -1,5 +1,6 @@
 import copy
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -27,3 +28,31 @@ class MediaContract(unittest.TestCase):
             info = self.fixture()
             info['streams'][0][field] = value
             with self.assertRaises(AssertionError): module.validate_streams(info, 1)
+
+    def test_shared_encoder_frame_count_contract(self):
+        cases = json.loads((Path(__file__).parent / 'fixtures/video-frame-count-contract.json').read_text(encoding='utf-8'))
+        def number(value):
+            return float(value['nonFinite']) if isinstance(value, dict) and 'nonFinite' in value else value
+        for fixture in cases:
+            with self.subTest(fixture=fixture['name']):
+                seconds, fps = number(fixture['seconds']), number(fixture['fps'])
+                if fixture.get('error'):
+                    with self.assertRaisesRegex(ValueError, 'at least one frame'):
+                        module.video_frame_count(seconds, fps)
+                    # Invalid windows fail before interpreting stream metadata.
+                    with self.assertRaises(ValueError):
+                        module.validate_streams({}, seconds, fps)
+                else:
+                    self.assertEqual(module.video_frame_count(seconds, fps), fixture['frames'])
+        self.assertEqual(module.video_frame_count(.15), 5)
+
+    def test_half_frame_metadata_matches_the_encoder_not_python_even_rounding(self):
+        for seconds, frames in [(.15, 5), (.35, 11), (.14999999999999997, 4), (.15000000000000002, 5), (.3499999999999999, 10), (.35000000000000003, 11)]:
+            with self.subTest(seconds=seconds):
+                info = self.fixture()
+                info['format']['duration'] = str(frames / 30)
+                info['streams'][0].update(nb_frames=str(frames), duration=str(frames / 30))
+                self.assertEqual(module.validate_streams(info, seconds)[2], frames)
+                info['streams'][0]['nb_frames'] = str(frames - 1)
+                with self.assertRaises(AssertionError):
+                    module.validate_streams(info, seconds)

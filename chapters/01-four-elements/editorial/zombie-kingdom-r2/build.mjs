@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {presentationModel} from '../../../../design/experiments/tabletop/presentation.mjs';
 import {validateScenes,validateTimeline} from '../../../../scripts/validate-data.mjs';
-import {protectedSubtitleTokens,validateSubtitleLines} from '../../../../scripts/text-contract.mjs';
+import {TEXT_UNICODE_VERSION,protectedSubtitleTokens,readableCount,validateSubtitleLines} from '../../../../scripts/text-contract.mjs';
 const directory=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(directory,'../../../..');
 const read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8')),hash=b=>createHash('sha256').update(b).digest('hex');
 export const template=read('chapters/01-four-elements/editorial/zombie-kingdom-r2/blocks.template.json');
@@ -100,11 +100,10 @@ export function resolveDraft({scene,presentation,timeline,sourceHash}){
  const oldIds=new Set(timeline.segments.map(s=>s.id)),mapped=new Set(blocks.flatMap(b=>b.original_segment_ids));
  if(oldIds.size!==mapped.size||[...mapped].some(id=>!oldIds.has(id)))throw Error('Draft must map all original segment IDs.');
  const plain=blocks.map(b=>b.voiceover).join('\n\n')+'\n';
- const count=text=>(text.match(/[\u4e00-\u9fffA-Za-z0-9]/g)||[]).length;
  const draft={schema:'zombie_kingdom_semantic_draft_v1',draft_version:template.draft_version,status:template.status,language:'zh-CN',not_a_production_timeline:true,human_audio_available:false,audio_alignment_status:'not_started_waiting_for_human_recording',production_timeline_update_authorized:false,user_final_approval:false,title_selection_status:'candidates_only_not_approved',series_label:presentation.series,source_metadata_status:template.source_metadata_status,source_metadata_history:template.source_metadata_history,
   timing_notice:'无时间码语义草稿；timing 全部 null。先确认真人口播，再人工建立参考时间轴并按实录重定时；不得硬套旧片长或覆盖正式 timeline。',
   source:{repository_url:'https://github.com/trainMyBrain233/game-theory-studio',reference_commit:template.reference_commit,reference_timeline_sha256:template.reference_timeline_sha256,active_timeline_sha256:sourceHash,timeline_repository_relative_path:'chapters/01-four-elements/narration/timeline.json',source_reference_duration_seconds:timeline.duration,source_reference_duration_is_recording_target:false,old_recording_pack_status:'delivered_legacy_small_A_B_version_pending_revision',presentation_source:'design/experiments/tabletop/presentation.json',case_source:'design/scenes.json'},
-  metrics:{definition:'汉字、拉丁字母和数字逐字符计数，不含空白标点；文量不是片长预测。',old_spoken_character_count:count(timeline.segments.map(s=>s.voiceover).join('')),draft_spoken_character_count:count(plain),old_semantic_blocks:timeline.segments.length,draft_semantic_blocks:blocks.length},
+  metrics:{definition:`Unicode ${TEXT_UNICODE_VERSION} 字母或数字（L*/N*）逐码点计数，不含空白、标点、组合符或符号；不是字素数、真实语速或片长预测。`,old_spoken_character_count:readableCount(timeline.segments.map(s=>s.voiceover).join('')),draft_spoken_character_count:readableCount(plain),old_semantic_blocks:timeline.segments.length,draft_semantic_blocks:blocks.length},
   model_contract:{game_rounds:1,current_choices_observed_before_deciding:false,score_rules_public_to_both:true,players:{A:{display_name:words.A,matrix_axis:'row',payoff_index:0,avatar:presentation.actors.A.avatar},B:{display_name:words.B,matrix_axis:'column',payoff_index:1,avatar:presentation.actors.B.avatar}},matrix_values:values,matrix_reveal_order:['RR','RB','BR','BB'],payoff_read_order:[words.A,words.B],internal_keys_visible_to_audience:false,multi_round_example:{is_comparison_only:true,return_to_one_round_block:'zk01_b17'},no_predicted_choice_or_equilibrium:true},
   recording_contract:{pace:'按自然语速和意义断句，不追旧片长。',read_titles_ids_and_notes:false,keep_names_and_number_units_together:true,pronunciation:{行:'háng'},recommended_contiguous_groups:[['zk01_b15','zk01_b16','zk01_b17'],['zk01_b20','zk01_b21','zk01_b22','zk01_b23'],['zk01_b24','zk01_b25'],['zk01_b26','zk01_b27'],['zk01_b28','zk01_b29'],['zk01_b30','zk01_b31'],['zk01_b32','zk01_b33']]},
   sections:['intro','players','information','strategy','payoffs','recap'].map(id=>({id,block_ids:blocks.filter(b=>b.section===id).map(b=>b.id)})),blocks};

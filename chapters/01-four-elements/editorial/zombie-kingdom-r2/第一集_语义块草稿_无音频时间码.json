@@ -29,7 +29,7 @@
     "case_source": "design/scenes.json"
   },
   "metrics": {
-    "definition": "汉字、拉丁字母和数字逐字符计数，不含空白标点；文量不是片长预测。",
+    "definition": "Unicode 15.0.0 字母或数字（L*/N*）逐码点计数，不含空白、标点、组合符或符号；不是字素数、真实语速或片长预测。",
     "old_spoken_character_count": 460,
     "draft_spoken_character_count": 646,
     "old_semantic_blocks": 37,

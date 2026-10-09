@@ -39,6 +39,17 @@ NUMERIC_SVG_FUNCTION = re.compile(
     r'(?:matrix|translate|scale|rotate|skewX|skewY|rgb|rgba|hsl|hsla)\s*\([-+.0-9eE%,/\s]+\)', re.I)
 
 
+SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
+# Every element must belong to this static subset, in SVG's exact namespace or
+# no namespace. Foreign and future/unknown elements must not pass by omission.
+STATIC_SVG_ELEMENTS = frozenset({
+    'svg', 'g', 'defs', 'symbol', 'use', 'path', 'rect', 'circle', 'ellipse',
+    'line', 'polyline', 'polygon', 'text', 'tspan', 'textpath', 'title', 'desc',
+    'style', 'lineargradient', 'radialgradient', 'stop', 'pattern', 'clippath',
+    'mask', 'marker',
+})
+
+
 def svg_css_issue(css):
     """Only literal local URLs and numeric color/geometry functions are allowed."""
     if '\\' in css or '/*' in css or '*/' in css:
@@ -66,10 +77,15 @@ def svg_source_issue(text):
     if local_name(document.tag) != 'svg':
         return 'SVG root is not svg'
     for element in document.iter():
+        namespace = element.tag[1:].split('}', 1)[0] if element.tag.startswith('{') else ''
+        if namespace not in {'', SVG_NAMESPACE}:
+            return 'SVG has an unsupported element namespace'
         if local_name(element.tag) in {'image', 'feimage', 'script', 'foreignobject'}:
             return 'SVG has script, embedded image, or foreign content'
         if local_name(element.tag) in {'animate', 'animatemotion', 'animatetransform', 'set', 'discard'}:
             return 'SVG has unsupported animation or resource-changing content'
+        if local_name(element.tag) not in STATIC_SVG_ELEMENTS:
+            return 'SVG has an unsupported static element'
         for name, value in element.attrib.items():
             attribute = local_name(name)
             if attribute == 'base':

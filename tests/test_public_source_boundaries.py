@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from unittest.mock import patch
 from xml.sax.saxutils import escape, quoteattr
 
@@ -86,6 +87,98 @@ class SvgCssBoundaryTests(unittest.TestCase):
             result = subprocess.run([sys.executable, str(root / 'scripts/qa_source.py')], capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertNotIn(marker, result.stdout + result.stderr)
+
+
+class SvgNamespaceBoundaryTests(unittest.TestCase):
+    def test_html_iframe_srcdoc_is_rejected_by_namespace_without_execution(self):
+        # Parse only. This XML/HTML fixture is never opened, rendered, or executed.
+        html = '<script>globalThis.__svg_guard_fixture__=true</script>'
+        payload = ('<svg xmlns="http://www.w3.org/2000/svg" '
+                   'xmlns:h="http://www.w3.org/1999/xhtml"><h:iframe srcdoc=' +
+                   quoteattr(html) + '/></svg>')
+        ET.fromstring(payload)
+        self.assertEqual(svg_source_issue(payload), 'SVG has an unsupported element namespace')
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for suffix in ['svg', 'SVG', 'sVg']:
+                name = 'source.' + suffix
+                (root / name).write_text(payload, encoding='utf-8')
+                self.assertEqual(scan_sources(root, [name])[0],
+                                 [(name, 'SVG has an unsupported element namespace')])
+
+    def test_foreign_default_prefixed_and_nested_namespace_resets_are_rejected(self):
+        for namespace in ['http://www.w3.org/1999/xhtml', 'http://www.w3.org/1998/Math/MathML',
+                          'http://www.w3.org/2001/XInclude', 'urn:unknown-svg-test',
+                          'http://www.w3.org/2000/SVG', 'HTTP://www.w3.org/2000/svg',
+                          'http://www.w3.org/2000/svg/']:
+            sources = [
+                '<svg xmlns=' + quoteattr(namespace) + '><path d="M0 0L1 1"/></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg"><g xmlns=' + quoteattr(namespace) +
+                '><path xmlns="" d="M0 0L1 1"/></g></svg>',
+                '<svg xmlns:p=' + quoteattr(namespace) + '><p:path d="M0 0L1 1"/></svg>',
+                '<svg xmlns="http://www.w3.org/2000/svg"><g xmlns=""><svg xmlns=' +
+                quoteattr(namespace) + '/></g></svg>',
+            ]
+            for source in sources:
+                with self.subTest(namespace=namespace, source=source):
+                    ET.fromstring(source)
+                    self.assertEqual(svg_source_issue(source), 'SVG has an unsupported element namespace')
+
+    def test_unknown_elements_fail_closed_even_in_svg_or_no_namespace(self):
+        for name in ['iframe', 'IFRAME', 'object', 'embed', 'audio', 'video', 'link',
+                     'html', 'body', 'a', 'filter', 'unknown', 'futureSvgElement']:
+            for declaration in ['', ' xmlns="http://www.w3.org/2000/svg"']:
+                source = '<svg' + declaration + '><' + name + ' srcdoc="escaped fixture"/></svg>'
+                with self.subTest(name=name, declaration=declaration):
+                    ET.fromstring(source)
+                    self.assertEqual(svg_source_issue(source), 'SVG has an unsupported static element')
+
+    def test_supported_static_shapes_definitions_text_and_local_references_pass(self):
+        # Spell out the expected public subset independently of the guard's set.
+        content = ('<title>Original art</title><desc>Static vector fixture</desc><defs>'
+                   '<symbol id="shape"><path d="M0 0L1 1"/></symbol>'
+                   '<linearGradient id="linear"><stop offset="0" stop-color="blue"/></linearGradient>'
+                   '<radialGradient id="radial" href="#linear"/>'
+                   '<pattern id="pattern" width="2" height="2"><rect width="1" height="1"/></pattern>'
+                   '<clipPath id="clip"><circle r="1"/></clipPath>'
+                   '<mask id="mask"><ellipse rx="1" ry="2"/></mask>'
+                   '<marker id="marker"><polygon points="0,0 1,0 1,1"/></marker></defs>'
+                   '<style>path { fill: url(#linear); }</style>'
+                   '<g clip-path="url(#clip)"><line x1="0" y1="0" x2="1" y2="1"/>'
+                   '<polyline points="0,0 1,1"/><use href="#shape" fill="url(#pattern)"/>'
+                   '<text>Label <tspan>part</tspan><textPath href="#shape">curve</textPath></text></g>')
+        for declaration in ['', ' xmlns="http://www.w3.org/2000/svg"']:
+            self.assertIsNone(svg_source_issue('<svg' + declaration + '>' + content + '</svg>'))
+        self.assertIsNone(svg_source_issue(
+            '<s:SVG xmlns:s="http://www.w3.org/2000/svg" xmlns:l="http://www.w3.org/1999/xlink">'
+            '<s:defs><s:PATH id="shape" d="M0 0L1 1"/></s:defs><s:use l:href="#shape"/></s:SVG>'))
+        self.assertIsNone(svg_source_issue(
+            '<svg xmlns="http://www.w3.org/2000/svg"><g xmlns=""><path d="M0 0L1 1"/>'
+            '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg></g></svg>'))
+
+    def test_cli_and_archive_guard_reject_foreign_content_without_echoing_payload(self):
+        payload = ('<svg xmlns:h="http://www.w3.org/1999/xhtml"><h:iframe '
+                   'srcdoc="&lt;script&gt;do-not-echo-foreign-fixture&lt;/script&gt;"/></svg>')
+        ET.fromstring(payload)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'scripts').mkdir()
+            (root / 'scripts/qa_source.py').write_bytes((ROOT / 'scripts/qa_source.py').read_bytes())
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, capture_output=True)
+            (root / 'source.svg').write_text(payload, encoding='utf-8')
+            result = subprocess.run([sys.executable, str(root / 'scripts/qa_source.py')],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('unsupported element namespace', result.stdout)
+            self.assertNotIn('do-not-echo-foreign-fixture', result.stdout + result.stderr)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            ArchiveBoundaryTests.fixture(root, {'source.svg': payload.encode('utf-8')})
+            result = subprocess.run([sys.executable, '-O', str(ROOT / 'production/verify_source_archive.py'), str(root)],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('public-source boundary checks', result.stderr)
+            self.assertNotIn('do-not-echo-foreign-fixture', result.stdout + result.stderr)
 
 
 class WindowsPathBoundaryTests(unittest.TestCase):

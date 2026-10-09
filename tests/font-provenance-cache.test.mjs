@@ -1,0 +1,48 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {withSourceFixture} from '../scripts/source-fixture.mjs';
+
+test('proof caching keys actual font, manifest, verifier and TTC-source bytes, without Canvas or FontTools',()=>{
+ withSourceFixture(root=>{
+  const directory=path.join(root,'typography/fonts');fs.unlinkSync(directory);fs.mkdirSync(directory);
+  for(const kind of ['Sans','Serif'])for(const weight of ['Regular','Bold'])fs.writeFileSync(path.join(directory,`Noto${kind}CJKSC-${weight}.otf`),`${kind} ${weight}`);
+  fs.writeFileSync(path.join(directory,'prepared_font_manifest.json'),'{}');
+  const code=`
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+const mock=globalThis.fontVerifierMock={calls:0,sources:{}};
+const {verifyPreparedFonts}=await import('./typography/font-provenance.mjs');
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const regular='typography/fonts/NotoSansCJKSC-Regular.otf',manifest='typography/fonts/prepared_font_manifest.json';
+let proof=verifyPreparedFonts(['Sans']);assert.equal(mock.calls,1);
+assert.deepEqual(proof.fonts.map(font=>font.bytes.toString()),['Sans Regular','Sans Bold']);
+verifyPreparedFonts(['Sans']);assert.equal(mock.calls,1);
+verifyPreparedFonts(['Sans','Serif']);assert.equal(mock.calls,2);
+fs.appendFileSync(manifest,' ');verifyPreparedFonts(['Sans']);assert.equal(mock.calls,3);
+const stat=fs.statSync(regular),bytes=fs.readFileSync(regular),changed=Buffer.from(bytes);changed[0]^=1;
+fs.writeFileSync(regular,changed);fs.utimesSync(regular,stat.atime,stat.mtime);
+mock.reject=true;assert.throws(()=>verifyPreparedFonts(['Sans']),/fixture provenance rejected/);assert.equal(mock.calls,4);
+assert.throws(()=>proof.assertUnchanged(),/resources changed/);
+assert.throws(()=>verifyPreparedFonts(['Sans']),/fixture provenance rejected/);assert.equal(mock.calls,5,'Failures must not be cached');
+fs.writeFileSync(regular,bytes);mock.reject=false;
+const source=path.resolve('source.ttc');fs.writeFileSync(source,'source-1');mock.sources={[source]:hash(fs.readFileSync(source))};
+fs.appendFileSync(manifest,' ');proof=verifyPreparedFonts(['Sans']);assert.equal(mock.calls,6);
+verifyPreparedFonts(['Sans']);assert.equal(mock.calls,6);
+const sourceStat=fs.statSync(source);fs.writeFileSync(source,'source-2');fs.utimesSync(source,sourceStat.atime,sourceStat.mtime);
+assert.throws(()=>proof.assertUnchanged(),/TTC source changed/);mock.reject=true;
+assert.throws(()=>verifyPreparedFonts(['Sans']),/fixture provenance rejected/);assert.equal(mock.calls,7);
+fs.writeFileSync(source,'source-1');mock.reject=false;
+fs.appendFileSync('scripts/setup_fonts.py','\\n');verifyPreparedFonts(['Sans']);assert.equal(mock.calls,8);
+fs.appendFileSync('typography/verify-fonts.py','\\n');verifyPreparedFonts(['Sans']);assert.equal(mock.calls,9);
+assert.equal(fs.readFileSync(manifest,'utf8'),'{}  ','Verification must not rewrite provenance');
+fs.unlinkSync(regular);assert.throws(()=>verifyPreparedFonts(['Sans']),/Required SC font is missing/);
+`;
+  const run=spawnSync(process.execPath,['--loader','./tests/fixtures/font-provenance-stubs-loader.mjs','--input-type=module','-e',code],{cwd:root,encoding:'utf8'});
+  assert.equal(run.status,0,run.stdout+run.stderr);
+ });
+});

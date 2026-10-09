@@ -17,6 +17,8 @@ node chapters/01-four-elements/editorial/zombie-kingdom-r2/build.mjs --check
 
 两种命令都会先验证字幕建议：每组 `suggested_lines` 必须一字不差地拼成 `spoken_span`，各组再完整拼成块口播。每组一至两行、每行最多 22 个可读 Unicode 字母或数字，只能在子句标点后换行／换组；当前角色名、策略名及对应选择／收益子句不能拆开。模板只允许已定义的自身 token，未知 token 和 `constructor`、`toString`、`__proto__` 等原型属性明确报错；验证失败不会写出任何派生产物。
 
+原稿及草稿的 `spoken_character_count` 指标都复用 [Unicode 15.0.0 文本合同](../../../../scripts/unicode-text-contract.md)中的 L*/N* 码点计数。重音字母、扩展汉字和非 ASCII 数字计入，组合符、符号、标点与空白不计入；补充平面的一个字母或数字仍只算一个码点。这不是字素数、真实语速或片长预测。`tests/editorial-unicode-metrics.test.mjs` 通过真实重建和独立的八码点样本检查两个指标。
+
 自然试读后再人工建立新参考时间轴，真人录制后重定时。字符增加不等于按比例预测片长，禁止硬塞旧 174.1 秒。植物以后可以加入；田忌赛马只是举例，本次不新建章节或重渲整片。
 
 “支付”保留为 payoff 译法备考，观众口播只用“收益”。放松/夹持手、真实头像净空、桌牌支撑及七状态动作仍见[质量回归记录](../../../../docs/quality-regressions.md)中的 OPEN 项。
