@@ -54,6 +54,9 @@ class ValidationFixtures(unittest.TestCase):
             fonts.mkdir(parents=True)
             qa.mkdir(parents=True)
             (qa / 'text-runs.json').write_text(json.dumps({'textRuns': ['中文 A']}), encoding='utf-8')
+            # Synthetic faces must cover the real current first-use repertoire;
+            # retain the per-face mutations below to exercise their exact gates.
+            characters = set(qa_glyphs.current_characters()) | set('中文A')
             manifest = {}
             tables = {}
             for kind in ['Sans', 'Serif']:
@@ -63,7 +66,7 @@ class ValidationFixtures(unittest.TestCase):
                     (fonts / name).write_bytes(data)
                     manifest[name] = {'sha256': hashlib.sha256(data).hexdigest()}
                     tables[name] = dict(family=f'Noto {kind} CJK SC', weight=number,
-                                        glyphs=20000, cmap={ord(c): c for c in '中文A博弈论入门参与者信息策略收益每种组合各得什么红蓝小B'})
+                                        glyphs=20000, cmap={ord(c): c for c in characters})
             manifest_path = fonts / 'prepared_font_manifest.json'
             manifest_path.write_text(json.dumps(manifest), encoding='utf-8')
 
@@ -86,7 +89,7 @@ class ValidationFixtures(unittest.TestCase):
                 qa_glyphs.main(root)
                 report = qa / 'glyphs.json'
                 self.assertEqual(len(json.loads(report.read_text())), 4)
-                self.assertTrue(all(item['unique_characters_checked'] == 3 for item in json.loads(report.read_text())))
+                self.assertTrue(all(item['unique_characters_checked'] == len(characters) for item in json.loads(report.read_text())))
                 # Mutate every face, including late failures after prior valid faces.
                 for name in tables:
                     original = copy.deepcopy(tables[name])

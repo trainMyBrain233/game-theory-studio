@@ -399,6 +399,31 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** 三项候选及字体输入/输出隔离、语义 fixture 修正已获上述冻结专项证据；此前 alias/alpha 修补与本轮定向通过不等于完整新 head 接受，最终 CI/复审待验，PR 未记为合并。
 
+### `8de7344` CI：合成字体与文件系统能力 fixture 必须跟随真实入口合同
+
+`8de73441829888d04ee9f23caead6e25461b370b` 的 [PR Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37928856019) 与 [push Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37928848352) 四路 core 均失败。各路 JS 903 项中 900 pass/3 skip 已通过；Python 原始报告各 178 项，Ubuntu 为 6 failures/1 error/6 skip，macOS 为 6 failures/2 errors/9 skip。这里含子用例/alias skip 记录，不以这些数字直接相减伪造顶层 pass 数。后续静态/episode/联系图/源码终检均未到达；安全审查于 2026-10-09 12:25:31 UTC 完成且无新增，代码审查于 12:33:48 完成并新增下节四项 P2。
+
+字体相关失败来自旧合成 fixture：优化测试仍只提供短 cmap 并断言 checked==3，已不符合 first-use 当前完整 inventory；下载恢复测试的 prepare mock 仍只接受四参数，而真实入口已传入第五个 required_characters，产生 TypeError。两处精确失败已在本机复现；修补仅改 `tests/test_optimized_validation.py` 与 `tests/test_quality.py`，合成 cmap 使用真实当前 inventory 与测试文案的并集，报告 count 按该集合核对，recovery mock 接受且明确检查第五参数已传播。原各 face 的 family/weight/subset/cmap/hash/provenance 负例保持，不缩小生产 inventory 或放宽真实字体检查。最终 quality 23 项（1.392 秒）、optimized 五项（18.430 秒，内部四 ValidationFixtures 各跨普通/`-O`/`-OO`/`PYTHONOPTIMIZE=1/2`）、相邻字体八项（15.690 秒）、真实 notdef/TTC 四项（47.143 秒，含既有优化模式控制）均通过，限定 Linux/Python 3.12.14 的定向证据。macOS 另在创建非法 UTF-8 文件名时由文件系统返回 EILSEQ（该平台 errno 92），尚未进入 QA。`tests/test_source_portable_names.py` 仅在实际创建返回 errno.EILSEQ 时跳过该一个 native-byte-name 测试，不按 Darwin 整体跳过；EACCES/ENOSPC 用显式负例证明仍抛出。独立无条件 synthetic Git candidate bytes 通过 runpy 子进程执行真实 QA/pack main 与真实 checkout 验证，在五优化启动模式中检查精确一次 hook 命中、UTF-8 拒绝、无 traceback、只读快照及旧 ZIP 保留。Linux 普通/`-O`/`-OO` 三次专属各 8/8、无 skip（16.199/15.594/15.732 秒），每次 100 个 CLI 子调用；仅给真实非法文件名注入 EILSEQ 的整套实测为 8 项中恰好一项 capability skip，其余含 synthetic CLI 全通过（14.160 秒）。生产 guard 未改，模拟 EILSEQ 不冒称原生 macOS 执行；最终源码 QA 与 scoped diff 检查通过。
+
+教训：合成字体的合法基线需满足当前公开入口，故障注入还必须到达所要测的检查；操作系统根本不能表示某种文件名时，应精确区分能力限制与 guard 放行，并保留无条件入口拒绝证据。
+
+**根级最终 Python 集成：** fixture 修补后完整 `test_*.py` 180/180、0 skip 通过（354.271 秒，Linux、Python 3.12.14，复用现有依赖）；这是本轮完整 Python suite，不能代替完整 npm test、Node、干净安装或新 head CI，也不与上述专项重复累加。
+
+**当前状态：** 四路旧 head core 已失败，fixture-only 修补及上述专项/完整 Python 证据已冻结；双审查已终态且代码新增下节四项，新 head 尚未推送，完整双平台验证待验，PR 未记为合并。
+
+## PR #4 `8de7344` 新增 4 项：editorial 发布、徽章容器、SRT 量化与布局参数
+
+[自动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5470070139)于 2026-10-09 12:33:48 UTC 完成，新增以下四项 P2；安全于 12:25:31 完成无新增。上节字体/文件名 fixture 修补后的本机完整 Python 180 项通过保留为独立证据，不代表这四项生产问题已修或新全链通过。
+
+- **本轮-1：editorial 产品集同样需要发布失败回滚。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4230127548)中后置 `原段ID映射.json` 目标为目录等错误会在前面的 writeFileSync 已覆盖产品后发生，造成 draft JSON、mapping、提词文本混代。新 `scripts/publish-products.mjs` 提供支持相对嵌套路径的共享 writeProducts；显式 editorial build 才调用，check 保持只读。先校验路径/重叠/目标类型与父目录实际可写，再暂存全部产品和旧字节备份；普通发布异常逆序恢复旧产品、删除本次新文件，仅移除本次创建的空目录。回滚自身失败明确报 incomplete recovery 并保留备份；不承诺整组并发读取原子性、崩溃/断电持久性或并发 writer 安全。新测试覆盖后置目录、真实 POSIX 不可写父目录、暂存/复制/第二次 rename 注入失败的已有/新/混合输出、字节一致重建、只读 check、恢复失败备份、跨目录回滚及 symlink/escape/overlap。publication 专属 16 项与 editorial-draft/unicode-metrics 合并 42/42、0 skip（12.885 秒），直接 check 通过。根级要求真实 Linux TMPDIR symlink 预检后，专属初跑 15/16，仅 recovery 目录的字面 alias/真实路径期望不同；故障注入均命中，生产备份行为未失效。仅将 fixture 期望目录作 realpath 比较，保留错误 marker、恢复错误和原备份字节断言；最终同一 symlink 条件专属 16/16、0 skip（5.102 秒），不冒称该断言调整后原合并 42 项已全部重跑（Linux、Node 24.19.0）。教训：同类输出生产者都要维护产品集一致性；路径身份断言应规范化，但不能因此放宽失败注入或字节保全要求。
+- **本轮-2：bright 收益徽章需检查文字对容器的实际边界。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4230127556)中合法四字姓名配 99 分、34px 字号超过固定 190px 徽章，画布/文字间碰撞 QA 却不能检测溢出徽章。真实“甲方同学/乙方同学 · 99分”墨迹约 256.56/257.56px，旧容器明确不足。`design/render-proposals.mjs` 现按实际左右 bearing 测量并将徽章在 190–360px lane 内有界扩展，保留 34px/700，4px stroke 内再留横向 12px、纵向 8px，仍超界则拒绝。相邻四字行名仅按需左移，选择 header 符号仅按需右移，避免解决徽章后新增邻近图形碰撞；短默认保持原位，完整默认 bright-payoff PNG 与修前字节相同。真实字体/像素专项覆盖四个 selected cell 的 1920 原图与 960 半尺寸、内边距、相邻符号/卡面间隔、超大文本拒绝；恢复固定 190 的变异精确命中容器失败。最终串行 focused 11/11 通过，默认/压力原图与半尺寸已实际查看（Linux、Node 24.19.0）。此前较宽组合 18/19 的一项被并行 inventory 修改阻断，保留为非通过，不当渲染错误或完整工程通过。教训：实际字形墨迹要同时满足局部容器、stroke/padding 和邻近图形，必须把最大支持姓名与最大分数一起验，不能只检查画布边界。
+- **本轮-3：SRT 发布需要验证量化后的显示窗口。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4230127561)中模型合法的正 sub-ms 窗口两端可舍入到同一毫秒，导出零时长 SRT；真实 CLI 已复现 0.0001 秒尾 cue 输出两个相同时间。新 `production/src/subtitle-time.mjs` 保留既有 Math.round，将端点只量化一次到安全整数毫秒，拒绝非 number/非 finite/负数/不可表示值及量化后零长、倒置或重叠窗口，格式化消费同一已验整数，所有检查在任何发布前完成。跨毫秒边界的 0.0002 秒正窗口仍可合法，不新增语速规则或一概拒绝 sub-ms；Python builder 本来先舍入三位再严格验正窗口，未改其生产合同。同型写出路径经授权复用 writeProducts，统一保护 output/narration exports 五个产品；实际后置目标障碍与末次 export rename 注入证明旧产品集保持。默认与合法 changed 中文名字/策略/不对称收益五产品字节均与原 CLI 相同。专属四项在普通临时路径和真实 TMPDIR symlink alias 下分别 4/4，通过路径后缀匹配明确到达所需 rename 注入；相邻 Python narration-validation 6/6 通过（Linux、Node 24.19.0、Python 3.12.14），只作字幕/文本发布证据，非实际配音对齐接受。教训：可表示性是导出格式的独立合同，原始时间连续且为正不保证编码后的字幕仍有显示窗口。
+- **本轮-4：未知布局选项不能静默降级到公开占位。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4230127572)中误拼 actor-alpha 选项被忽略，命令仍可能以 public placeholder 成功，未检查操作者所要验证的私有 mask。共享 `production/qa/layout-mode.mjs` 现只允许 --actor-alpha、--placeholder-cast、--stress-cast、--all-frames 四个无值 boolean switch，未知/value/positional token 在模式选择前拒绝，保留 actor-alpha 与 placeholder 冲突检查；validator 的 stress 状态修改移到解析之后。实际 npm wrapper、direct runner、direct validator 共 30 个非法案例证明未准备资产、旧报告未替换；12 个合法 npm 组合保留公共/私有/压力/全帧行为与私有非空 mask/检查证据。移除 allowlist 的内存反向变异重新把误拼项当 public_placeholder，拒绝断言按预期失败。alpha-routing/report/sampling 合并 29/29 通过（22.503 秒，Linux、Node 24.19.0），该组是受控入口/记录测试，未新增原生私图或全片接受。教训：必需安全检查的选项误拼应明确失败，不能把忽略参数后的一般默认成功当作操作者想要的检查已执行。
+
+**根级定向集成：** 布局参数相关三文件另独立 29/29、0 skip 通过（24.942 秒）；最终 publication/editorial/subtitle/badge/proposal 组合 57/57、0 skip，qa:data 两章 39 blocks、editorial 只读比较及源码 QA 365 文件通过。根级独立查看 bright 四字名/99 分的 1920 原图与 960 预览，徽章内墨迹及邻近标签可读；默认修前后同 SHA 证据保留。以上与 worker 专项重叠，不累加为完整工程结果，也不延伸到未查看的场景/私图。
+
+**当前状态：** 四项候选及上述最终专项/根级定向集成证据已冻结。此前完整 Python 180 项发生在这四项修补前，不作为新生产改动后的全套通过；新 head 完整 CI/复审待验，PR 未记为合并。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

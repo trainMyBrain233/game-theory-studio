@@ -300,8 +300,10 @@ class FontRecoveryTests(unittest.TestCase):
             payload = b'official-fixture'
             checksums = {key: hashlib.sha256(payload).hexdigest() for key in setup_fonts.OFFICIAL_SHA256}
             calls = []
+            required_characters = setup_fonts.current_characters()
 
-            def prepare(source, target, kind, weight):
+            def prepare(source, target, kind, weight, current_characters):
+                self.assertEqual(current_characters, required_characters)
                 self.assertEqual(source.suffix, '.download')
                 target.write_bytes(payload)
                 calls.append((kind, weight))

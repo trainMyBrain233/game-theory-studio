@@ -1,5 +1,9 @@
 /** Public QA is the default; private alpha QA must never use placeholder art. */
+const layoutFlags=new Set(['--actor-alpha','--placeholder-cast','--stress-cast','--all-frames']);
 export function layoutMode(args){
+ // These switches take no values. Never turn a typo, positional argument or
+ // renderer-only option into a successful public-placeholder QA run.
+ for(const arg of args)if(!layoutFlags.has(arg))throw Error(`Unknown layout argument: ${JSON.stringify(arg)}. Supported switches (no values): ${[...layoutFlags].join(', ')}.`);
  const actorAlpha=args.includes('--actor-alpha'),placeholder=args.includes('--placeholder-cast');
  if(actorAlpha&&placeholder)throw Error('--actor-alpha conflicts with --placeholder-cast; private alpha QA requires the real layered renderer.');
  return {actorAlpha,placeholder:!actorAlpha};

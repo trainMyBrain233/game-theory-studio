@@ -8,8 +8,8 @@ import {CAST} from '../src/cast.mjs';
 import {prepareAssets,records,routes,getActorMask} from '../src/primitives.mjs';
 import {TOKENS} from '../src/model.mjs';
 import {actorTextClearance} from './actor-clearance.mjs';
-if(process.argv.includes('--stress-cast')){CAST.actors.A.display_name='普通僵尸';CAST.actors.B.display_name='路障僵尸';}
 const mode=layoutMode(process.argv.slice(2));
+if(process.argv.includes('--stress-cast')){CAST.actors.A.display_name='普通僵尸';CAST.actors.B.display_name='路障僵尸';}
 if(mode.placeholder&&!process.argv.includes('--placeholder-cast'))process.argv.push('--placeholder-cast');
 const sampling=createLayoutSamples({...timeline,duration:DURATION},{fps:TOKENS.canvas?.fps??30,allFrames:process.argv.includes('--all-frames')});
 const [shardIndex,shardCount]=(process.env.EPISODE_LAYOUT_SHARD??'0/1').split('/').map(Number);

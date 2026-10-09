@@ -170,20 +170,43 @@ function brightPlayers(scene){
  rect(828,611,264,67,S.accent,S.ink,4);txt('都想多得分',960,643,33,700,S.ink,'center');
  badge('A',431,890,24);txt(`${actorLabel('A')}`,477,890,36,700);badge('B',1369,890,24);txt(`${actorLabel('B')}`,1415,890,36,700);txt('2 个决策者',960,890,34,700,S.ink,'center');
 }
+// Measure real ink, including alignment and unequal bearings, at the requested size.
+function brightLabelInk(text,size,align='left'){
+ c.save();try{
+  c.font=canvasFont(size,700);assertAppliedFont(c,{size,weight:700,family:FONT_FAMILY});
+  c.textBaseline='middle';c.textAlign=align;
+  const m=c.measureText(text);
+  if(![m.actualBoundingBoxLeft,m.actualBoundingBoxRight,m.actualBoundingBoxAscent,m.actualBoundingBoxDescent].every(Number.isFinite))throw Error('Bright payoff requires finite text ink metrics');
+  return {left:m.actualBoundingBoxLeft,right:m.actualBoundingBoxRight,ascent:m.actualBoundingBoxAscent,descent:m.actualBoundingBoxDescent};
+ }finally{c.restore();}
+}
+function brightPayoffBadge(text,cx,fill){
+ const ink=brightLabelInk(text,34,'center'),padding=12,stroke=4;
+ // Preserve the original 190px badge when it fits. Each result owns a 360px lane.
+ const width=Math.max(190,Math.ceil(2*(Math.max(ink.left,ink.right)+padding+stroke/2)));
+ const left=cx-width/2,top=769,height=69,baseline=801;
+ if(width>360||cx-ink.left<left+padding+stroke/2||cx+ink.right>left+width-padding-stroke/2||baseline-ink.ascent<top+8+stroke/2||baseline+ink.descent>top+height-8-stroke/2)throw Error(`Bright payoff badge text does not fit: ${text}`);
+ rect(left,top,width,height,fill,S.ink,stroke);txt(text,cx,baseline,34,700,S.ink,'center');
+}
 function brightPayoff(scene){const f=focus();
  rect(82,237,929,28,S.accent);txt(scene.title,84,202,82,700,S.ink,'left',S.titleFamily);txt(scene.lead,1836,300,33,400,S.muted,'right');
  const x=316,y=444,cw=310,rh=181;
  txt(`${actorLabel('B')}的选择`,626,327,34,700,S.ink,'center');smallChoice('red',430,390,35);smallChoice('blue',740,390,35);
- txt(`${actorLabel('A')}`,117,535,35,700);txt('的选择',96,584,31,400);smallChoice('red',194,534,35);smallChoice('blue',194,716,35);
+ const rowName=actorLabel('A'),rowInk=brightLabelInk(rowName,35);
+ // Leave 8px before the row's red symbol; preserve the short default name's origin.
+ txt(rowName,Math.min(117,194-35*.3-8-rowInk.right),535,35,700);txt('的选择',96,584,31,400);smallChoice('red',194,534,35);smallChoice('blue',194,716,35);
  rect(x,y,cw*2,rh*2,null,S.ink,5);rect(x+cw*f.k,y+rh*f.r,cw,rh,S.wash);line(x+cw,y,x+cw,y+2*rh,S.ink,5);line(x,y+rh,x+2*cw,y+rh,S.ink,5);
  STATE.payoffs.forEach((row,r)=>row.forEach((p,k)=>scorePair(...p,x+cw*(k+.5),y+rh*(r+.5),74)));
  txt(`每格顺序：（${actorLabel('A')}，${actorLabel('B')}）`,626,873,32,400,S.muted,'center');
  arrow(974,y+rh*(f.r+.5),1098,535,S.ink,5);
  // The focused cell is unpacked into two actor-owned results.
- smallChoice(f.kindA,1193,380,34);txt(`${actorLabel('A')}选`,1082,380,32,700);smallChoice(f.kindB,1593,380,34);txt(`${actorLabel('B')}选`,1482,380,32,700);
+ for(const [who,kind,labelX,choiceX] of [['A',f.kindA,1082,1193],['B',f.kindB,1482,1593]]){
+  const text=`${actorLabel(who)}选`,ink=brightLabelInk(text,32);
+  smallChoice(kind,Math.max(choiceX,labelX+ink.right+16+34*.32),380,34);txt(text,labelX,380,32,700);
+ }
  badge('A',1218,497,34);badge('B',1620,497,34);
  txt(String(f.a),1218,649,174,700,S.ink,'center');txt(String(f.b),1620,649,174,700,S.ink,'center');
- rect(1123,769,190,69,S.accent,S.ink,4);rect(1525,769,190,69,'#DAD4EA',S.ink,4);txt(`${actorLabel('A')} · ${f.a}分`,1218,801,34,700,S.ink,'center');txt(`${actorLabel('B')} · ${f.b}分`,1620,801,34,700,S.ink,'center');
+ brightPayoffBadge(`${actorLabel('A')} · ${f.a}分`,1218,S.accent);brightPayoffBadge(`${actorLabel('B')} · ${f.b}分`,1620,'#DAD4EA');
 }
 export function drawScene(canvas,styleId,sceneId,override={}){
  const scale=proposalScale(canvas.width,canvas.height);

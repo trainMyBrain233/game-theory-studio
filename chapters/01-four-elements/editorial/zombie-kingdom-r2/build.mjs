@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {writeProducts} from '../../../../scripts/publish-products.mjs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -125,9 +126,11 @@ export function currentProducts(){
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const args=process.argv.slice(2);if(args.length>1||args.length===1&&args[0]!=='--check')throw Error('Use no arguments to rebuild this draft, or --check for read-only validation.');
- for(const [name,text] of Object.entries(currentProducts())){
+ const products=currentProducts();
+ if(args[0]==='--check')for(const [name,text] of Object.entries(products)){
   const file=path.join(directory,name);
-  if(args[0]==='--check'){if(!fs.existsSync(file)||fs.readFileSync(file,'utf8')!==text)throw Error(`Stale editorial product ${name}; explicit rebuild required.`);}else fs.writeFileSync(file,text);
+  if(!fs.existsSync(file)||fs.readFileSync(file,'utf8')!==text)throw Error(`Stale editorial product ${name}; explicit rebuild required.`);
  }
+ else writeProducts(directory,products);
  console.log(args[0]==='--check'?'Editorial draft: read-only products match current shared case/presentation.':'Wrote r2 semantic draft, 37-ID mapping and clean teleprompter text; no production timeline changed.');
 }
