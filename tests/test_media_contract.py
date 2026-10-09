@@ -23,6 +23,20 @@ class MediaContract(unittest.TestCase):
             broken['streams'][1][field] = value
             with self.assertRaises(ValueError): module.validate_streams(broken, 1)
 
+    def test_rejects_extra_or_malformed_stream_entries(self):
+        for extra in [dict(codec_type=kind) for kind in
+                      ['subtitle', 'data', 'attachment', 'unknown', 'Video', '', None, [], {}]] + [
+                          {}, None, 'audio', [], 0, True]:
+            with self.subTest(extra=extra):
+                info = self.fixture()
+                info['streams'].append(extra)
+                with self.assertRaisesRegex(ValueError, 'only video or audio'):
+                    module.validate_streams(info, 1)
+        for info in [None, [], {}, {'streams': None}, {'streams': {}}, {'streams': 'video'}]:
+            with self.subTest(info=info):
+                with self.assertRaisesRegex(ValueError, 'list of media streams'):
+                    module.validate_streams(info, 1)
+
     def test_range_rate_and_each_stream_timing(self):
         for field, value in [('color_range', 'pc'), ('avg_frame_rate', '60/1'), ('start_time', '.1'), ('duration', '0.5')]:
             info = self.fixture()

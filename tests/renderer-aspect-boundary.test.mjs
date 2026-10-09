@@ -6,7 +6,7 @@ import {spawnSync} from 'node:child_process';
 const scenes=new URL('../production/src/scenes.mjs',import.meta.url).href;
 const primitives=new URL('../production/src/primitives.mjs',import.meta.url).href;
 function run(source){
- const result=spawnSync(process.execPath,['--loader',new URL('./fixtures/frame-time-stubs-loader.mjs',import.meta.url).pathname,'--input-type=module','-e',source],{cwd:os.tmpdir(),encoding:'utf8',timeout:30000});
+ const result=spawnSync(process.execPath,['--loader',new URL('./fixtures/frame-time-stubs-loader.mjs',import.meta.url).pathname,'--input-type=module','-e',`import {prepareAssets} from ${JSON.stringify(primitives)}; await prepareAssets();\n${source}`],{cwd:os.tmpdir(),encoding:'utf8',timeout:30000});
  assert.equal(result.status,0,result.stdout+result.stderr);
 }
 

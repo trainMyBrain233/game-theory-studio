@@ -117,7 +117,8 @@ test('real drawFrame rejects nonfinite or coercible times before any state or co
  const source=`
   import assert from 'node:assert/strict';
   import {drawFrame,DURATION} from ${JSON.stringify(new URL('../production/src/scenes.mjs',import.meta.url).href)};
-  import {calls} from ${JSON.stringify(new URL('../production/src/primitives.mjs',import.meta.url).href)};
+  import {calls,prepareAssets} from ${JSON.stringify(new URL('../production/src/primitives.mjs',import.meta.url).href)};
+  await prepareAssets();
   const canvas={width:1920,height:1080,getContext(){calls.push(['getContext']);throw Error('Context boundary reached');}};
   for(const time of [NaN,Infinity,-Infinity,undefined,null,'1',true,{}]){
    calls.length=0;

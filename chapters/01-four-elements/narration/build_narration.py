@@ -2,6 +2,7 @@ from pathlib import Path
 import argparse,json,sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[3]/'scripts'))
 from narration_io import write_products
+from narration_validation import validate_narration
 from case_data import Case
 from text_contract import readable_count
 CASE=Case(Path(__file__).resolve().parents[3])
@@ -10,7 +11,6 @@ sys.stdout.reconfigure(encoding='utf-8')
 parser=argparse.ArgumentParser(description='Rebuild the authored chapter; QA can use a temporary output directory.')
 parser.add_argument('--output-dir',type=Path,default=Path(__file__).resolve().parent)
 OUT=parser.parse_args().output_dir
-OUT.mkdir(parents=True,exist_ok=True)
 # Speech estimates are authored per semantic unit; they are not character-rate allocation.
 # Only revised text is re-estimated; unchanged original reference windows stay fixed.
 def revised_speech(text,previous):
@@ -85,6 +85,7 @@ data={
  'speech_guidance':{'tone':'清楚、平和，像面对一个第一次接触博弈论的人讲解。','names':'按当前参与者显示名读；中文姓名按中文发音，只有姓名中的拉丁字母读英语字母名称。不要省掉或替换人名。','numbers_and_symbols':'数值全部用中文数字口播；每格按参与者顺序读“姓名得几分”，不读括号、逗号或矩阵坐标；≠读不等于；行读 háng。','pace':'句内逗号轻停，问句和定义后留理解时间。允许局部伸缩，不要为踩时间码加速。','subtitle_policy':'整句或语义块完整出现；不逐字打字。字幕从start保留到end，包含尾部停顿，不提前收走。','pause_after_definition':'pause_after位于start/end显示窗的结尾：end = voiceover_end + pause_after。不是在end后再追加一次。'},
  'visual_contract':{'participants':CASE.players,'game_rounds':1,'matrix_orientation':f'{CASE.players[0]}为行，{CASE.players[1]}为列','matrix_score_order':CASE.players,'matrix_values':PAYOFFS,'matrix_reveal_order':['RR','RB','BR','BB'],'multi_round_is_comparison_only':True,'framework_note':'四问是入门整理，不是唯一公认分类。','information_note':'知道完整计分规则而看不到本轮行动，不能据此称为不完全信息。','persistent_visual_notes':['虚构教学案例','本片：一轮游戏'],'transitions':'转场优先落在pause_after内；字幕层保持清晰、稳定，不把转场时间从阅读窗硬扣除。'},
  'sections':sections,'segments':rows}
+validate_narration(rows, CASE)
 timeline_text=json.dumps(data,ensure_ascii=False,indent=2)+'\n'
 def ts(s):
     ms=round(s*1000); h,ms=divmod(ms,3600000); m,ms=divmod(ms,60000); sec,ms=divmod(ms,1000)
@@ -118,23 +119,6 @@ for s in sections:
 voiceover_text='\n'.join(parts)
 # Operational QA: CJK/letter/digit characters, punctuation excluded. Reference metrics, not speech standards.
 def chars(s): return readable_count(s)
-assert all(len(r['lines'])<=2 and max(map(chars,r['lines']))<=22 for r in rows)
-assert all(r['end']>r['start'] and r['voiceover_end']<=r['end'] for r in rows)
-assert all(abs(rows[i]['end']-rows[i+1]['start'])<.0001 for i in range(len(rows)-1))
-assert all(''.join(r['lines'])==r['voiceover'] for r in rows)
-for row in rows:
-    cue=row['visual_cue']
-    if 'matrix_cell' in cue:
-        cell=cue['matrix_cell']
-        assert cell in data['visual_contract']['matrix_values']
-        if 'choices' in cue:
-            assert cue['choices']=={'A':CASE.strategies[0 if cell[0]=='R' else 1],'B':CASE.strategies[0 if cell[1]=='R' else 1]}
-        if 'scores' in cue:
-            assert cue['scores']==data['visual_contract']['matrix_values'][cell]
-        for reveal in cue.get('score_reveals',[]):
-            assert reveal['player'] in ['A','B']
-            assert 0<=reveal['offset']<=row['spoken_duration']
-            assert reveal['value']==cue['scores'][0 if reveal['player']=='A' else 1]
 reading=sorted([{'id':r['id'],'text':r['voiceover'],'count':chars(r['voiceover']),'display_seconds':r['display_duration'],'cps':round(chars(r['voiceover'])/r['display_duration'],3),'speech_estimate_cps':round(chars(r['voiceover'])/r['spoken_duration'],3)} for r in rows],key=lambda x:x['cps'],reverse=True)
 metrics={'duration':t,'segment_count':len(rows),'spoken_characters':sum(chars(r['voiceover']) for r in rows),'planned_speech_duration':round(sum(r['spoken_duration'] for r in rows),3),'planned_tail_pause_duration':round(sum(r['pause_after'] for r in rows),3),'max_subtitle_cps':reading[0]['cps'],'max_subtitle_line_characters':max(chars(line) for r in rows for line in r['lines']),'max_subtitle_lines':max(len(r['lines']) for r in rows),'min_tail_pause':min(r['pause_after'] for r in rows),'max_tail_pause':max(r['pause_after'] for r in rows),'reading_rate_definition':'汉字、拉丁字母和数字计为一个可读字符；不计空格和标点；除以整块字幕显示时长。只用于版本自检，不是人的阅读速度标准。','densest_segments':reading[:5],'sections':sections,'checks':{'continuous_no_overlap':True,'subtitle_matches_voiceover':True,'two_lines_max':True,'line_22_readable_characters_max':True,'display_at_least_estimated_speech':True,'matrix_values_exact':True,'no_tts_or_actual_audio_alignment':True}}
 write_products(OUT,{'timeline.json':timeline_text,'game_theory_v2_zh.srt':srt,

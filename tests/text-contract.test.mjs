@@ -179,7 +179,7 @@ function generateTextTimeline(data) {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-semantic-splits-'));
   try {
     const builder = 'chapters/01-four-elements/narration/build_narration.py';
-    for (const relative of [builder, ...['case_data.py', 'text_contract.py', 'unicode-text-15.0.0.json', 'narration_io.py'].map(name => `scripts/${name}`)]) {
+    for (const relative of [builder, ...['case_data.py', 'text_contract.py', 'unicode-text-15.0.0.json', 'narration_validation.py', 'narration_io.py'].map(name => `scripts/${name}`)]) {
       const target = path.join(temporary, relative);
       fs.mkdirSync(path.dirname(target), {recursive: true});
       fs.copyFileSync(path.join(ROOT, relative), target);

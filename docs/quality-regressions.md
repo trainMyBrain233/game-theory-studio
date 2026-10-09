@@ -187,6 +187,34 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** 四项候选代码及上述专项已冻结；默认布局分段已覆盖完整原样本，但此前单进程入口的 `status=null`/`SIGKILL` 仍原因未明，不称 OOM，也不把该次单进程运行改记为通过。旧 endpoint 测试修正仍保留，未回退生产显示窗口合同。最终新 head 完整双平台 CI/复审仍待完成，PR 未记为合并；不新增真实私有角色全片、编码/解码、音频或平台播放接受结论。
 
+### `a9f74b8` CI：负例必须独立于当前案例数值
+
+`a9f74b8f18c3ab542737d487042c9cf062529f55` 的 [Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37900776436) 双平台默认 core 均通过 751/751 JS、100/100 Python，完整字体与 animatic 阶段通过；`test:render` 随后的 case-reuse 在 changed-case 内层 core 失败，render smoke、episode、联系图及最终源码 QA 未到达。新失败是 `tests/timeline-reveal-window.test.mjs` 假定任何当前 speech duration 的 Float64 前驱加 start 都会舍入到 end； changed 输入实际为 9.099999999999998 而预期 9.1，负例自己的前提不成立，未发现生产窗口规则错误。
+
+- **浮点负例先证明触发条件。** 仅在该内存测试 timeline 中把各段改为精确二进制可表示的 8 秒窗口，同步 section/duration，保留当前语义与收益载荷；先通过正式 validator，再改变目标 offset，独立断言 offset 小于 speech duration 但 absolute addition 确实等于 end，最后才要求窗口错误。生产实现不改，不能为让错误负例通过而放宽规则。
+- **更名 fixture 必须真正改变当前输入。** 同型检查发现 checkpoint 测试固定写入长姓名，若当前输入早已是这组姓名就没有变化。`tests/render-window-checkpoints.test.mjs` 现在从候选中选总口播姓名长度不同的一组，先断言内容/长度确实变化，再真实重建并保留 timeline hash、检查点时序移动及旧 still 身份拒绝。相关五个纯测试文件在默认、标准 changed-case 与已有长姓名三种输入上分别 177/177 通过；这些不是新的完整 case-reuse 执行结果。
+- **额外静态发现：用具名覆盖代替旧固定检查总数。** `scripts/case-reuse-smoke.mjs` 的 53 检查硬编码已与新增颜色配对 QA 不相容，但本次 CI 在更早的内层 core 已失败，不能声称 CI 已触发这一后续问题。新增 `scripts/case-reuse-contract.mjs` 要求实际每行 ok、名称无重复、计数自洽，以及由当前样式/场景/实际对比度角色推导的完整具名覆盖；允许追加合法检查，不允许删项目后只降低 passed 数。九个原真实 npm 步骤保持，新增 `tests/case-reuse-contract.test.mjs` 的 6/6 验证具名缺项/失败/计数/重复及真实 wrapper 命令列表；未把 wrapper 的受控测试说成九步全部重跑。失败 stdout/stderr 先完整直出，再抛简短含 status/signal/spawn error 的错误，避免大型 AssertionError 格式化截断关键末尾诊断。
+
+**补充实际集成：** 标准 changed-case 的隔离源码副本已执行八个真实 npm 命令：build:narration/build:editorial、qa:data/qa:editorial、render:proposals、qa:design/qa:layout/qa:cast，均 status=0、无 signal；仅未重跑其中的完整 `test:core`。真实新设计报告 69 passed/0 failed，经具名覆盖验收，layout 15 states 与录音指导检查通过。环境 Linux、Node 24.19.0、512 MiB JS heap，复用已锁定依赖，并非 fresh `npm ci`。这是实际 69 项报告证据，不仅是 wrapper stub 测试，但仍不等于完整九步 case-reuse 已过。
+
+**复审进展：** 上述测试/检查包装修正仍未发布；`a9f74b8` 的自动安全复审于 2026-10-09 07:52:27 UTC 完成，无新增项，代码复审于 08:05:29 完成并提出下节四项 P2。最终修正 head 的完整 case-reuse、双平台 CI 与复审仍待完成，PR 未记为合并，不新增影片或私有角色接受结论。
+
+## PR #4 `a9f74b8` 新增 4 项：生成、静帧计划、媒体流与素材准备
+
+[自动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5467454048)针对 `a9f74b8f18c3ab542737d487042c9cf062529f55` 提出以下四项 P2。上节浮点/长姓名 fixture 及 case-report 修正仍保留；以下记录冻结候选及专项证据，不借同 head 的安全审查无新增项或默认 core 通过关闭新问题。
+
+- **复审续-1：口播生成器的 cue 检查也必须抵抗 Python 优化。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228001062)把第一条 RR reveal owner 从 B 改成 C，优化模式删除 owner/周边 assertions 后，对称 3/3 掩盖错误归属且能覆盖旧产物。冻结候选让第一集、原创短章节及章节 template 的三个 builder 共用 `scripts/narration_validation.py` 显式 `ValueError`，在序列化、创建输出目录或写文件前完成完整且唯一 A/B owner、cell/choices/scores/action、事件 value、有限 offset/发声窗及 `start ≤ start + offset < end` 的绝对显示窗、字幕一致/长度/语义、连续时间及 speech/pause/display 算式校验。`tests/test_narration_validation.py` 对三 builder × 普通/`-O`/`-OO`/`PYTHONOPTIMIZE=1/2` 运行真实 B→C 对称负例及 27 类输入破坏，原四项测试包含 300 次负向子进程，验证既有四产物字节不变、缺失输出目录不创建；15 次合法生成跨模式字节一致，三个已有存档产物与默认库内字节一致，未存档 metrics 只做跨模式比较。集成复核另补绝对显示窗与 JS 一致：五模式下零 pause 端点、offset 小于时长却加法舍入到 end、正 pause 被舍入吞掉三类反例共 30 次真实拒绝，普通正 pause 的 speech-end offset 五次成功。教训：其他 QA 的优化模式防护不会保护生成入口，错误应在任何产物变动前停止，而非等待下游 QA 才发现已覆盖错误文件。
+- **复审续-2：default checkpoint 计划只能由默认静帧请求触发。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228001070)中合法 0.3 倍重定时让默认 s18+3s 锚点超段，却因 eager plan 连普通视频及自定义 times 也误拒。`production/render.mjs` 现传入 defaultTimes callback，`renderOptions` 仅在 still=true 且无 explicit times 时调用一次，保留数组兼容；默认计划仍按原合同拒绝越界，不放宽锚点。`tests/render-lazy-checkpoints.test.mjs` 使用真实 model/options/checkpoint/manifest/控制流程，原生绘制/资产/FFmpeg 受控：合法短时间轴的视频、单帧视频、preview、自定义 still 及其 manifest/hash 通过，default still 仍命中默认锚点错误；空/NaN/负数/end times、超窗/零帧视频在资产前拒绝。反向恢复 eager 实现，视频/自定义 still 精确命中旧 s18 错误。教训：可选派生产物的限制不应污染不消费它的入口；受控 producer 与 manifest 证据不等于实际图片或 MP4 编码验收。
+- **复审续-3：媒体流白名单必须验证完整 streams 列表。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228001075)中 subtitle/data 额外流被 video/audio filter 忽略，FFmpeg 默认选择也不能证明未选流安全。`production/qa/media_contract.py` 现在先要求 streams 为 list、每项为 dict 且 codec_type 精确为 video/audio，再要求一 video 和 0/1 audio；subtitle/data/attachment/unknown、大小写别名、空/null/非对象项及类型均拒绝，保留各流原编码与时间合同。额外 attached picture 若声明为 video，按额外视频计数拒绝，未新增 disposition 特殊语义。`tests/test_media_contract.py` 和 `tests/test_optimized_validation.py` 经真实 `verify_media.main` 的受控 probe/decode 路径覆盖 1080p/4K × 静音/mono/stereo × 两种顺序；所有轨道反例须在 decode 调用前拒绝且不写成功报告，并在普通、`-O`、`-OO`、`PYTHONOPTIMIZE=1/2` 保持。教训：必须先验证全集再分类，未处理的输入不能在 filter 中消失；测试没有新编码或真实视频解码证据。
+- **复审续-4：公开 drawFrame 必须要求素材准备完成。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228001081)直接 drawFrame 未等 prepareAssets 时漏画角色/牌并绕过私图缺失错误。冻结候选在原时间/几何检查后、resetRecords/setSceneTime/getContext 前调用 `assertAssetsReady`；primitives 明确 unprepared/preparing/ready/failed，只有全套 private renderer+cards 或显式 placeholder 人物+cards 成功后才原子发布。重试开始撤销旧 ready、清空公开资产表/report/renderer，失败不能继续画旧或半套素材；并发第二次 prepare 明确拒绝且不改变在途调用。`tests/renderer-asset-readiness.test.mjs` 使用真实字体/Canvas/scene，仅控制 decode 时机、不伪造成功：未 prepare、私图缺失、第三 decode pending、重入、第五 decode 失败、成功后失败/重试、八张原创 RGBA 私有正例、末张坏图及恢复均覆盖；负例核对画布字节及 records/routes 引用未被 drawFrame 改动。教训：字体注册或函数可调用不等于完整素材可用，异步准备必须形成可检查的状态与原子发布边界；原创 RGBA 成功不等于真实私图或完整影片接受。
+
+
+**冻结专项与集成证据：** narration 最终全文件 5/5 通过（42.231 秒，含五模式绝对窗），已有 NarrationTests 4/4 通过，22 个 Git 非测试 Python 候选 AST 扫描无运行时 assert（Linux、Python 3.12.14）；media 合同 5 项与优化模式专项 5 项通过。根级完整 Python 105/105（102.088 秒）是在最后绝对窗补丁前启动，不能声称新增后 106 项的完整最终套件已跑；最终 narration 五项已另行重验，完整新套件待干净 CI。Lazy checkpoint 专属 3 项、与既有 render-window 合并 15 项通过；readiness 与比例/边界/片尾组合 16/16 通过（约 6.8 秒）。根级十个相关 Node 文件 234/234 覆盖 readiness/lazy，绝对窗最终补丁后受影响的 builder-copy fixture 组合再通过 197/197（Linux、Node 24.19.0）。组间有重叠，不能累加为完整通过数；这些都是当前未提交集成工作树证据，不写成下一发布 commit 已通过。
+
+**发布前补充：** 源码 guard 将 case-reuse 测试中的嵌套转义换行字符串识别为 UNC 形态，内容实际为合成日志而非真实机器路径；测试改用 `JSON.stringify` 构造子进程字符串，未放宽 guard。对应 6/6 回归与 306 文件源码检查通过；教训是保持合成 fixture 的表达清楚，不能为绕过误识别降低发布边界。
+
+**当前状态：** 四项候选及上述最终定向集成已冻结；新 head 的完整 case-reuse、双平台 CI 和复审仍待完成，此前浮点/长姓名 fixture 与具名报告包装修正一并保留未暂存。PR 未记为合并，不新增私有素材或完整影片接受结论。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

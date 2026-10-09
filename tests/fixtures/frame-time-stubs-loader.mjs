@@ -12,6 +12,11 @@ export async function load(url,context,nextLoad){
   export {TOKENS} from ${JSON.stringify(new URL('./model.mjs',url).href)};
   export {clamp,ease,mix,ramp,span} from ${JSON.stringify(new URL('./motion.mjs',url).href)};
   export const C={},calls=[];
+  // These narrow scene/time fixtures model an explicit completed preparation;
+  // the native readiness regression exercises actual assets and failure paths.
+  let prepared=false;
+  export async function prepareAssets(){prepared=true;}
+  export function assertAssetsReady(){if(!prepared)throw Error('Fixture assets are unprepared');}
   export const resetRecords=()=>calls.push(['resetRecords']);
   export const setSceneTime=t=>calls.push(['setSceneTime',t]);
   const draw=()=>{throw Error('Unexpected drawing boundary');};

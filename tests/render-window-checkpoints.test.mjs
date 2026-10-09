@@ -112,7 +112,15 @@ test('real long-name rebuild moves default keyframes/transitions and rejects the
  const originalBytes=timelineBytes(),original=createStillsManifest(originalBytes);
  withSourceFixture(root=>{
   const file=path.join(root,'design/scenes.json'),scene=JSON.parse(fs.readFileSync(file));
-  scene.actors[0].label='欧阳小明';scene.actors[1].label='司马小红';
+  const currentNames=scene.actors.map(actor=>actor.label);
+  const nameLength=names=>names.reduce((total,name)=>total+[...name].length,0);
+  // Change the total spoken name length as well as the text, so rebuilding an
+  // already-long-name case must still move real checkpoints and invalidate it.
+  const names=nameLength(currentNames)===8
+   ? ['东方明','南宫红'] : ['欧阳小明','司马小红'];
+  assert.notDeepEqual(names,currentNames,'The changed fixture must actually change the current names.');
+  assert.notEqual(nameLength(names),nameLength(currentNames),'The changed fixture must alter spoken name length.');
+  scene.actors.forEach((actor,index)=>{actor.label=names[index];});
   scene.strategies[0].label='合作';scene.strategies[1].label='退出';
   scene.payoffs=[[[11,12],[21,22]],[[31,32],[41,42]]];
   fs.writeFileSync(file,JSON.stringify(scene));
@@ -124,7 +132,7 @@ test('real long-name rebuild moves default keyframes/transitions and rejects the
   const score=manifest.checkpoints.find(point=>point.id==='s27_rb_score');
   const scoreSegment=rebuilt.segments.find(segment=>segment.id==='s27_rb_score');
   assert.equal(score.time,scoreSegment.voiceover_end+(scoreSegment.end-scoreSegment.voiceover_end)/2);
-  assert(score.label.includes('欧阳小明')&&score.label.includes('司马小红'));
+  assert(names.every(name=>score.label.includes(name)));
   assert.notEqual(score.time,original.checkpoints.find(point=>point.id===score.id).time,'The actual rebuilt payoff checkpoint must move.');
   const transition=manifest.checkpoints.find(point=>point.id==='s21_rows_0.6');
   assert.equal(transition.time,rebuilt.segments.find(segment=>segment.id==='s21_rows').start+.6);

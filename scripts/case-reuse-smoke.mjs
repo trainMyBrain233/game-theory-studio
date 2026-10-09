@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {withSourceFixture} from './source-fixture.mjs';
 import {pythonCommand} from './python.mjs';
+import {verifyCaseDesignReport,verifyCaseCommand} from './case-reuse-contract.mjs';
 
 withSourceFixture(root=>{
  // Core tests may create another source fixture. Give this temporary copy a
@@ -20,7 +21,7 @@ withSourceFixture(root=>{
  // Run the real user commands, without recursively invoking this fixture.
  for(const command of ['build:narration','build:editorial','qa:data','qa:editorial','test:core','render:proposals','qa:design','qa:layout','qa:cast']){
   const run=spawnSync(process.platform==='win32'?'npm.cmd':'npm',['run',command],{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()},maxBuffer:8*1024*1024});
-  assert.equal(run.status,0,`Changed supported case failed ${command}:\n${run.stdout}\n${run.stderr}`);
+  verifyCaseCommand(command,run);
  }
  const base=path.join(root,'chapters/01-four-elements/narration');
  const timeline=JSON.parse(fs.readFileSync(path.join(base,'timeline.json'),'utf8'));
@@ -30,6 +31,7 @@ withSourceFixture(root=>{
  assert(!voiceover.includes('把A、B读成英语字母名称'),'Chinese display names retain an English-letter reading instruction');
  assert(voiceover.includes('明月得三十一分，青禾得三十二分。'));
  const design=JSON.parse(fs.readFileSync(path.join(root,'design/qa/checks.json'),'utf8'));
- assert.equal(design.failed,0);assert.equal(design.passed,53);
- console.log('Case reuse: changed Chinese names, strategies, asymmetric payoffs and default BR pass rebuild, data, core, all 53 design checks, layout and read-only cast QA; recording guidance is reusable.');
+ const tokens=JSON.parse(fs.readFileSync(path.join(root,'design/tokens.json'),'utf8'));
+ const designCount=verifyCaseDesignReport(design,tokens,scene);
+ console.log(`Case reuse: changed Chinese names, strategies, asymmetric payoffs and default BR pass rebuild, data, core, all ${designCount} design checks, layout and read-only cast QA; recording guidance is reusable.`);
 });

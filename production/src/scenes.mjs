@@ -6,7 +6,7 @@ import {proposalScale} from '../../design/canvas-geometry.mjs';
 import {beforeEnd} from './frame-time.mjs';
 import {createSubtitleElement} from './elements/subtitle.mjs';
 import {createPayoffMatrixElement} from './elements/payoff-matrix.mjs';
-import {TOKENS,C,clamp,ease,mix,ramp,span,tx,line,round,circle,arrow,group,reveal,person,badge,card,cardFlip,tag,desk,eye,resetRecords,setSceneTime,finishActorLayers} from './primitives.mjs';
+import {TOKENS,C,clamp,ease,mix,ramp,span,tx,line,round,circle,arrow,group,reveal,person,badge,card,cardFlip,tag,desk,eye,resetRecords,setSceneTime,finishActorLayers,assertAssetsReady} from './primitives.mjs';
 export const W=TOKENS.canvas.width,H=TOKENS.canvas.height,FPS=TOKENS.canvas.fps,DURATION=timeline.duration;
 // The timeline end is exclusive. Use its Float64 predecessor only for an
 // endpoint/out-of-range request; every valid in-window time stays unchanged,
@@ -182,6 +182,7 @@ function recap(c,t){
 export function drawFrame(canvas,t,{noSubtitles=false}={}){
  if(!Number.isFinite(t))throw Error('Frame time must be a finite number.');
  const scale=proposalScale(canvas.width,canvas.height);
+ assertAssetsReady();
  t=t<0?0:t>=DURATION?lastFrameTime:t;resetRecords();setSceneTime(t,canvas);const c=canvas.getContext('2d');c.save();c.setTransform(scale,0,0,scale,0,0);c.fillStyle=C.paper;c.fillRect(0,0,W,H);c.lineJoin='round';c.lineCap='round';
  const sec=secAt(t);const scenes={intro,players,information,strategy,payoffs,recap};scenes[sec.id](c,t);finishActorLayers(canvas);chapter(c,t);if(!noSubtitles)subtitle(c,t);c.restore();return c;
 }

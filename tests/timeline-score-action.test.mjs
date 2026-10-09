@@ -18,7 +18,7 @@ function changedCase() {
   try {
     // Rebuild real narration with public source only; no Canvas, fonts or rendering.
     const builder = 'chapters/01-four-elements/narration/build_narration.py';
-    for (const relative of [builder, ...['narration_io.py', 'case_data.py', 'text_contract.py',
+    for (const relative of [builder, ...['narration_validation.py', 'narration_io.py', 'case_data.py', 'text_contract.py',
       'unicode-text-15.0.0.json'].map(name => `scripts/${name}`)]) {
       fs.mkdirSync(path.dirname(path.join(temporary, relative)), {recursive: true});
       fs.copyFileSync(path.join(ROOT, relative), path.join(temporary, relative));

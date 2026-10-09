@@ -15,19 +15,32 @@ const tc=TOKENS.colors;
 export const C={paper:tc.paper,ink:tc.ink,muted:tc.secondary,light:tc.line,faint:tc.focus_fill,blue:tc.blue_strategy,red:tc.red_strategy,beige:'#F2E7CE',white:'#FFFFFF'};
 export const assets={};
 let characterRenderer=null,currentSceneTime=0;
+let assetPreparation='unprepared';
+export function assertAssetsReady(){
+ if(assetPreparation!=='ready')throw Error(`Assets are ${assetPreparation}; await successful prepareAssets() before drawing.`);
+}
 export function setSceneTime(t,canvas){currentSceneTime=t;characterRenderer?.beginFrame?.(canvas)}
 export function finishActorLayers(canvas){characterRenderer?.flush?.(canvas)}
 export function getActorMask(){return characterRenderer?.getMask?.()||null}
 const root=path.dirname(fileURLToPath(import.meta.url));
 export const assetLoadReport=[];
 export async function prepareAssets(scale=2){
- const names=['person-a','person-b','card-red','card-blue','card-back'];
+ // The adapter owns mutable rig state: never run two preparations concurrently.
+ if(assetPreparation==='preparing')throw Error('Asset preparation already in progress; await the active prepareAssets() call.');
+ // Retire the previous session immediately; a failed retry must not render it.
+ assetPreparation='preparing';
+ characterRenderer=null;
+ for(const name of Object.keys(assets))delete assets[name];
  assetLoadReport.length=0;
+ const preparedAssets={},preparedReport=[];
+ try{
+ const names=['person-a','person-b','card-red','card-blue','card-back'];
  const placeholder=process.argv.includes('--placeholder-cast');
- if(CAST.renderer_module&&!placeholder){characterRenderer=await import(new URL('../'+CAST.renderer_module,import.meta.url));await characterRenderer.prepare();}else characterRenderer=null;
+ let preparedRenderer=null;
+ if(CAST.renderer_module&&!placeholder){preparedRenderer=await import(new URL('../'+CAST.renderer_module,import.meta.url));await preparedRenderer.prepare();}
  for(const n of names){
   const isPerson=n.startsWith('person'),reg=isPerson?CAST.actors[n.at(-1).toUpperCase()]:CAST.strategies[n.slice(5)];
-  if(isPerson&&characterRenderer){assetLoadReport.push({id:n,type:'layered_raster',source:reg.asset,pixel_budget:characterRenderer.pixelBudget});continue;}
+  if(isPerson&&preparedRenderer){preparedReport.push({id:n,type:'layered_raster',source:reg.asset,pixel_budget:preparedRenderer.pixelBudget});continue;}
   const file=path.resolve(root,'..',placeholder&&isPerson?reg.fallback_asset||reg.asset:reg.asset);
   const vw=isPerson?420:140,vh=isPerson?500:190;
   if(path.extname(file).toLowerCase()==='.svg'){
@@ -39,14 +52,20 @@ export async function prepareAssets(scale=2){
    // Rasterize true vectors at the delivery resolution; preserve an explicit viewBox.
    const vb=reg.viewBox||[0,0,vw,vh];
    svg=svg.replace(/<svg\b[^>]*>/,`<svg xmlns="http://www.w3.org/2000/svg" width="${vw*scale}" height="${vh*scale}" viewBox="${vb.join(' ')}">`);
-   assets[n]=await loadImage(Buffer.from(svg));
-   assetLoadReport.push({id:n,type:'svg',source:reg.asset,render_width:vw*scale,render_height:vh*scale,embedded_raster:/<image\b/i.test(svg)});
+   preparedAssets[n]=await loadImage(Buffer.from(svg));
+   preparedReport.push({id:n,type:'svg',source:reg.asset,render_width:vw*scale,render_height:vh*scale,embedded_raster:/<image\b/i.test(svg)});
   } else {
    // High-resolution transparent character layers may be used without mislabeling them as vectors.
-   assets[n]=await loadImage(fs.readFileSync(file));
-   assetLoadReport.push({id:n,type:'raster',source:reg.asset,native_width:assets[n].width,native_height:assets[n].height,planned_width:vw*scale,planned_height:vh*scale});
+   preparedAssets[n]=await loadImage(fs.readFileSync(file));
+   preparedReport.push({id:n,type:'raster',source:reg.asset,native_width:preparedAssets[n].width,native_height:preparedAssets[n].height,planned_width:vw*scale,planned_height:vh*scale});
   }
  }
+ // Publish only a complete cast/card set; no await may split this commit.
+ Object.assign(assets,preparedAssets);
+ assetLoadReport.push(...preparedReport);
+ characterRenderer=preparedRenderer;
+ assetPreparation='ready';
+ }catch(error){assetPreparation='failed';throw error;}
 }
 // Record the applied context alpha after all parent groups. Never use a visual
 // cutoff: even the faintest nonzero transition participates in clearance QA.

@@ -77,7 +77,27 @@ for (const [name, source, validate] of [
 
   test(`${name}: an offset below speech duration can round up to the exclusive end`, () => {
     const {document, segment, event} = fixture();
-    speechEndsAt(segment, segment.end);
+    // Decimal durations generated from changed names/scores need not reproduce
+    // this rounding case. Use exact binary windows while retaining this chapter's
+    // semantic structure and current payloads. At start >= 8, the predecessor
+    // of offset 8 rounds back to end when added to start (including 8 + offset).
+    for (const [index, item] of document.segments.entries()) {
+      item.start = index * 8;
+      item.end = (index + 1) * 8;
+      item.display_duration = 8;
+      speechEndsAt(item, item.end);
+      for (const [owner, reveal] of (item.visual_cue.score_reveals ?? []).entries()) {
+        reveal.offset = 2 + owner;
+      }
+    }
+    for (const section of document.sections) {
+      const members = document.segments.filter(item => item.section === section.id);
+      section.start = members[0].start;
+      section.end = members.at(-1).end;
+    }
+    document.duration = document.segments.at(-1).end;
+    validate(document, scenes); // The fixture is otherwise valid before mutation.
+    assert(segment.start >= 8);
     event.offset = previousFloat(segment.spoken_duration);
     assert(event.offset < segment.spoken_duration);
     assert.equal(segment.start + event.offset, segment.end, 'The fixture must reproduce addition rounding.');

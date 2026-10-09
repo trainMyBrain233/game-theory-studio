@@ -27,8 +27,16 @@ def video_frame_count(seconds, fps=30):
 
 def validate_streams(info, duration, fps=30):
     count = video_frame_count(duration, fps)
-    videos = [s for s in info['streams'] if s['codec_type'] == 'video']
-    audio = [s for s in info['streams'] if s['codec_type'] == 'audio']
+    streams = info.get('streams') if isinstance(info, dict) else None
+    if not isinstance(streams, list):
+        raise ValueError('Expected a list of media streams')
+    # Validate every entry before selecting tracks: filtering first would silently
+    # accept subtitle, data, attachment or unrecognized streams.
+    for stream in streams:
+        if not isinstance(stream, dict) or stream.get('codec_type') not in ('video', 'audio'):
+            raise ValueError('Expected only video or audio stream objects')
+    videos = [stream for stream in streams if stream['codec_type'] == 'video']
+    audio = [stream for stream in streams if stream['codec_type'] == 'audio']
     if len(videos) != 1 or len(audio) > 1:
         raise ValueError('Expected one video and at most one audio stream')
     video = videos[0]

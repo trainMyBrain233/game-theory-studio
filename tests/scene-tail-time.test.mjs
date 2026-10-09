@@ -11,7 +11,8 @@ function run(body){
   import {timeline,sceneData,TOKENS} from ${moduleUrl('../production/src/model.mjs')};
   import {validateFirstEpisodeTimeline} from ${moduleUrl('../scripts/validate-data.mjs')};
   import {createStillsManifest} from ${moduleUrl('../production/src/checkpoints.mjs')};
-  import {calls} from ${moduleUrl('../production/src/primitives.mjs')};
+  import {calls,prepareAssets} from ${moduleUrl('../production/src/primitives.mjs')};
+  await prepareAssets();
   function previous(value){const bits=new DataView(new ArrayBuffer(8));bits.setFloat64(0,value);bits.setBigUint64(0,bits.getBigUint64(0)-1n);return bits.getFloat64(0);}
   const context={save(){},restore(){},setTransform(){},fillRect(){}};
   const canvas={width:1920,height:1080,getContext(){return context;}};

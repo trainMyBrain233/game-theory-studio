@@ -27,7 +27,9 @@ export function renderOptions(args,duration,{fps=30,defaultTimes}={}) {
  if(!still&&options['--times'])throw Error('--times requires --stills.');
  if(still&&(options['--start']||options['--duration']||options['--out']))throw Error('Video options do not apply to still frames.');
  const explicitTimes=options['--times']!==undefined;
- const times=explicitTimes?options['--times'].split(',').map(value=>value.trim()===''?NaN:Number(value)):(still?defaultTimes:[])??[];
+ // Semantic checkpoints may reject short, otherwise valid timelines. Resolve
+ // them only for default stills, never for custom stills or video requests.
+ const times=explicitTimes?options['--times'].split(',').map(value=>value.trim()===''?NaN:Number(value)):(still?(typeof defaultTimes==='function'?defaultTimes():defaultTimes):[])??[];
  if(still&&!times.length)throw Error('Default still frames require checkpoints from the current timeline.');
  const frameCount=still?null:videoFrameCount(seconds,fps);
  if(times.some(t=>!Number.isFinite(t)||t<0||t>=duration))throw Error('Still times must be finite and inside the episode.');

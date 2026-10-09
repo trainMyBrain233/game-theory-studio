@@ -7,6 +7,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from narration_io import write_products
+from narration_validation import validate_narration
 from case_data import Case
 from text_contract import readable_count
 case = Case(ROOT)
@@ -56,6 +57,7 @@ def timestamp(seconds):
     seconds, milliseconds = divmod(total, 1000)
     return f'{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}'
 
+validate_narration(segments, case)
 srt = '\n\n'.join(f"{i}\n{timestamp(s['start'])} --> {timestamp(s['end'])}\n{s['text']}"
                   for i, s in enumerate(segments, 1)) + '\n'
 voiceover = config['title'] + '｜人工口播参考（未音频对齐）\n\n' + '\n\n'.join(

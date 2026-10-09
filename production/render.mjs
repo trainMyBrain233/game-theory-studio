@@ -7,7 +7,7 @@ import {prepareAssets} from './src/primitives.mjs';
 import {drawFrame,FPS,DURATION,timeline} from './src/scenes.mjs';
 import {renderOptions} from './src/render-options.mjs';
 import {checkpointPlan,createStillsManifest,stampCheckpointPng,sha256,STILLS_MANIFEST,TIMELINE_PATH} from './src/checkpoints.mjs';
-const {width,height,still,times,explicitTimes,start,frameCount,file}=renderOptions(process.argv.slice(2),DURATION,{fps:FPS,defaultTimes:checkpointPlan(timeline).map(point=>point.time)});
+const {width,height,still,times,explicitTimes,start,frameCount,file}=renderOptions(process.argv.slice(2),DURATION,{fps:FPS,defaultTimes:()=>checkpointPlan(timeline).map(point=>point.time)});
 if(!still){const check=spawnSync('ffmpeg',['-version'],{encoding:'utf8'});if(check.error||check.status!==0)throw Error('Video encoding requires ffmpeg on PATH with libx264. Still rendering does not require it.');}
 await prepareAssets(width/1920*1.15);
 fs.mkdirSync('output',{recursive:true});

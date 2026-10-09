@@ -255,12 +255,63 @@ class ValidationFixtures(unittest.TestCase):
             source.write_bytes(b'controlled media fixture')
             report = production / 'qa/media_fixture.mp4.json'
             with patch.object(verify_media.shutil, 'which', return_value='/fake/tool'), \
-                 patch.object(verify_media.subprocess, 'check_output', return_value=json.dumps(media_fixture()).encode()), \
+                 patch.object(verify_media.subprocess, 'check_output', return_value=json.dumps(media_fixture()).encode()) as probe, \
                  patch.object(verify_media.subprocess, 'run') as decode:
                 decode.return_value = SimpleNamespace(returncode=0, stderr='', stdout='frame=1\nframe=30\nprogress=end\n')
                 verify_media.main(['--duration', '1', str(source)], production)
                 self.assertEqual(json.loads(report.read_text())['full_decode']['frames'], 30)
                 self.assertEqual(json.loads(report.read_text())['full_decode']['status'], 'passed')
+                # Exercise all supported resolution/audio combinations through the
+                # real entry point; stream ordering must not affect acceptance.
+                for dimensions in [(1920, 1080), (3840, 2160)]:
+                    for channels in [None, 1, 2]:
+                        for reverse in [False, True]:
+                            with self.subTest(dimensions=dimensions, channels=channels, reverse=reverse):
+                                valid = media_fixture()
+                                valid['streams'][0].update(width=dimensions[0], height=dimensions[1])
+                                if channels is None:
+                                    valid['streams'].pop()
+                                else:
+                                    valid['streams'][1]['channels'] = channels
+                                if reverse:
+                                    valid['streams'].reverse()
+                                probe.return_value = json.dumps(valid).encode()
+                                report.unlink(missing_ok=True)
+                                decode.reset_mock()
+                                verify_media.main(['--duration', '1', str(source)], production)
+                                decode.assert_called_once()
+                                written = json.loads(report.read_text())
+                                self.assertEqual(written['audio_tracks'], int(channels is not None))
+                                self.assertEqual(written['video']['width'], dimensions[0])
+                                self.assertEqual(written['full_decode']['status'], 'passed')
+                # Unexpected entries must be rejected BEFORE decode or report writes,
+                # including under -O/-OO and PYTHONOPTIMIZE (see OptimizationModes).
+                extras = [dict(codec_type=kind) for kind in
+                          ['subtitle', 'data', 'attachment', 'unknown', 'Video', '', None, [], {}]]
+                extras += [{}, None, 'audio', [], 0, True]
+                invalid = []
+                for extra in extras:
+                    for with_audio in [False, True]:
+                        broken = media_fixture()
+                        if not with_audio:
+                            broken['streams'].pop()
+                        broken['streams'].append(extra)
+                        invalid.append(broken)
+                valid = media_fixture()
+                invalid += [{'streams': streams} for streams in [
+                    [], valid['streams'][1:], [valid['streams'][0]] * 2,
+                    valid['streams'] + [valid['streams'][1]], None, {}, 'video']]
+                invalid += [None, [], {}]
+                for broken in invalid:
+                    with self.subTest(invalid_probe=broken):
+                        probe.return_value = json.dumps(broken).encode()
+                        report.unlink(missing_ok=True)
+                        decode.reset_mock()
+                        with self.assertRaises(ValueError):
+                            verify_media.main(['--duration', '1', str(source)], production)
+                        decode.assert_not_called()
+                        self.assertFalse(report.exists())
+                probe.return_value = json.dumps(media_fixture()).encode()
                 for status, stderr, stdout in [
                     (1, '', 'frame=30\n'), (0, 'decode error', 'frame=30\n'),
                     (0, '', 'frame=29\n'), (0, '', 'frame=31\n'),
