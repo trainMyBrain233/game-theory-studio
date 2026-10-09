@@ -6,7 +6,7 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {ROOT, pythonCommand} from '../scripts/python.mjs';
 import {readJSON, validateScenes, validateTimeline} from '../scripts/validate-data.mjs';
-import {TEXT_UNICODE_VERSION, readableCount, normalizedLabel, validateSubtitleLine, validateSubtitleLines} from '../scripts/text-contract.mjs';
+import {TEXT_UNICODE_VERSION, readableCount, normalizedLabel, spokenNumber, validateSubtitleLine, validateSubtitleLines} from '../scripts/text-contract.mjs';
 
 const scenes = readJSON(path.join(ROOT, 'design/scenes.json'));
 const original = readJSON(path.join(ROOT, 'chapters/01-four-elements/narration/timeline.json'));
@@ -133,27 +133,112 @@ function replaceLines(timeline, id, lines) {
   assert(segment, id); assert.equal(lines.join(''), segment.voiceover);
   segment.lines = lines; segment.text = lines.join('\n');
 }
-for (const [name, id, lines] of [
-  ['choice clause', 's24_rr_select', ['小A选', '红，小B也选红。']],
-  ['player name', 's24_rr_select', ['小', 'A选红，小B也选红。']],
-  ['owner/result', 's27_rb_score', ['小A', '得零分，小B得五分。']],
-  ['spoken score', 's27_rb_score', ['小A得零', '分，小B得五分。']],
-  ['equal-payoff collective result', 's25_rr_score', ['两个人，', '各得三分。']],
-]) test(`canonical timeline rejects splitting ${name} without changing its voiceover`, () => {
-  const timeline = structuredClone(original); replaceLines(timeline, id, lines);
-  assert.throws(() => validateTimeline(timeline, scenes), /splits/);
+function splitAfter(timeline, id, prefix) {
+  const segment = timeline.segments.find(item => item.id === id);
+  assert(segment, id);
+  assert(prefix.length > 0 && prefix.length < segment.voiceover.length && segment.voiceover.startsWith(prefix), `${id}: split must be inside the current voiceover`);
+  const lines = [prefix, segment.voiceover.slice(prefix.length)];
+  lines.forEach(line => validateSubtitleLine(line)); // Reach semantic validation, not length/visibility rejection.
+  replaceLines(timeline, id, lines);
+}
+const semanticSplits = [
+  ['choice clause', 's24_rr_select', (_segment, data) => `${data.actors[0].label}选`],
+  ['player name', 's24_rr_select', (_segment, data) => Array.from(data.actors[0].label)[0]],
+  ['owner/result', 's27_rb_score', (_segment, data) => data.actors[0].label],
+  ['spoken score', 's27_rb_score', (segment, data) => `${data.actors[0].label}得${spokenNumber(segment.visual_cue.scores[0]).slice(0, -1)}`],
+];
+function semanticFixture(source, data, kind) {
+  const changed = structuredClone(data);
+  let regenerate = false;
+  if (kind === 'player name' && Array.from(data.actors[0].label).length < 2) {
+    changed.actors[0].label = '甲方'; changed.actors[1].label = '乙方';
+    regenerate = true;
+  }
+  const scores = data.payoffs[0][1];
+  if (['owner/result', 'spoken score', 'complete clauses'].includes(kind) &&
+      (scores[0] === scores[1] || (kind === 'spoken score' && spokenNumber(scores[0]).length < 2))) {
+    // Equal scores produce a collective result; single-character numbers cannot
+    // be split internally. Build a suitable fixture without altering voiceover.
+    changed.payoffs[0][1] = [27, 36];
+    regenerate = true;
+  }
+  return regenerate ? [generateTextTimeline(changed), changed] : [source, data];
+}
+function assertSemanticSplitRejected(source, data, [name, id, prefix]) {
+  [source, data] = semanticFixture(source, data, name);
+  validateTimeline(source, data);
+  const timeline = structuredClone(source), segment = timeline.segments.find(item => item.id === id);
+  splitAfter(timeline, id, prefix(segment, data));
+  assert.throws(() => validateTimeline(timeline, data), {message: new RegExp(`^${id}: subtitle splits (a semantic clause|protected current-case token or clause)`)});
+}
+for (const mutation of semanticSplits) test(`canonical timeline rejects splitting ${mutation[0]} without changing its voiceover`, () => {
+  assertSemanticSplitRejected(original, scenes, mutation);
 });
 
+function generateTextTimeline(data) {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-semantic-splits-'));
+  try {
+    const builder = 'chapters/01-four-elements/narration/build_narration.py';
+    for (const relative of [builder, ...['case_data.py', 'text_contract.py', 'unicode-text-15.0.0.json', 'narration_io.py'].map(name => `scripts/${name}`)]) {
+      const target = path.join(temporary, relative);
+      fs.mkdirSync(path.dirname(target), {recursive: true});
+      fs.copyFileSync(path.join(ROOT, relative), target);
+    }
+    fs.mkdirSync(path.join(temporary, 'design'));
+    fs.writeFileSync(path.join(temporary, 'design/scenes.json'), JSON.stringify(data));
+    const output = path.join(temporary, 'generated');
+    const build = spawnSync(pythonCommand(), [path.join(temporary, builder), '--output-dir', output], {cwd: temporary, encoding: 'utf8'});
+    assert.equal(build.status, 0, build.stderr);
+    const timeline = readJSON(path.join(output, 'timeline.json'));
+    validateTimeline(timeline, data);
+    return timeline;
+  } finally {fs.rmSync(temporary, {recursive: true, force: true});}
+}
+
+test('canonical timeline rejects splitting equal-payoff collective result without changing its voiceover', () => {
+  // Case-reuse deliberately makes every payoff asymmetric; generate an explicit
+  // equal-score case rather than assuming the checked-in RR cell stays equal.
+  const equalScenes = structuredClone(scenes);
+  equalScenes.payoffs[0][0] = [27, 27];
+  const timeline = generateTextTimeline(equalScenes);
+  splitAfter(timeline, 's25_rr_score', '两个人，');
+  assert.throws(() => validateTimeline(timeline, equalScenes), {message: /^s25_rr_score: subtitle splits protected current-case token or clause/});
+});
+
+function assertCompleteClauses(source, data) {
+  [source, data] = semanticFixture(source, data, 'complete clauses');
+  const timeline = structuredClone(source), actor = data.actors[0].label;
+  const choice = timeline.segments.find(item => item.id === 's24_rr_select');
+  const score = timeline.segments.find(item => item.id === 's27_rb_score');
+  splitAfter(timeline, choice.id, `${actor}选${choice.visual_cue.choices.A}，`);
+  splitAfter(timeline, score.id, `${actor}得${spokenNumber(score.visual_cue.scores[0])}分，`);
+  validateTimeline(timeline, data);
+}
 test('complete choice, condition and result clauses may occupy separate lines', () => {
-  const timeline = structuredClone(original);
-  replaceLines(timeline, 's24_rr_select', ['小A选红，', '小B也选红。']);
-  replaceLines(timeline, 's27_rb_score', ['小A得零分，', '小B得五分。']);
-  validateTimeline(timeline, scenes);
+  assertCompleteClauses(original, scenes);
   const cue = {matrix_cell: 'RB', choices: {A: '合作', B: '退出'}, scores: [27, 36]};
   const voiceover = '如果乙方选退出，甲方得二十七分。';
   validateSubtitleLines(['如果乙方选退出，', '甲方得二十七分。'], voiceover, ['甲方', '乙方'], ['合作', '退出'], cue);
   assert.throws(() => validateSubtitleLines(['如果乙方选', '退出，甲方得二十七分。'], voiceover, ['甲方', '乙方'], ['合作', '退出'], cue), /splits/);
   assert.throws(() => validateSubtitleLines(['如果乙方选退出，甲方得二十', '七分。'], voiceover, ['甲方', '乙方'], ['合作', '退出'], cue), /splits/);
+});
+
+test('case-reuse text rebuild preserves semantic split negatives and complete-clause positives without Canvas', () => {
+  const changed = structuredClone(scenes);
+  changed.actors[0].label = '明月'; changed.actors[1].label = '青禾';
+  changed.strategies[0].label = '合作'; changed.strategies[1].label = '退出';
+  changed.payoffs = [[[11, 12], [21, 22]], [[31, 32], [41, 42]]];
+  changed.selected = {row: 1, column: 0, actorA: 'blue', actorB: 'red'};
+  const timeline = generateTextTimeline(changed);
+  for (const mutation of semanticSplits) assertSemanticSplitRejected(timeline, changed, mutation);
+  assertCompleteClauses(timeline, changed);
+  // The same assertions must still reach their intended validation when the
+  // current case supplies no divisible name/number and no owner-specific score.
+  changed.actors[0].label = '甲'; changed.actors[1].label = '乙';
+  changed.payoffs = [[[0, 0], [5, 5]], [[10, 10], [99, 99]]];
+  const indivisible = generateTextTimeline(changed);
+  for (const mutation of semanticSplits) assertSemanticSplitRejected(indivisible, changed, mutation);
+  assertCompleteClauses(indivisible, changed);
 });
 
 test('punctuation inside current-case labels is never mistaken for a semantic break', () => {

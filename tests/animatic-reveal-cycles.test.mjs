@@ -68,21 +68,105 @@ test('each participants phase independently requires its own complete cycle',()=
   }
 });
 
-test('a narrated joint reveal can stay visible into later phases until its explicit conceal',()=>{
+test('a narrated joint reveal can stay visible into compatible later phases until its explicit conceal',()=>{
   const plan=fixture(),event=plan.blocks[0].events.pop(),block=plan.blocks[1];
+  plan.blocks[0].events[0].cell='RR';plan.blocks[0].events[0].choices=choicesForCell('RR');
   event.phaseId=block.subtitles[1].id;event.frame=101;block.events.push(event);
   const compiled=compilePlan(plan);
   for(const frame of [40,59,60,79,80,100]){
     const state=resolveFrame(compiled,frame);
     assert.equal(state.information.phase,'visible');
-    assert.deepEqual(state.information.choices,{A:'red',B:'blue'});
+    assert.deepEqual(state.information.choices,{A:'red',B:'red'});
   }
   for(const frame of [101,102,119])assert.equal(resolveFrame(compiled,frame).information.phase,'hidden');
   assert.deepEqual(resolveFrame(compiled,100).revealedScores.RR,[2,7]);
 });
 
+test('the original RB hold through RR narration is rejected even before its border activates',()=>{
+  const plan=fixture(),conceal=plan.blocks[0].events.pop();
+  conceal.phaseId='rr_result';conceal.frame=101;plan.blocks[1].events.push(conceal);
+  assert.throws(()=>compilePlan(plan),/rr_choice: revealing\/visible cards contradict the current expected cell/);
+});
+
+for(const [name,cell,phaseIndex,revealFrame,phaseStart,concealPhase] of [
+  ['case','RB',0,20,60,'rr_choice'],
+  ['comparison','RB',2,181,200,'compare_red'],
+])test(`incompatible ${name} narration accepts conceal at its start, but rejects one frame later`,()=>{
+  for(const offset of [-1,0,1]){
+    const plan=fixture();
+    if(name==='comparison')plan.blocks[phaseIndex].events.push({id:'comparison_open',type:'joint_reveal',phaseId:'rb_result',frame:revealFrame,durationFrames:8,cell,choices:choicesForCell(cell)});
+    const conceal=name==='case'?plan.blocks[0].events.pop():{id:'comparison_hide',type:'conceal_choices'};
+    conceal.frame=phaseStart+offset;
+    const owner=plan.blocks.find(block=>conceal.frame>=block.startFrame&&conceal.frame<block.endFrame);
+    conceal.phaseId=owner.subtitles.find(phase=>conceal.frame>=phase.startFrame&&conceal.frame<phase.endFrame).id;
+    owner.events.push(conceal);
+    if(offset===1){assert.throws(()=>compilePlan(plan),new RegExp(`${concealPhase}: revealing/visible cards contradict`));continue;}
+    const compiled=compilePlan(plan);
+    assert.equal(resolveFrame(compiled,conceal.frame-1).information.cell,cell);
+    assert.equal(resolveFrame(compiled,conceal.frame).information.phase,'hidden');
+    const next=resolveFrame(compiled,phaseStart);assert.equal(next.activeCell,null);assert.equal(next.information.phase,'hidden');
+  }
+});
+
+test('a compatible comparison hold ends precisely at the next incompatible comparison phrase',()=>{
+  const plan=fixture(),block=plan.blocks[3];
+  block.events.push(
+    {id:'compare_open',type:'joint_reveal',phaseId:'compare_red',frame:201,durationFrames:8,cell:'RR',choices:choicesForCell('RR')},
+    {id:'compare_hide',type:'conceal_choices',phaseId:'compare_blue',frame:240},
+  );
+  const compiled=compilePlan(plan);
+  for(const frame of [201,208,209,219,220,239])assert.equal(resolveFrame(compiled,frame).information.cell,'RR');
+  assert.equal(resolveFrame(compiled,240).information.phase,'hidden');
+  block.events.at(-1).frame++;
+  assert.throws(()=>compilePlan(plan),/compare_blue: revealing\/visible cards contradict/);
+});
+
+test('a no-focus summary may retain the previous choice cell until explicit conceal',()=>{
+  const plan=fixture();
+  plan.blocks[3].events.push({id:'summary_open',type:'joint_reveal',phaseId:'compare_blue',frame:261,durationFrames:8,cell:'RB',choices:choicesForCell('RB')});
+  plan.blocks[4].events.push({id:'summary_hide',type:'conceal_choices',phaseId:'summary_caption',frame:331});
+  const compiled=compilePlan(plan);
+  for(const frame of [279,280,281,330])assert.equal(resolveFrame(compiled,frame).information.cell,'RB');
+  assert.equal(resolveFrame(compiled,280).activeCell,null);
+  assert.equal(resolveFrame(compiled,331).information.phase,'hidden');
+});
+
+test('a no-focus summary does not erase the card-cell contract for the next focused phrase',()=>{
+  const plan=fixture(),conceal=plan.blocks[0].events.pop();
+  plan.blocks=plan.blocks.slice(0,3);plan.durationFrames=200;
+  for(const phase of plan.blocks[1].subtitles){phase.focus=structuredClone(plan.blocks[0].subtitles[0].focus);phase.narration={kind:'summary'};}
+  plan.blocks[1].events=[];
+  conceal.phaseId='rb_result';conceal.frame=171;plan.blocks[2].events.push(conceal);
+  rebuildNarration(plan);const compiled=compilePlan(plan);
+  for(const frame of [59,60,79,80,119,120,150,170])assert.equal(resolveFrame(compiled,frame).information.cell,'RB');
+  assert.equal(resolveFrame(compiled,171).information.phase,'hidden');
+  for(const phase of plan.blocks[2].subtitles)phase.focus.expectedCell='RR';
+  for(const event of plan.blocks[2].events)if(event.cell)event.cell='RR';
+  rebuildNarration(plan);
+  assert.throws(()=>compilePlan(plan),/rb_choice: revealing\/visible cards contradict the current expected cell/);
+});
+
+test('fresh participants may start at reveal, but must conceal any previous cycle by their start',()=>{
+  for(const [concealFrame,revealFrame,accepted] of [[279,280,true],[280,292,true],[281,292,false]]){
+    const plan=fixture(),block=plan.blocks[4],phase=block.subtitles[0];phase.narration={kind:'participants'};
+    plan.blocks[3].events.push({id:'prior_open',type:'joint_reveal',phaseId:'compare_blue',frame:261,durationFrames:8,cell:'RB',choices:choicesForCell('RB')});
+    const previousConceal={id:'prior_hide',type:'conceal_choices',phaseId:concealFrame<280?'compare_blue':phase.id,frame:concealFrame};
+    plan.blocks[concealFrame<280?3:4].events.push(previousConceal);
+    block.events.push(
+      {id:'fresh_open',type:'joint_reveal',phaseId:phase.id,frame:revealFrame,durationFrames:8,cell:'BR',choices:choicesForCell('BR')},
+      {id:'fresh_hide',type:'conceal_choices',phaseId:phase.id,frame:331},
+    );
+    rebuildNarration(plan);
+    if(!accepted){assert.throws(()=>compilePlan(plan),/participants narration must start without cards from a previous reveal/);continue;}
+    const compiled=compilePlan(plan);
+    assert.equal(resolveFrame(compiled,280).information.phase,revealFrame===280?'revealing':'hidden');
+    assert.deepEqual(resolveFrame(compiled,revealFrame+8).information.choices,choicesForCell('BR'));
+  }
+});
+
 for(const timingStatus of ['synthetic_test_only','manual_reference_not_audio_aligned'])test(`joint reveal must have a fully visible frame before its exclusive phase end (${timingStatus})`,()=>{
   const plan=fixture(),block=plan.blocks[0],phase=block.subtitles[0],reveal=block.events[0],conceal=block.events.pop();
+  reveal.cell='RR';reveal.choices=choicesForCell('RR');
   plan.timingStatus=timingStatus;
   reveal.durationFrames=phase.endFrame-1-reveal.frame;
   // Conceal in the next phase, after both tested completion times. Only the
@@ -93,7 +177,7 @@ for(const timingStatus of ['synthetic_test_only','manual_reference_not_audio_ali
   const last=resolveFrame(compiled,phase.endFrame-1);
   assert.equal(last.phaseId,phase.id);assert.equal(last.information.phase,'visible');
   assert.equal(last.information.revealProgress,1);assert.equal(last.information.choicesVisible,true);
-  assert.deepEqual(last.information.choices,{A:'red',B:'blue'});
+  assert.deepEqual(last.information.choices,{A:'red',B:'red'});
   assert.equal(resolveFrame(compiled,phase.endFrame).information.phase,'visible');
   assert.equal(resolveFrame(compiled,phase.endFrame+1).information.phase,'hidden');
   const missingVisibleFrame=structuredClone(plan);missingVisibleFrame.blocks[0].events[0].durationFrames++;

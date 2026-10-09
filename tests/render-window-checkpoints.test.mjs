@@ -219,7 +219,7 @@ test('contact sheet entrypoint rejects tampered metadata, image escape symlinks,
 test('PNG reader directly refuses absolute and traversal paths before accessing outside files',()=>{
  const output=fs.mkdtempSync(path.join(os.tmpdir(),'checkpoint-paths-'));
  try{
-  for(const filename of ['../outside.png','nested/../../outside.png','/outside.png','C:\\outside.png']){
+  for(const filename of ['../outside.png','nested/../../outside.png','/outside.png','C:' + String.fromCharCode(92) + 'outside.png']){
    const code=`import importlib.util,sys\nspec=importlib.util.spec_from_file_location('contact_sheets',sys.argv[1]); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)\nmodule.read_frame_bytes(sys.argv[2],{'file':sys.argv[3],'sha256':'unused'},(1920,1080))`;
    const result=spawnSync(pythonCommand(),['-c',code,path.join(ROOT,'production/make_contact_sheets.py'),output,filename],{encoding:'utf8'});
    assert.notEqual(result.status,0);assert.match(result.stderr,/path must be a PNG basename/);

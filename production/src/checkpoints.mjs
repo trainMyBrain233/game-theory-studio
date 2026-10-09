@@ -8,7 +8,8 @@ export const STILLS_MANIFEST = 'stills-manifest.json';
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 
 // Stable semantic anchors, never absolute episode seconds. Keyframes sample the
-// current segment's reading pause, after its spoken content and score reveals.
+// current segment's reading pause; a segment with no pause uses its final
+// in-window instant instead, without claiming an after-speech reading pause.
 const KEYFRAMES = [
   's01_hook', 's02_four_questions', 's06_definition', 's08_known_unknown',
   's10_distinction', 's14_simple_case', 's17_comparison_example',
@@ -39,13 +40,25 @@ function inside(time, item, id) {
   if (!Number.isFinite(time) || time < item.start || time >= item.end) throw Error(`Checkpoint lies outside its current anchor: ${id}`);
   return time;
 }
+// All anchor ends are finite and positive. The preceding Float64 stays inside
+// even a one-ULP segment, unlike a fixed frame/epsilon subtraction. This also
+// keeps a rounded midpoint from accidentally selecting the next segment.
+function beforeEnd(end) {
+  const bits = new DataView(new ArrayBuffer(8));
+  bits.setFloat64(0, end);
+  bits.setBigUint64(0, bits.getBigUint64(0) - 1n);
+  return bits.getFloat64(0);
+}
 
 export function checkpointPlan(timeline) {
   if (!Number.isFinite(timeline.duration) || timeline.duration <= 0 || !Array.isArray(timeline.sections) || !Array.isArray(timeline.segments)) throw Error('Checkpoints require a current episode timeline.');
   const keyframes = KEYFRAMES.map(id => {
     const segment = anchor(timeline, 'segment', id);
-    const time = inside(segment.voiceover_end + (segment.end - segment.voiceover_end) / 2, segment, id);
-    return {id, group: 'keyframes', time, label: readable(segment.voiceover), anchor: {kind: 'segment', id, phase: 'reading_pause_midpoint'}};
+    if (!Number.isFinite(segment.voiceover_end) || segment.voiceover_end <= segment.start || segment.voiceover_end > segment.end) throw Error(`Invalid checkpoint speech window: ${id}`);
+    const phase = segment.voiceover_end === segment.end ? 'segment_end_interior' : 'reading_pause_midpoint';
+    const midpoint = segment.voiceover_end + (segment.end - segment.voiceover_end) / 2;
+    const time = inside(midpoint < segment.end ? midpoint : beforeEnd(segment.end), segment, id);
+    return {id, group: 'keyframes', time, label: readable(segment.voiceover), anchor: {kind: 'segment', id, phase}};
   });
   const transitions = TRANSITIONS.map(([kind, id, offset, label]) => {
     const item = anchor(timeline, kind, id);

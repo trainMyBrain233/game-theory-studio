@@ -72,7 +72,15 @@ require a card cycle. Any authored cycles must start hidden, alternate joint
 reveal and explicit `conceal_choices`, and finish hidden before the plan ends.
 Conceal must occur strictly after reveal completion. Cards may stay visible
 across later subtitle phases until that explicit conceal; conceal need not
-belong to the reveal's phase. Missing, reversed, duplicate or overlapping
+belong to the reveal's phase. The revealing/visible interval is
+`[reveal.frame, conceal.frame)`. Every intersecting case or comparison subtitle
+must expect the same card cell, starting at the subtitle boundary even before
+its border activates. Conceal at an incompatible phase's `startFrame` is valid;
+conceal at `startFrame + 1` leaves a contradictory frame and is invalid.
+A no-focus summary names no cell and can retain visible cards. A new
+`participants` phase promises fresh choices and its own joint reveal, so any
+previous cycle must be concealed by that phase's start; its own reveal may
+start on that frame. Missing, reversed, duplicate or overlapping
 controls are invalid. Multiple card controls on the same frame are rejected
 regardless of their IDs or input array order.
 

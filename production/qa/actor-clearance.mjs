@@ -1,5 +1,10 @@
-/** Measure visible RGBA artwork against measured text, in 1080p canvas units. */
-export function actorTextClearance(mask,record,spacing,{alphaThreshold=40}={}){
+/** Measure visible RGBA artwork against measured text, in 1080p canvas units.
+ * All nonzero alpha is authoritative by default. An explicit alphaThreshold
+ * is an integer byte (0–255); only alpha strictly greater than it is counted.
+ * @param {{alphaThreshold?: number}} [options]
+ */
+export function actorTextClearance(mask,record,spacing,{alphaThreshold=0}={}){
+ if(!Number.isInteger(alphaThreshold)||alphaThreshold<0||alphaThreshold>255)throw Error('alphaThreshold must be an integer byte from 0 to 255.');
  const minimum=record.role==='actor-name'?spacing.figure_name_gap:spacing.graphic_text_gap_target;
  if(!Number.isFinite(minimum)||minimum<0)throw Error('Missing actor/text clearance contract.');
  const x0=Math.max(0,Math.floor(record.x-minimum)),y0=Math.max(0,Math.floor(record.y-minimum));

@@ -66,6 +66,15 @@ function validateCardCycles(phases,events) {
       activeReveal=event;
     } else {
       assert(activeReveal,'Conceal requires a preceding joint reveal');
+      // Cards exist on [reveal.frame, conceal.frame), independently of the
+      // border activation. Check every intersecting narration window, not just
+      // the phase containing the reveal. A conceal at a new phase's start is
+      // already hidden there; a conceal one frame later is not.
+      for(const phase of phases.filter(phase=>phase.startFrame<event.frame && phase.endFrame>activeReveal.frame)) {
+        if(phase.focus.expectedCell!==null)assert.equal(activeReveal.cell,phase.focus.expectedCell,`${phase.id}: revealing/visible cards contradict the current expected cell`);
+        if(phase.narration.kind==='participants')assert.equal(activeReveal.phaseId,phase.id,`${phase.id}: participants narration must start without cards from a previous reveal`);
+        // A no-focus summary names no choice cell and may retain this cycle.
+      }
       activeReveal=null;
     }
     previous=event;

@@ -30,6 +30,49 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 `tests/ci-font-order.test.mjs` 检查真实工作流及npm聚合阶段顺序，旧顺序和移除准备步骤必须失败。独立源码副本先解除自己的字体缓存符号链接、创建真正空目录，确认真实矩阵QA报缺失SC字体；随后复制并独立验证既有缓存的完整来源/校验契约，再运行全部八张矩阵光栅。此回归不借用系统字体、不省略光栅测试，也不把缓存恢复声称为重新联网下载。
 
+## PR #4 公开基础工程：两轮 18 项回归
+
+记录日期：2026-10-09（UTC）。以下对应[首轮 9 项审查](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5465439790)与[第二轮 9 项审查](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5465703641)；“一/二”标识审查轮次，不改变上文历史验证范围。首轮修补已发布至 `7da7fa1`；第二轮及后续测试修正仍待最终提交的完整 CI 和复审。本节记录实现契约与可复现检查，不表示外部问题已关闭或整片已验收。
+
+### 标签、字幕与编辑稿
+
+- **一-1：可见标签与 NFKC 唯一性。** 玩家名仅差尾空格、全空白策略或 `Ａ/A` 等归一化重名，会让校验通过却显示空白或难以区分的身份。`scripts/text-contract.mjs`、`scripts/text_contract.py` 统一要求已去首尾空白、可见、单行且无控制/默认忽略字符；在支持字符范围内按 NFKC 与空格归一化比较唯一性，不悄悄改写显示名。`tests/text-contract.test.mjs`、`tests/test_text_contract.py` 同时检查 JS 正片入口与 Python 生成器的空白、不可见字符、组合重音及兼容字符碰撞，并保留不同中文名、扩展汉字的正例。合法文本仍须另验字体覆盖与布局。
+- **一-2：正片字幕不能在语义内部断行。** 把 RR 选择句拆成姓名加“选”与剩余策略，即使拼回原口播、每行不超限，也会拆散条件。共享文本契约要求字幕逐字保留口播，只在完整分句标点后断行，保护当前姓名、策略、选择与收益归属句；生成器无法排入两行时明确失败。`tests/text-contract.test.mjs`、`tests/test_text_contract.py` 保留姓名、选择、数字、归属和集体收益的拆分负例，以及完整条件/结果分行的正例；标签内自带逗号也不能成为断点。这是模板与 cue 的有界语义合同，不是任意自然语言解析。
+- **一-3：22 字限制不能漏算非 ASCII。** 23 个 `é`、扩展汉字或非 ASCII 数字原可被计为零。两语言现在共享 `scripts/unicode-text-15.0.0.json`，按 Unicode 15.0 的 L*/N* 码点计数，并明确拒绝表外字符。`tests/text-contract.test.mjs`、`tests/test_text_contract.py` 检查各类字符的 22/23 边界、跨语言结果、口播时长/metrics 和固定表重建；组合符、标点与 emoji 的计数另有正例。码点数不代表字素数、阅读速度或实际字形可用。
+- **二-7：编辑稿建议字幕也必须符合口播合同。** 只改 `suggested_lines` 为另一句话，旧编辑稿可重建成“新鲜”产物却与口播不符。`chapters/01-four-elements/editorial/zombie-kingdom-r2/build.mjs` 现在同时校验各 chunk 的 `spoken_span` 拼接、建议行精确文本、两行/22 字、分句边界及跨 chunk 的保护词。`tests/editorial-draft.test.mjs` 覆盖错文、缺 chunk、三行、隐藏字符、长行、带标点姓名/策略和选择/收益拆分；真实 build 与 `--check` 都须在写产物前拒绝，默认产物字节不变。
+- **二-8：编辑 token 只能查自身字典。** `{{constructor}}`、`{{toString}}` 等继承自 Object 的属性原可能被当作合法 token，污染录音注释或强调内容。编辑构建器改用 `Object.hasOwn`，完整 token、嵌入文本和数组展开都走同一检查。`tests/editorial-draft.test.mjs` 的 `editorial template tokens reject unknown and inherited Object properties in every expansion path` 检查未知键及继承键，并验证 build/check 失败时保留原产物。
+
+### 亮牌状态、渲染入口与净空
+
+- **一-8：口播承诺必须有完整亮牌周期。** 删除 reveal/conceal 任一端、同时删两端或重复收牌，不能因为“剩余事件有序”就通过。`production/src/animatic/semantic-state.mjs` 从每个 participants 叙述独立建立亮牌期待，再检查 hidden→reveal→conceal 的非重叠周期。`tests/animatic-reveal-cycles.test.mjs` 覆盖空事件、缺端、重复、倒序、同帧、移错 phase、多个 participants、两种时制，以及边界/25%/50%/75% 和乱序取帧；不承诺亮牌的叙述仍可没有卡牌事件。
+- **二-1：跨 phase 持牌须与当前叙述相容。** RB 牌留到 RR 叙述，即使边框尚未激活，画面已经与口播矛盾。编译器检查整个 `[reveal.frame, conceal.frame)` 与所有相交 phase 的 `expectedCell`；新 participants 开始前要收起上一轮。`tests/animatic-reveal-cycles.test.mjs` 保留原 RB→RR 反例、相容持牌、无 focus 总结、总结后再次矛盾、下一 phase 起点收牌与迟一帧收牌的正反例。不能用禁止所有跨 phase 持牌来绕过问题，兼容 case/comparison 和无 focus 总结仍可保留同一周期。
+- **一-6：正时长不等于至少一帧。** 30fps 下 `--duration 0.01` 或片尾仅余 0.01 秒会量化为零帧，原来启动编码器后才失败。`production/src/render-options.mjs` 与 `production/render.mjs` 共用 `videoFrameCount`，要求 `Math.round(fps * duration)` 为至少 1 的安全整数。`tests/render-window-checkpoints.test.mjs` 检查显式/片尾零帧、不同 fps、溢出及真实 CLI 的拒绝顺序；0.02 秒在 30fps 量化为一帧仍合法。入口 stub 证明早拒绝，不证明实际编码完成。
+- **一-7：拒绝横纵异比拉伸。** 1280×1080 画布曾把固定 1920×1080 布局横向压缩，失真坐标中的边界检查却可通过。`design/canvas-geometry.mjs`、`design/render-proposals.mjs` 仅接受正整数、精确 16:9 画布，并使用单一比例。`tests/render-window-checkpoints.test.mjs` 验证在取得 context 前拒绝；`tests/proposal-aspect-canvas.test.mjs` 先载隔离字体，再用实际 Canvas 检查原尺寸、缩小和 4K 的文字边界与圆形徽章像素比例。纯几何/stub 通过不能替代这项光栅检查。
+- **二-5：低 alpha 也属于人物像素。** 默认忽略 alpha 1–40，会让淡入/淡出人物与文字靠得过近仍通过。`production/qa/actor-clearance.mjs` 默认计入所有非零 alpha；显式阈值须为 0–255 整数字节，只忽略小于等于阈值的像素。`tests/actor-clearance-alpha.test.mjs` 逐一检查 1–255、alpha 0、32px 姓名/24px 正文边界及非法阈值的早拒绝。合成 RGBA mask 验证算法，不是私有角色或实际转场净空验收。
+- **二-9：帧时间必须是有限数字。** `NaN` 或无穷值原可进入状态更新、被静默夹到端点或引发误导性下游错误。`production/src/scenes.mjs` 的 `drawFrame` 先做 `Number.isFinite`，在记录、人物状态或 context 接触前拒绝；有限越界时间仍按已有合同夹到片头/片尾。`tests/renderer-boundary-regressions.test.mjs` 经真实入口配 stub 检查 `NaN`、正负无穷、字符串及可强制转换值，同时保留正常时间和有限越界的正例。
+
+### 当前时间轴与静帧身份
+
+- **一-9：默认静帧不能继续采旧绝对秒。** 合法长姓名/策略/不对称收益重建后，段落起点会变；旧秒数配旧标签能生成成功但采错内容。`production/src/checkpoints.mjs` 从当前 section/segment 生成检查点，`production/render.mjs` 与 `production/make_contact_sheets.py` 共用 manifest 的时间、标签、文件名及时间轴/图片身份；显式 `--times` 保留用户值。`tests/render-window-checkpoints.test.mjs` 用真实长姓名重建、旧图拒绝、缺失/重复锚点、元数据篡改、越界路径/symlink 和损坏 PNG（含非空 IEND）检查生产链。检查点集合本身不覆盖每个改动转场的全部中间/相邻帧。
+- **二-4：零尾停顿仍需合法的段内样本。** `pause_after=0` 时，旧“暂停中点”等于半开区间的 end，合法时间轴反而无法生成默认静帧。检查点现在取 end 前一个可表示的 Float64，标为 `segment_end_interior`；正暂停保留原中点，异常口播窗口仍拒绝。`tests/renderer-boundary-regressions.test.mjs` 检查零暂停、纳秒/单 ULP 极短段、正暂停舍入、序列化后身份验证和下一段边界。此取样不声称存在口播后阅读暂停，也不声称恰在 end 的收益事件已完成。
+
+### 公开源码与归档边界
+
+- **一-4：无 script 元素不等于无脚本。** SVG 根或嵌套形状的 `onload`/`onclick` 原可漏检。`scripts/qa_source.py` 解析 XML 后对属性 local-name 忽略大小写/命名空间，拒绝所有 `on*`。`tests/test_source_svg_safety.py` 检查根/嵌套、混合大小写、命名空间和未来事件名；原创形状、局部引用与普通说明文字保留。CLI 不回显属性值，公开打包失败不覆盖已有 archive；测试只解析，不执行事件。
+- **二-2：SVG 的局部引用不可被 CSS、base URI 或动画改义。** 转义后的 import/url、CSS 注释、`xml:base` 或动画改写资源属性可绕过字面检查，公开文件可能加载外部内容。源码 guard 采用明确的静态子集：拒绝 CSS 转义/注释/at-rule、不支持的函数、base URI 与动画元素；保留完整字面的局部 fragment 及有限数值颜色/变换。`tests/test_public_source_boundaries.py` 的 `SvgCssBoundaryTests` 检查 XML 解码后的转义、style/属性三种入口、局部引用正例及无回显错误。边界见 `docs/public-source-boundaries.md`，这不是通用 SVG sanitizer。
+- **二-3：归档校验不可依赖可被优化移除的 assert。** 用 Python `-O`/`-OO` 或 `PYTHONOPTIMIZE` 运行时，旧 assert 可消失，错误字节或不安全清单可能被判通过。`production/verify_source_archive.py` 改为显式失败，先验证 manifest 类型/来源字段、规范相对路径、非 symlink 常规文件、长度/摘要与完整目录清单，再加载校验器自身的源码 guard。`tests/test_public_source_boundaries.py` 的 `ArchiveBoundaryTests` 在全部优化模式检查有效归档只读通过，篡改/缺失/多余文件、非法路径、symlink、合法摘要下违规源码均拒绝，且不执行调用者提供的 guard、不回显不可信值。字节一致不是发布者签名或真实性证明。
+- **二-6：机器路径检查要覆盖 Windows。** 只识别 Unix home/workspace 会遗漏盘符绝对路径、反斜线 UNC、设备/扩展路径及 JSON 转义写法，导致机器信息进入公开源码。`scripts/qa_source.py` 增加这些检测，保留 URL、相对路径与常见正则转义；通用 Windows 系统根仅有精确带引号例外，不能借前缀放行子路径。`tests/test_public_source_boundaries.py` 的 `WindowsPathBoundaryTests` 在运行时构造正反样本，不把真实机器路径放入测试。跨格式检测不代表已在 Windows 上运行完整工程，也不保证发现所有秘密。
+
+### 入门、运行时与复发测试自身
+
+- **一-5：长期入口不能指向旧评审分支。** README 的旧分支 clone 与“main 只有 LICENSE”描述会把新使用者导向过期源码。`README.md`、`CONTRIBUTING.md` 和 `scripts/qa_source.py` 统一以 `main` 为长期入口，未合入改动明确检出对应 PR head。`tests/test_source_svg_safety.py` 的 `test_no_git_failure_points_to_main` 检查无 Git 时的可操作错误提示；文档 clone/base 指引另需源码复核。这不宣称 PR #4 已合并。
+
+共享文本契约也带来明确的迁移与分发要求：最低 Python 为 3.12，normalizer 的 Unicode 数据至少为 15.0；Node 为 22+，项目支持字符集仍固定为 Unicode 15.0。`scripts/setup-python.mjs` 不仅检查 bootstrap，还在复用旧 `.venv` 前和创建后检查实际目标解释器，再运行 pip；旧 3.10/3.11、失效解释器或旧 UCD 需先移开旧环境保留数据，不能只换 bootstrap 就声称迁移成功。`tests/setup-python-migration.test.mjs` 保留早拒绝、旧目标及正常流程检查。Unicode 派生表与生成器范围必须随附 `docs/licenses/Unicode-15.0.0.txt`；`tests/text-contract.test.mjs` 检查完整且版本匹配的历史声明，详见 `scripts/unicode-text-contract.md`、`docs/third-party-content.md`。
+
+**CI 也发现了回归测试自身的缺陷。** `7da7fa1` 的[Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37883013642)在 changed-case reuse 中因六个文本测试硬编码原姓名/收益或原对称情形而失败。修正后的 `tests/text-contract.test.mjs` 从当前 case/cue 推导拆分输入；需要可拆多字姓名、两位收益或等收益时，显式临时重建合适 fixture。每个负例先确认原时间轴合法、行长合法、口播未改变，再精确断言语义错误；完整分句正例仍须通过。新增 changed-case、单字名/单字数字/等收益变体，避免把无效测试构造或另一个校验失败当作防复发证据。这个教训补充上文 `92fdc37` 的案例复用合同，不能把旧默认案例单测通过当作 `test:case-reuse` 通过。
+
+**本节实际验证范围：** 首轮文本/Unicode、Python SVG、亮牌状态、渲染窗口/检查点与 venv 迁移已有专项执行证据；第二轮候选代码的净空 alpha、零暂停/有限时间、亮牌周期、编辑稿、animatic 状态/源绑定、动态文本 fixture 及 Python 公开边界专项已通过，`qa:data`（默认重建字节相同）、`qa:editorial` 与 `qa:source` 也已通过。上述是分组检查，既不相加成完整测试总数，也不迁移为下一提交的通过结果。最终 head 的干净依赖、完整 `npm test`/`test:case-reuse`、双平台 CI 与复审仍待确认；本轮本地未做重型光栅/联系图执行。实际 Canvas 比例、字体、联系图完整解码、所有改动转场中间/相邻帧及视觉检查仍须绑定最终版本；私有素材、自然手势、完整编码解码、试听/声画对齐与平台播放继续单独验收。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {presentationModel} from '../../../../design/experiments/tabletop/presentation.mjs';
 import {validateScenes,validateTimeline} from '../../../../scripts/validate-data.mjs';
+import {protectedSubtitleTokens,validateSubtitleLines} from '../../../../scripts/text-contract.mjs';
 const directory=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(directory,'../../../..');
 const read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8')),hash=b=>createHash('sha256').update(b).digest('hex');
 export const template=read('chapters/01-four-elements/editorial/zombie-kingdom-r2/blocks.template.json');
@@ -46,6 +47,31 @@ function validateEditorialReferences(timeline){
   check(scoreId,'visual_intent',same?[row,`pair.${cell}`]:[`pair.${cell}`]);
  }
 }
+function validateEditorialSubtitles(blocks,timeline,words){
+ const players=[words.A,words.B],strategies=[words.red,words.blue];
+ const sourceById=new Map(timeline.segments.map(segment=>[segment.id,segment]));
+ for(const block of blocks){
+  if(!Object.hasOwn(block,'subtitle_chunks'))continue;
+  const chunks=block.subtitle_chunks,role=`Editorial subtitles: ${block.id}`;
+  assert(Array.isArray(chunks)&&chunks.length>0,`${role}: subtitle_chunks must be a nonempty array`);
+  assert(chunks.every(chunk=>typeof chunk.spoken_span==='string'),`${role}: each chunk needs a spoken_span`);
+  assert.equal(chunks.map(chunk=>chunk.spoken_span).join(''),block.voiceover,`${role}: spoken spans must preserve the exact voiceover`);
+  const cues=block.original_segment_ids.map(id=>sourceById.get(id)?.visual_cue??{});
+  for(const chunk of chunks){
+   validateSubtitleLines(chunk.suggested_lines,chunk.spoken_span,players,strategies,{},`${role}/${chunk.id}`);
+   for(const cue of cues)validateSubtitleLines(chunk.suggested_lines,chunk.spoken_span,players,strategies,cue,`${role}/${chunk.id}`);
+  }
+  for(const chunk of chunks.slice(0,-1))assert('，；。！？：'.includes(chunk.spoken_span.at(-1)),`${role}: subtitle chunks must break only after clause punctuation`);
+  // Chunk boundaries must protect the same current-case names, choices and
+  // complete payoff clauses as line boundaries, including punctuated labels.
+  const tokens=new Set([...protectedSubtitleTokens(players,strategies),...cues.flatMap(cue=>protectedSubtitleTokens(players,strategies,cue))]);
+  const lines=chunks.flatMap(chunk=>chunk.suggested_lines);
+  for(const token of tokens){
+   const occurrences=text=>text.split(token).length-1;
+   assert.equal(lines.reduce((sum,line)=>sum+occurrences(line),0),occurrences(block.voiceover),`${role}: subtitle chunks split protected current-case token or clause: ${token}`);
+  }
+ }
+}
 export function resolveDraft({scene,presentation,timeline,sourceHash}){
  validateScenes(scene);validateTimeline(timeline,scene);const view=presentationModel(presentation,scene);
  validateEditorialReferences(timeline);
@@ -57,11 +83,12 @@ export function resolveDraft({scene,presentation,timeline,sourceHash}){
   words[`joint.${cell}`]=pair[0]===pair[1]?`各得${spokenScore(pair[0])}分。`:`${words.A}得${spokenScore(pair[0])}分，${words.B}得${spokenScore(pair[1])}分。`;
   words[`emphasis.${cell}`]=pair[0]===pair[1]?['各',`${spokenScore(pair[0])}分`]:['A','B'].map((id,index)=>`${words[id]}${spokenScore(pair[index])}分`);
  }
- const resolve=text=>text.replace(/\{\{([^}]+)\}\}/g,(_,key)=>{if(!(key in words))throw Error(`Unknown editorial token ${key}`);return words[key]});
+ const word=key=>{if(!Object.hasOwn(words,key))throw Error(`Unknown editorial token ${key}`);return words[key]};
+ const resolve=text=>text.replace(/\{\{([^}]+)\}\}/g,(_,key)=>word(key));
  const resolveDeep=value=>{
   if(typeof value==='string'){
    const key=value.match(/^\{\{([^}]+)\}\}$/)?.[1];
-   return key&&Array.isArray(words[key])?[...words[key]]:resolve(value);
+   return key&&Array.isArray(word(key))?[...word(key)]:resolve(value);
   }
   // A whole emphasis token expands to list entries, while nested authored arrays
   // remain arrays. This preserves the default symmetric recording notes exactly.
@@ -69,6 +96,7 @@ export function resolveDraft({scene,presentation,timeline,sourceHash}){
   return value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([key,value])=>[key,resolveDeep(value)])):value;
  };
  const blocks=template.blocks.map(block=>({...resolveDeep(block),timing:null}));
+ validateEditorialSubtitles(blocks,timeline,words);
  const oldIds=new Set(timeline.segments.map(s=>s.id)),mapped=new Set(blocks.flatMap(b=>b.original_segment_ids));
  if(oldIds.size!==mapped.size||[...mapped].some(id=>!oldIds.has(id)))throw Error('Draft must map all original segment IDs.');
  const plain=blocks.map(b=>b.voiceover).join('\n\n')+'\n';

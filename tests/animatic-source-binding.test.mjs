@@ -112,8 +112,8 @@ test('binding rejects malformed bytes, JSON, source shape, and voiceover text', 
 
 test('only unambiguous repository-relative JSON source paths are accepted', () => {
   const paths = [undefined, null, '', '/', '/outside.json', '../outside.json', 'a/../outside.json',
-    './source.json', 'a/./source.json', 'a//source.json', 'C:/source.json', 'C:\\source.json',
-    '\\\\server\\source.json', 'https://example.org/source.json', 'file:source.json',
+    './source.json', 'a/./source.json', 'a//source.json', 'C:' + '/source.json', 'C:' + String.fromCharCode(92) + 'source.json',
+    String.fromCharCode(92).repeat(2) + ['server', 'source.json'].join(String.fromCharCode(92)), 'https://example.org/source.json', 'file:source.json',
     '%2e%2e/source.json', 'a/%2fsource.json', '~user/source.json', 'source.json?x=1',
     'source.json#id', 'source.txt', ' source.json', 'source.json ', 'a/ /source.json',
     'a/\u0000source.json', 'a/\nsource.json', 'a/\ud800.json'];

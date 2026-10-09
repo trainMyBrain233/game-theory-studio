@@ -14,9 +14,45 @@ patterns = {
     'AWS access credential': re.compile(r'\b(?:AKIA|ASIA)[A-Z0-9]{16}\b'),
     'Slack credential': re.compile(r'\bxox[baprs]-[A-Za-z0-9-]{20,}\b'),
     'OpenAI credential': re.compile(r'\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{30,}\b'),
-    'machine workspace path': re.compile(r'/(?:workspace|home|Users|root)/[A-Za-z0-9_.-]+/'),
+    'machine workspace path': re.compile(
+        r'/(?:workspace|home|Users|root)/[A-Za-z0-9_.-]+/'
+        # A drive root, including JSON-escaped backslashes; not a URL scheme.
+        r'|(?<![\w+./\\:-])[A-Za-z]:(?:\\+|/(?!/))'
+        # Backslash UNC shares and extended/device paths, also JSON-escaped.
+        r'|(?<![\w/\\])\\{2,}'
+        # A regex character class ending in conventional escapes is not a share.
+        r'(?!(?:(?:[sSdDwWnrtabfv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})\\+)'
+        r'+(?:[sSdDwWnrtabfv]|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})\])'
+        r'(?:[?.]\\|[\w.-]+\\+[^\\/\s\"\'<>|*?\[\]{}]+)'),
     'internal note reference': re.compile(r'/(?:agent_notes|user_notes)/|dream' + r'_notes'),
 }
+
+# This exact quoted OS default is portable, not a user's workspace. No prefix
+# allowance: any additional path segment (including traversal) is still scanned.
+GENERIC_WINDOWS_ROOT = re.compile(r"""(['\"])""" + "C:" + r"/Windows\1")
+
+# Deliberately bounded CSS, not a general CSS parser or SVG sanitizer. See
+# docs/public-source-boundaries.md before extending this publication subset.
+LOCAL_SVG_URL = re.compile(
+    r"""url\s*\(\s*(?:\#[^\s'"()<>\\]+|'\#[^\s'"()<>\\]+'|"\#[^\s'"()<>\\]+")\s*\)""", re.I)
+NUMERIC_SVG_FUNCTION = re.compile(
+    r'(?:matrix|translate|scale|rotate|skewX|skewY|rgb|rgba|hsl|hsla)\s*\([-+.0-9eE%,/\s]+\)', re.I)
+
+
+def svg_css_issue(css):
+    """Only literal local URLs and numeric color/geometry functions are allowed."""
+    if '\\' in css or '/*' in css or '*/' in css:
+        return 'SVG has unsupported CSS escapes or comments'
+    if '@' in css:
+        return 'SVG has an unsupported CSS at-rule'
+    remainder = LOCAL_SVG_URL.sub('', css)
+    if re.search(r'url\s*\(', remainder, re.I):
+        return 'SVG has a nonlocal or malformed resource reference'
+    remainder = NUMERIC_SVG_FUNCTION.sub('', remainder)
+    if '(' in remainder or ')' in remainder:
+        return 'SVG has an unsupported CSS function or construct'
+    return None
+
 
 def svg_source_issue(text):
     """Inspect parsed names/decoded attributes, independent of prefixes and case."""
@@ -32,18 +68,27 @@ def svg_source_issue(text):
     for element in document.iter():
         if local_name(element.tag) in {'image', 'feimage', 'script', 'foreignobject'}:
             return 'SVG has script, embedded image, or foreign content'
+        if local_name(element.tag) in {'animate', 'animatemotion', 'animatetransform', 'set', 'discard'}:
+            return 'SVG has unsupported animation or resource-changing content'
         for name, value in element.attrib.items():
             attribute = local_name(name)
+            if attribute == 'base':
+                return 'SVG has an unsupported base URI'
             if attribute.startswith('on'):
                 return 'SVG has an event-handler attribute'
             if attribute == 'href' and value.strip() and not value.strip().startswith('#'):
                 return 'SVG has a nonlocal resource reference'
-        css = ' '.join([element.text or '', *element.attrib.values()])
-        if re.search(r'@import\b', css, re.I):
-            return 'SVG has a stylesheet import'
-        for reference in re.findall(r'url\s*\((.*?)\)', css, re.I | re.S):
-            if not reference.strip().strip('\'"').strip().startswith('#'):
-                return 'SVG has a nonlocal resource reference'
+        # Style text and decoded attributes can contain CSS. Ordinary visible
+        # SVG text is not CSS and may contain punctuation such as parentheses.
+        css_values = list(element.attrib.values())
+        if local_name(element.tag) == 'style':
+            if len(element):
+                return 'SVG has unsupported nested stylesheet content'
+            css_values.append(element.text or '')
+        for css in css_values:
+            issue = svg_css_issue(css)
+            if issue:
+                return issue
     return None
 
 def scan_sources(root, files):
@@ -63,7 +108,8 @@ def scan_sources(root, files):
         except UnicodeDecodeError:
             errors.append((relative, 'non-UTF-8 source')); continue
         for label, pattern in patterns.items():
-            if pattern.search(text): errors.append((relative, label))
+            candidate = GENERIC_WINDOWS_ROOT.sub('', text) if label == 'machine workspace path' else text
+            if pattern.search(candidate): errors.append((relative, label))
         if file.suffix.lower() == '.svg':
             issue = svg_source_issue(text)
             if issue: errors.append((relative, issue))
