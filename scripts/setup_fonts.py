@@ -4,6 +4,8 @@ Default: extract/copy installed Noto CJK. --download opts into official download
 Requires Python 3 and fontTools (python -m pip install fonttools).
 """
 from pathlib import Path
+from contextlib import nullcontext
+from narration_io import write_products
 import argparse, hashlib, json, os, shutil, subprocess, sys, tempfile, urllib.request
 try:
     from fontTools.ttLib import TTFont, TTCollection
@@ -139,9 +141,21 @@ def main():
     p.add_argument('--output-dir',type=Path,default=ROOT/'typography/fonts')
     p.add_argument('--download',action='store_true',help='Prefer pinned official SC downloads for missing/invalid targets; ignore installed font candidates')
     p.add_argument('--verify-only',action='store_true',help='Check already-prepared four SC fonts')
-    a = p.parse_args(); a.output_dir.mkdir(parents=True,exist_ok=True)
+    a = p.parse_args()
     if a.verify_only and a.download:
         p.error('--verify-only cannot be combined with --download')
+    # Verification does not create an output directory or publish any products.
+    with (nullcontext(None) if a.verify_only else
+          tempfile.TemporaryDirectory(prefix='noto-sc-prepare-')) as temporary:
+        return prepare_set(a, Path(temporary) if temporary is not None else None)
+
+
+def prepare_set(a, staging):
+    """Validate all faces before publishing the set, with ordinary-error rollback.
+
+    Publication is not crash-atomic or atomic to concurrent readers. Callers must
+    exclude concurrent writers; write_products retains backups if rollback fails.
+    """
     roots=a.source_dir+[Path('/usr/share/fonts'),Path('/usr/local/share/fonts'),Path.home()/'.local/share/fonts',Path.home()/'.fonts',Path('/Library/Fonts'),Path.home()/'Library/Fonts',Path(os.environ.get('WINDIR','C:/Windows'))/'Fonts']
     files={}
     for r in roots:
@@ -150,7 +164,7 @@ def main():
                 for f in r.rglob(pattern):files.setdefault(f.name.lower(),f)
     manifest_path = a.output_dir/'prepared_font_manifest.json'
     previous = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {}
-    report={}; missing=[]
+    report={}; missing=[]; products={}
     required_characters = current_characters()
     for kind in ['Sans','Serif']:
         for weight in ['Regular','Bold']:
@@ -166,23 +180,27 @@ def main():
                     if a.verify_only and previous.get(target.name,{}).get('sha256') != verified['sha256']:
                         missing.append(f'{target.name}: manifest does not match independently verified font bytes'); continue
                     report[target.name] = verified
+                    if not a.verify_only:
+                        products[target.name] = target.read_bytes()
                     print('Verified',target.name); continue
             if a.verify_only:
                 missing.append(target.name); continue
             candidates=[f'Noto{kind}CJK-{weight}.ttc',f'Noto{kind}CJKsc-{weight}.otf']
             source=next((files[n.lower()] for n in candidates if n.lower() in files),None)
             if source and not a.download:
-                report[target.name]=prepare(source,target,kind,weight,required_characters)
+                report[target.name]=prepare(source,staging/target.name,kind,weight,required_characters)
+                products[target.name]=(staging/target.name).read_bytes()
                 print('Prepared',target.name,'SC face',report[target.name]['face_index']); continue
             url=f'{BASE}/{COMMITS[kind]}/{kind}/OTF/SimplifiedChinese/Noto{kind}CJKsc-{weight}.otf'
             if a.download:
-                temporary=a.output_dir/(target.name+'.download')
+                temporary=staging/(target.name+'.download')
                 try:
                     with urllib.request.urlopen(url,timeout=120) as response, temporary.open('wb') as output:
                         shutil.copyfileobj(response,output)
                     if hashlib.sha256(temporary.read_bytes()).hexdigest() != OFFICIAL_SHA256[(kind,weight)]:
                         raise ValueError('Official font checksum mismatch; existing target is preserved')
-                    report[target.name]=prepare(temporary,target,kind,weight,required_characters)
+                    report[target.name]=prepare(temporary,staging/target.name,kind,weight,required_characters)
+                    products[target.name]=(staging/target.name).read_bytes()
                     report[target.name]['source']=url
                     temporary.unlink(); print('Downloaded and verified',target.name)
                 except Exception as e:
@@ -198,9 +216,8 @@ def main():
             return 1
         print('All four complete SC fonts verified against pinned OTFs or reproduced TTC sources; manifest unchanged.')
         return 0
-    temporary_manifest=manifest_path.with_suffix('.tmp.json')
-    temporary_manifest.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    os.replace(temporary_manifest,manifest_path)
+    products[manifest_path.name]=json.dumps(report,ensure_ascii=False,indent=2)+'\n'
+    write_products(a.output_dir,products)
     print('All four complete SC fonts are ready. Manifest saved.'); return 0
 if __name__ == '__main__':
     try:sys.exit(main())

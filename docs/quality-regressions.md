@@ -472,6 +472,24 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** 历史结果已恢复记录，当前恢复树与最终证明仍待重验；旧公开 CI 仍是四路 font fixture 失败，不将旧专项或丢失的本机证据移植为新树通过，PR 未记为合并。
 
+### `7b316f9` 恢复检查点 CI：替换结果不能再次按旧别名解析
+
+恢复 WIP 检查点 `7b316f9e17f81ef5a0ed700117dbf81bd7195dc4` 的 [PR Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37944798657) 与 [push Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37944790249) 四个 job 均在 changed-case 的四字 owner 矩阵测试十个案例失败。默认 JS 各 1004 项中 1001 pass/3 skip，Python 210 项报告 OK（Ubuntu 13 skip/macOS 17 条 skip 记录）；默认 animatic 67 帧、design/layout 15 states/cast 已过。新增 skip 含六项真实 FFmpeg media identity 和一项实际 NumPy SFX，不能记成 CI 已执行这些媒体路径。changed-case 剩余命令、episode/联系图/源码终检未到。安全于 2026-10-09 14:42:44 UTC 完成无新增，代码于 14:47:39 完成并新增下节三项 P2。
+
+实际检出导出函数 resolveCastText 在 fixture 内存覆盖下的级联替换：先展开 token，再用 legacy alias 扫描新输出，内存 CAST“明月同学/青禾同学”配当前 scene 别名“明月/青禾”被扩成“明月同学同学/青禾同学同学”。进一步 schema 核对确认 production/cast.json 不允许独立 display_name 字段，名字实际从 scene 派生；这套独立 CAST 覆盖不是合法磁盘配置，不能把本次 CI 失败说成已验证生产配置会生成错误姓名。仍保留该内存反例用于导出函数加固，不通过换成不重叠名字回避函数行为；候选改为对原始输入一次性匹配 token 与最长优先、已转义的旧别名，替换结果不再扫描，并明确断言期望姓名。六项纯函数回归覆盖重复/交叉别名、策略 token 输出、标点/前缀、canonical/unknown 与歧义验证通过，canonical 行为不变；恢复后的 default native 尚在执行，changed-case native 排队，部分项目通过不计作整组终态。scenes 字节未变但 model 已改，旧 native 证明不能直接移植。教训：替换函数应区分原输入与生成文本；同时必须查明失败 fixture 是否属于真实配置合同，不能把内存覆盖当作已接受的文件配置。
+
+**恢复后本机全验边界：** fresh npm test 的 core 最后输出停在 14:42，根级于 14:51 用 Ctrl-C 停止，退出 130，未得到完整通过。该日志中 avatar 曾有原生项目通过，与重置前两份 avatar/components 文件级失败不是同一证据；不把旧失败推断为本次失败原因，也不把部分原生通过叫全套完成。下一次 checkpoint 需保留 WIP 标识，恢复与定向检查不等于最终接受。
+
+## PR #4 `7b316f9` 新增 3 项：字体产品集、SRT 连续性与可见标题
+
+[自动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5471623968)于 2026-10-09 14:47:39 UTC 完成，新增以下三项 P2；安全无新增。上节级联解析生产修补与历史恢复记录独立保留，尚未称完整新 head 接受。
+
+- **本轮-1：四字体与 manifest 应作为一个可回滚产品集。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4231381388)中早期 face 修好后已替换 cache，后续下载/来源校验或最后 manifest 写入失败，留下新字体配旧记录、首次验证不可用。`scripts/setup_fonts.py` 现把准备/下载的各 face 放在独立暂存目录，全部通过后将四 OTF 字节与 manifest 交给既有 narration_io.write_products 发布；普通 replace 失败恢复旧产品/删除本次新产品，回滚再失败保留备份并报告。verify-only 连缺失输出目录也不创建，不改来源记录；不承诺断电/崩溃、并发读者的整组原子视图或并发 writer 安全。新 font-publication 九项（0.161 秒）、既有 quality 23 项（10.301 秒）通过（Linux Debian 13、Python 3.12.14）：小型 pinned-byte fixture 替代 glyph metadata/下载，但实际执行 prepare checksum/暂存及真实 publisher，覆盖第2/4来源失败、替换第2/4/manifest 失败的已有/新目录、symlink/目录、cache 正例和 verify-only 正反例。另 isolated-import 五项通过；该组没有重新执行真实 Noto/TTC 全链或 live download，不把受控来源测试冒充字形视觉证明。教训：单 face 原子替换仍可能留下与 manifest 不一致的字体集合，准备成功不应提前成为公开 cache 状态。
+- **本轮-2：SRT 量化后也不能出现未验证间隙。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4231381399)中相邻源边界只差 0.8 微秒、处于源连续性容差，却跨半毫秒舍入阈值成为 1000/1001ms，留下 1ms 空洞。JS 现要求每个后续 cue 的量化 start 精确等于前 end，原 overlap 错误保留，首个独立 partial cue 仍可从大于零开始。真实 CLI 的 1.0004996→1.0005004 反例在发布前拒绝，既有五产品字节不变/无输出目录时不创建；同落 1000ms 或同落 1001ms 的邻接对通过，不修改 authored timing。文本导出改从已验证 model 导入，避免不必要的 native renderer 依赖。Python 共享 validator 按其原有 round(seconds*1000) 验正时长和与前 end 精确相等（初始为零），不修补时间戳或改变各语言既有舍入策略。已报告 JS 专属 7/7、Python 新两项（164.966 秒，三个 builder×五优化模式）通过，涵盖容差内原时差与量化 gap/overlap 正反例；补充 collapsed-window 用例及既有 narration-validation 兼容回归仍以各自实际终态为准，本检查点未称全部兼容套件通过（Linux、Node 24.19.0、Python 3.12.14）。教训：源时间容差不能代替输出格式的精确连续性，量化后不重叠也可能留白。
+- **本轮-3：chapter 标题需在建文件前满足可见单行合同。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4231381405)中 scaffold 接受仅含空白但 length>0 的 title，生成空 README 标题及不可读 timeline/voiceover，qa:data 仍接受。`validateSchema('chapter')` 现调用共享 normalizedLabel，要求至少一个 Unicode 15 可读字母/数字，拒绝空/纯空白、首尾空白、C0/C1、Unicode 换行/default-ignorable、纯标点/组合音标、孤立代理/私用/未赋值等，不自建标点白名单或改写原文。合法中文、重音/组合重音、全角字、内部 NBSP、专业标点和 40 字标题原样保留，不套字幕 22 字上限。createChapter 在 mkdir 前走同一入口；无 chapters 父目录和实际 CLI 负例均先报 title 错误、无新增目录/输出。qa:data 检查现有 chapter.json 也先拒绝错误 title，缺 narration 的隔离样本证明未以无关错误冒充，metadata 字节保留。新四项加既有 data 31 项共 35/35，qa:data 两章 39 blocks 只读重建匹配及 diff 检查通过（Linux、Node 24.19.0、Python 3.12.14），不是完整 npm。教训：JSON 字符串非空不证明标题可见，生成入口与读取 QA 应共享同一文本合同。
+
+**当前状态：** 三项生产修补与单次解析加固已冻结到上述已知定向证据；恢复后本机 native 很慢，default/changed 完整矩阵证明、SRT 后续兼容、真实字体全链和完整 npm 尚未完成。原检查点 CI 四路失败。先做源码审计并发布 WIP checkpoint 仅为避免再次丢失工作，不将排队/部分通过记作终态，最终精确 head 的完整 CI/复审与视觉证明待验，PR 未记为合并。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

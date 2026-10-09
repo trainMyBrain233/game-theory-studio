@@ -26,6 +26,7 @@ export function subtitleWindows(segments) {
     const context = segment.id ?? `cue ${index + 1}`;
     if (end <= start) throw new Error(`${context}: SRT display window collapses after millisecond rounding (${start} --> ${end}); end must be greater than start`);
     if (start < previousEnd) throw new Error(`${context}: SRT display windows must be chronological and nonoverlapping after millisecond rounding`);
+    if (index > 0 && start !== previousEnd) throw new Error(`${context}: SRT display windows must be continuous after millisecond rounding (${previousEnd} --> ${start})`);
     previousEnd = end;
     return {start, end};
   });

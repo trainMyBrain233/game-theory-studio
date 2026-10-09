@@ -1,5 +1,5 @@
 import {writeProducts} from '../scripts/publish-products.mjs';
-import {timeline} from './src/scenes.mjs';
+import {timeline} from './src/model.mjs';
 import {resolveCastText,CAST} from './src/cast.mjs';
 import {subtitleMilliseconds,subtitleStamp,subtitleWindows} from './src/subtitle-time.mjs';
 const windows=subtitleWindows(timeline.segments);

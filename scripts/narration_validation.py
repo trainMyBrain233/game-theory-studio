@@ -14,6 +14,7 @@ def finite_number(value):
 def validate_narration(rows, case):
     require(bool(rows), 'Narration needs at least one segment')
     previous_end = 0
+    previous_srt_end = 0
     for row in rows:
         context = row['id']
         for field in ('start', 'end', 'voiceover_end', 'spoken_duration', 'pause_after', 'display_duration'):
@@ -30,6 +31,13 @@ def validate_narration(rows, case):
             (row['display_duration'], row['end'] - row['start']),
         ):
             require(abs(actual - expected) < .0011, f'{context}: inconsistent narration timing')
+        # Match the actual Python SRT exporters' integer-millisecond rounding.
+        srt_start, srt_end = round(row['start'] * 1000), round(row['end'] * 1000)
+        require(srt_end > srt_start,
+                f'{context}: SRT display window collapses after millisecond rounding')
+        require(srt_start == previous_srt_end,
+                f'{context}: SRT display windows must be continuous after millisecond rounding')
+        previous_srt_end = srt_end
         previous_end = row['end']
         cue = row['visual_cue']
         cell = cue.get('matrix_cell')

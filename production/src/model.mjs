@@ -17,8 +17,10 @@ for(const strategy of sceneData.strategies)CAST.strategies[strategy.id].label=st
 export function resolveCastText(text) {
   const names=Object.fromEntries(sceneData.actors.map(actor=>[actor.label,CAST.actors[actor.id].display_name]));
   const escape=text=>text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const matcher=new RegExp(Object.keys(names).sort((a,b)=>b.length-a.length).map(escape).join('|'),'g');
-  return String(text).replace(/\{\{(A|B|red|blue)\}\}/g,(_,id)=>CAST.actors[id]?.display_name??CAST.strategies[id].label).replace(matcher,name=>names[name]);
+  // Match tokens and legacy aliases in the original input in one pass.
+  // A replacement may itself contain an alias; never expand that output again.
+  const matcher=new RegExp('\\{\\{(A|B|red|blue)\\}\\}|'+Object.keys(names).sort((a,b)=>b.length-a.length).map(escape).join('|'),'g');
+  return String(text).replace(matcher,(match,id)=>id===undefined?names[match]:CAST.actors[id]?.display_name??CAST.strategies[id].label);
 }
 export const content=read('../content.json');
 const validateContent=ajv.compile(read('../schema/content.schema.json'));

@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {FONT_FAMILY} from '../../typography/fonts.mjs';
 import {createCanvas} from '@napi-rs/canvas';
-import {timeline,CAST} from '../../production/src/model.mjs';
+import {timeline,CAST,resolveCastText} from '../../production/src/model.mjs';
 process.argv.push('--placeholder-cast');
 if(process.env.AXIS_LONG){CAST.strategies.red.label='共同合作';CAST.strategies.blue.label='各自退出';CAST.actors.A.display_name='明月';CAST.actors.B.display_name='青禾';}
 if(process.env.AXIS_LONG_NAMES){CAST.actors.A.display_name='明月同学';CAST.actors.B.display_name='青禾同学';}
+for(const id of ['A','B'])assert.equal(resolveCastText('{{'+id+'}}'),CAST.actors[id].display_name,'Fixture owner name must resolve exactly once');
 if(process.env.AXIS_TOO_LONG)CAST.strategies.red.label='这是不能缩小的超长策略';
 const primitives=await import('../../production/src/primitives.mjs');
 await primitives.prepareAssets(1);

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {withSourceFixture} from '../scripts/source-fixture.mjs';
+import {validateFirstEpisodeTimeline} from '../scripts/validate-data.mjs';
 import {pythonCommand} from '../scripts/python.mjs';
 import {subtitleMilliseconds,subtitleStamp,subtitleWindows} from '../production/src/subtitle-time.mjs';
 
@@ -70,4 +71,48 @@ test('actual export CLI rolls back all products when a final export rename fails
  assert.equal(result.status,1,result.stdout+result.stderr);assert.match(result.stderr,/INJECTED_FINAL_EXPORT_RENAME/);assert.equal(result.stdout,'');
  assert.deepEqual(snapshot(root),before);
  assert(!fs.readdirSync(path.join(root,'production')).some(name=>name.startsWith('.publication-')));
+}));
+
+function firstBoundary(root,end,start){
+ const file=path.join(root,'chapters/01-four-elements/narration/timeline.json'),timeline=JSON.parse(fs.readFileSync(file));
+ const [first,second]=timeline.segments;
+ first.end=end;first.voiceover_end=end-.1;first.spoken_duration=first.voiceover_end-first.start;
+ first.pause_after=first.end-first.voiceover_end;first.display_duration=first.end-first.start;
+ second.start=start;second.spoken_duration=second.voiceover_end-second.start;second.display_duration=second.end-second.start;
+ // Prove the authored source passes the existing tolerance-aware contract.
+ validateFirstEpisodeTimeline(timeline,JSON.parse(fs.readFileSync(path.join(root,'design/scenes.json'))));
+ fs.writeFileSync(file,JSON.stringify(timeline));
+ return file;
+}
+
+test('SRT adjacency is strict after quantization without repairing source timing',()=>{
+ assert.throws(()=>subtitleWindows([{start:0,end:1.0004996},{start:1.0005004,end:2}]),/continuous after millisecond rounding \(1000 --> 1001\)/);
+ assert.throws(()=>subtitleWindows([{start:0,end:1.0005004},{start:1.0004996,end:2}]),/nonoverlapping after millisecond rounding/);
+ for(const [end,start,boundary] of [[1.0004996,1.0004999,1000],[1.0005001,1.0005004,1001]]){
+  assert.deepEqual(subtitleWindows([{start:0,end},{start,end:2}]),[{start:0,end:boundary},{start:boundary,end:2000}]);
+ }
+});
+
+test('actual export CLI rejects tolerance-valid quantized gaps and preserves every product',()=>withSourceFixture(root=>{
+ const first=run(root);assert.equal(first.status,0,first.stdout+first.stderr);
+ const before=snapshot(root),file=firstBoundary(root,1.0004996,1.0005004),source=fs.readFileSync(file);
+ const failed=run(root);assert.equal(failed.status,1,failed.stdout+failed.stderr);
+ assert.match(failed.stderr,/s02_four_questions: SRT display windows must be continuous after millisecond rounding \(1000 --> 1001\)/);
+ assert.equal(failed.stdout,'');assert.deepEqual(snapshot(root),before);assert.deepEqual(fs.readFileSync(file),source);
+ fs.rmSync(path.join(root,'production/output'),{recursive:true});fs.rmSync(path.join(root,'production/narration/exports'),{recursive:true});
+ const absent=run(root);assert.equal(absent.status,1);assert.match(absent.stderr,/continuous after millisecond rounding/);
+ assert(!fs.existsSync(path.join(root,'production/output')));assert(!fs.existsSync(path.join(root,'production/narration/exports')));
+}));
+
+test('actual export CLI keeps default and changed continuous timing exportable',()=>withSourceFixture(root=>{
+ const first=run(root);assert.equal(first.status,0,first.stdout+first.stderr);
+ const before=snapshot(root);
+ for(const [end,start,stamp] of [[1.0004996,1.0004999,'00:00:01,000'],[1.0005001,1.0005004,'00:00:01,001']]){
+  const file=firstBoundary(root,end,start),source=fs.readFileSync(file);
+  const result=run(root);assert.equal(result.status,0,result.stdout+result.stderr);
+  const after=snapshot(root);assert.notDeepEqual(after[0],before[0]);
+  const windows=after[0].toString().split('\n').filter(line=>line.includes(' --> '));
+  assert.equal(windows[0].split(' --> ')[1],stamp);assert.equal(windows[1].split(' --> ')[0],stamp);
+  assert.deepEqual(fs.readFileSync(file),source);
+ }
 }));

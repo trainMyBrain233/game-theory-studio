@@ -12,6 +12,9 @@ export function validateSchema(kind, data) {
   if (!validators.has(kind)) validators.set(kind, ajv.compile(readJSON(path.join(ROOT, `schemas/${kind}.schema.json`))));
   const validate = validators.get(kind);
   assert(validate(data), `${kind}: ${JSON.stringify(validate.errors)}`);
+  // Chapter titles are reused verbatim as README headings and narration titles.
+  // Validate here so both scaffold creation (before writes) and qa:data agree.
+  if (kind === 'chapter') normalizedLabel(data.title, 'Chapter title');
   if (kind === 'tokens') {
     for (const [id, style] of Object.entries(data.styles)) {
       for (const field of ['name', 'subtitle']) normalizedLabel(style[field], `Tokens styles.${id}.${field}`);
