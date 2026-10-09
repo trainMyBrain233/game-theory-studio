@@ -3,6 +3,7 @@
  * Validated content and every drawing dependency are injected by the caller.
  * No chapter IDs, IO, font registration or hidden frame state live here.
  */
+import {revealWithinWindow} from '../reveal-window.mjs';
 export const MATRIX_CELLS=Object.freeze({
  RR:Object.freeze([0,0]),RB:Object.freeze([0,1]),
  BR:Object.freeze([1,0]),BB:Object.freeze([1,1]),
@@ -19,7 +20,7 @@ export function createPayoffMatrixElement({timeline,summaryStart,drawing}) {
   score:Object.freeze({defaultFontSize:64,weight:700,familyRole:'sans-sc',baseline:'alphabetic',
    baselineOffsetAt64:21,playerXOffsetsAt64:Object.freeze({A:-64,B:64}),
    punctuationXOffsetsAt64:Object.freeze([-126,0,126]),revealSeconds:.38,revealDy:6}),
-  highlight:Object.freeze({rowIndicatorX:757,columnIndicatorY:488,inset:3,
+  highlight:Object.freeze({rowIndicatorX:765,columnIndicatorY:488,inset:3,
    scope:'fixed episode coordinates; recap summary moves the grid without active indicators'}),
   dependencies:Object.freeze(['timeline.segments.visual_cue','summaryStart','drawing.C/ramp/group/round/line/tx/reveal']),
  });
@@ -27,7 +28,7 @@ export function createPayoffMatrixElement({timeline,summaryStart,drawing}) {
   const s=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key);if(!s||t<s.start)return;
   const reveals=s.visual_cue.score_reveals;
   tx(c,'(',cx-126*size/64,cy+21*size/64,size,400,C.ink,'center');tx(c,',',cx,cy+21*size/64,size,400,C.ink,'center');tx(c,')',cx+126*size/64,cy+21*size/64,size,400,C.ink,'center');
-  reveals.forEach(r=>reveal(c,t,s.start+r.offset,()=>tx(c,String(r.value),cx+(r.player==='A'?-64:64)*size/64,cy+21*size/64,size,700,C.ink,'center'),{d:.38,dy:6}));
+  reveals.forEach(r=>revealWithinWindow(reveal,c,t,s.start+r.offset,s.end,()=>tx(c,String(r.value),cx+(r.player==='A'?-64:64)*size/64,cy+21*size/64,size,700,C.ink,'center'),{d:.38,dy:6}));
  }
  function currentCell(t) {
   return timeline.segments.filter(s=>s.start<=t&&s.visual_cue.matrix_cell).at(-1)?.visual_cue.matrix_cell||null;
@@ -66,7 +67,7 @@ export function createPayoffMatrixElement({timeline,summaryStart,drawing}) {
   Object.entries(MATRIX_CELLS).forEach(([key,[r,co]])=>scoreValues(c,t,key,x+co*cw+cw/2,y+r*ch+ch/2,fontSize));
   if(current&&!showSummary){const state=choiceState(t,key),pr=state.rowProgress,pc=state.columnProgress;
    // Indicators remain in the episode's dedicated grid gutters.
-   line(c,757,y+current[0]*ch+20,757,y+(current[0]+1)*ch-20,C.ink,5,pr);
+   line(c,765,y+current[0]*ch+20,765,y+(current[0]+1)*ch-20,C.ink,5,pr);
    line(c,x+current[1]*cw+50,488,x+(current[1]+1)*cw-50,488,C.ink,5,pc);
    group(c,state.borderProgress,0,0,()=>round(c,x+current[1]*cw+3,y+current[0]*ch+3,cw-6,ch-6,0,null,C.ink,4));
   }

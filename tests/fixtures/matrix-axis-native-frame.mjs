@@ -30,6 +30,14 @@ context.drawImage=(asset,x,y,w,h,...rest)=>{
  return nativeDrawImage(asset,x,y,w,h,...rest);
 };
 drawFrame(canvas,time);
+// Preserve native evidence before assertions when reproducing a failing frame.
+if(process.env.AXIS_RAW_PROOF){
+ const folder=process.env.AXIS_RAW_PROOF;fs.mkdirSync(folder,{recursive:true});
+ const name=`${process.env.AXIS_MUTATION??'current'}-${process.env.AXIS_LONG_NAMES?'long-names':process.env.AXIS_LONG?'long':'default'}-${segment.id}-${offset??process.env.AXIS_FRACTION??.6}`;
+ fs.writeFileSync(`${folder}/${name}.png`,canvas.toBuffer('image/png'));
+ const half=createCanvas(960,540);half.getContext('2d').drawImage(canvas,0,0,960,540);fs.writeFileSync(`${folder}/${name}-960.png`,half.toBuffer('image/png'));
+ fs.writeFileSync(`${folder}/${name}.json`,JSON.stringify({time,records:primitives.records,routes:primitives.routes},null,2));
+}
 const axes=primitives.records.filter(r=>r.role==='matrix-axis');
 assert.equal(axes.length,4,'all four row/column axis labels have recorded ink');
 // Match episode QA's 8px graphic clearance using native ink and actual
@@ -61,10 +69,13 @@ for(const [i,r] of axes.entries()){
   assert(!(r.x<other.x+other.width&&r.x+r.width>other.x&&r.y<other.y+other.height&&r.y+r.height>other.y),`axis ${r.text} collides with ${other.text}`);
  }
 }
+for(const name of primitives.records.filter(r=>r.role==='actor-name'))for(const card of cards)assert(!(name.x<card.right&&name.x+name.width>card.x&&name.y<card.bottom&&name.y+name.height>card.y),'actor name ink overlaps card cue');
 for(const name of primitives.records.filter(r=>r.role==='actor-name'))for(const badge of badges)assert(!(name.x<badge.x+badge.width&&name.x+name.width>badge.x&&name.y<badge.y+badge.height&&name.y+name.height>badge.y),'actor name ink overlaps owner badge');
 if(process.env.AXIS_PROOF){fs.mkdirSync(process.env.AXIS_PROOF,{recursive:true});const name=`${process.env.AXIS_LONG_NAMES?'long-names':process.env.AXIS_LONG?'long':'default'}-${segment.id}-${offset??process.env.AXIS_FRACTION??.6}`;fs.writeFileSync(`${process.env.AXIS_PROOF}/${name}.png`,canvas.toBuffer('image/png'));const half=createCanvas(960,540);half.getContext('2d').drawImage(canvas,0,0,960,540);fs.writeFileSync(`${process.env.AXIS_PROOF}/${name}-960.png`,half.toBuffer('image/png'));}
 console.log(JSON.stringify({time,axes}));
 }
 const offsets=process.env.AXIS_BATCH_OFFSETS?JSON.parse(process.env.AXIS_BATCH_OFFSETS):[process.env.AXIS_OFFSET===undefined?null:Number(process.env.AXIS_OFFSET)];
 assert(Array.isArray(offsets)&&offsets.length>0&&offsets.length<=8,'Bound native batches to eight frames');
-for(const offset of offsets){assert(offset===null||Number.isFinite(offset));auditFrame(offset);}
+const failures=[];
+for(const offset of offsets){assert(offset===null||Number.isFinite(offset));try{auditFrame(offset);}catch(error){if(!process.env.AXIS_COLLECT_FAILURES)throw error;failures.push(error.stack);}}
+assert.equal(failures.length,0,failures.join('\n\n'));

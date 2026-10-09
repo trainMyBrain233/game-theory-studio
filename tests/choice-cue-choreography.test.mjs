@@ -57,7 +57,7 @@ for(const [name,scale] of [['default',1],['positive retiming',1.3],['short',.3],
    assert(rectangles.every(c=>c.alpha===1));
    const indicators=calls.filter(c=>c.name==='line').slice(-2);
    assert.deepEqual(indicators.map(c=>c.args),[
-    [757,523+row*170,757,653+row*170,'ink',5,1],
+    [765,523+row*170,765,653+row*170,'ink',5,1],
     [830+column*480,488,1210+column*480,488,'ink',5,1],
    ]);
    const labels=calls.filter(c=>c.name==='tx'&&c.args[0].includes('选'));

@@ -97,7 +97,7 @@ test('matrix paints the selected BR fill before the grid, scores and final outli
  ]);
  assert.deepEqual(calls.at(-1),['round',783,676,474,164,0,null,'#123456',4]);
  assert.deepEqual(calls.filter(c=>c[0]==='line').slice(-2),[
-  ['line',757,693,757,823,'#123456',5,1],
+  ['line',765,693,765,823,'#123456',5,1],
   ['line',830,488,1210,488,'#123456',5,1],
  ]);
 });

@@ -11,6 +11,7 @@ const timelineFile=new URL(`../${TIMELINE_PATH}`,import.meta.url);
 const timelineBytes=fs.readFileSync(timelineFile);
 const {renderOptions}=await import('./src/render-options.mjs');
 const {encodeVideo}=await import('./src/encode-video.mjs');
+const {writeProducts}=await import('../scripts/publish-products.mjs');
 const {createCanvas}=await import('@napi-rs/canvas');
 const {prepareAssets}=await import('./src/primitives.mjs');
 const {drawFrame,FPS,DURATION,timeline}=await import('./src/scenes.mjs');
@@ -23,18 +24,22 @@ if(!still){const check=spawnSync('ffmpeg',['-version'],{encoding:'utf8'});if(che
 const stillManifest=still?createStillsManifest(timelineBytes,{width,placeholderCast,...(explicitTimes?{times}:{})}):null;
 await prepareAssets(width/1920*1.15);
 verifyRenderInputs();
-fs.mkdirSync('output',{recursive:true});
 const canvas=createCanvas(width,height);
 if(still){
  if(JSON.stringify(JSON.parse(timelineBytes))!==JSON.stringify(timeline))throw Error('Timeline changed after loading the renderer; rerun still rendering.');
  const manifest=stillManifest;
  const manifestFile=path.join('output',STILLS_MANIFEST);
- // Invalidate the previous set before touching any images. A failed render must
- // never leave an apparently complete manifest pointing to mixed generations.
- fs.rmSync(manifestFile,{force:true});
- for(const point of manifest.checkpoints){drawFrame(canvas,point.time);const png=stampCheckpointPng(canvas.toBuffer('image/png'),manifest,point);fs.writeFileSync(path.join('output',point.file),png);point.sha256=sha256(png);}
+ // Render and validate the complete generation before publishing any bytes.
+ // The trusted working directory is the publication root, so output itself is
+ // checked as a component (including when it already exists as a symlink).
+ const products={};
+ for(const point of manifest.checkpoints){drawFrame(canvas,point.time);const png=stampCheckpointPng(canvas.toBuffer('image/png'),manifest,point);products[path.join('output',point.file)]=png;point.sha256=sha256(png);}
+ verifyRenderInputs();
  verifyStillsManifest(manifest,fs.readFileSync(new URL(`../${TIMELINE_PATH}`,import.meta.url)));
- fs.writeFileSync(`${manifestFile}.tmp`,JSON.stringify(manifest,null,2)+'\n');fs.renameSync(`${manifestFile}.tmp`,manifestFile);
+ products[manifestFile]=JSON.stringify(manifest,null,2)+'\n';
+ // Unique staging files, atomic per-file replacement and ordinary-error batch
+ // rollback preserve prior PNGs and manifest on render or publication failure.
+ writeProducts(process.cwd(),products);
  console.log(`Rendered ${manifest.checkpoints.length} native ${width}x${height} frames and ${manifestFile}.`);
 }else{
  fs.mkdirSync(path.dirname(file),{recursive:true});

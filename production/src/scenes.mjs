@@ -7,6 +7,7 @@ import {comparisonState} from './comparison-timing.mjs';
 import {beyondMoneyState,recapState} from './payoff-recap-timing.mjs';
 import {payoffEntryState} from './payoff-entry-timing.mjs';
 import {textTransitionState} from './motion.mjs';
+import {revealWithinWindow,windowProgress} from './reveal-window.mjs';
 import {proposalScale} from '../../design/canvas-geometry.mjs';
 import {beforeEnd} from './frame-time.mjs';
 import {createSubtitleElement} from './elements/subtitle.mjs';
@@ -162,12 +163,12 @@ function payoffs(c,t){
   group(c,cols,0,0,()=>tx(c,'列',1157,361,29,700,C.muted,'right'));
  });
  if(entry.showExplanation){
-  const order=ramp(t,T('s23_score_order'),.5),key=currentCell(t),summary=ramp(t,T('s32_joint_choices'),.5),beyondState=beyondMoneyState(t,timeline),beyond=beyondState.entrance;
+  const order=windowProgress(ramp,t,T('s23_score_order'),S('s23_score_order').end,.5),key=currentCell(t),summary=ramp(t,T('s32_joint_choices'),.5),beyondState=beyondMoneyState(t,timeline),beyond=beyondState.entrance;
   group(c,entry.explanation,0,0,()=>{tx(c,t<T('s22_columns')?'先找{{A}}的行':'再找{{B}}的列',100,465,40,700);tx(c,t<T('s22_columns')?'{{red}}与{{blue}}，两种选择':'{{red}}与{{blue}}，两种选择',100,533,31,400,C.muted)});
-  group(c,order*(1-ramp(t,T('s33_beyond_money')-.3,.25)),0,0,()=>{
+  group(c,order*(1-windowProgress(ramp,t,Math.max(T('s32_joint_choices'),T('s33_beyond_money')-.3),T('s33_beyond_money'),.25)),0,0,()=>{
    tx(c,'每格的读法',100,400,31,400,C.muted);tx(c,'先{{A}}，再{{B}}',100,465,39,700);
    if(key&&!summary){choiceLabels(c,t);
-   const rs=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key),lastReveal=rs.start+Math.max(...rs.visual_cue.score_reveals.map(event=>event.offset));if(t>=lastReveal)reveal(c,t,lastReveal,()=>{tx(c,'得分',100,739,30,400,C.muted);tx(c,`(${rs.visual_cue.scores[0]}, ${rs.visual_cue.scores[1]})`,208,744,52,700)});
+   const rs=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key),lastReveal=rs.start+Math.max(...rs.visual_cue.score_reveals.map(event=>event.offset));if(t>=lastReveal)revealWithinWindow(reveal,c,t,lastReveal,rs.end,()=>{tx(c,'得分',100,739,30,400,C.muted);tx(c,`(${rs.visual_cue.scores[0]}, ${rs.visual_cue.scores[1]})`,208,744,52,700)});
    } else if(summary){tx(c,'两个人的选择',100,583,35,700);tx(c,'共同决定收益',100,646,35,700);}
   });
   group(c,beyondState.alpha,0,(1-beyond)*10,()=>{tx(c,'收益可以表示',100,418,37,700);[['省下的时间',519],['声誉',625],['对结果的偏好',731]].forEach(([a,y],i)=>{const pp=beyondState.examples[i];group(c,pp,0,0,()=>{circle(c,124,y-12,17,C.paper,C.ink,2.5);if(i===0){line(c,124,y-12,124,y-23,C.ink,2);line(c,124,y-12,134,y-7,C.ink,2)}else if(i===1){line(c,116,y-11,122,y-5,C.ink,2);line(c,122,y-5,132,y-20,C.ink,2)}else{circle(c,124,y-12,6,C.ink,null)}tx(c,a,164,y,34,400)})})});

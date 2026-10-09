@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Original sparse, restrained UI/physical cues; no speech or borrowed audio."""
 from dataclasses import asdict
+import hashlib
 import io
 import json
 import math
@@ -43,7 +44,7 @@ def synthesize(timeline):
     return out, plan
 
 
-def publish_sound(directory, pcm_bytes, manifest):
+def publish_sound(directory, pcm_bytes, manifest, *, before_publish=None):
     """Stage both products, rolling back ordinary publication failures.
 
     The shared publisher excludes symlinks and special files. This is not an
@@ -58,20 +59,35 @@ def publish_sound(directory, pcm_bytes, manifest):
     write_products(directory, {
         'output/original_sparse_sfx.wav': wav.getvalue(),
         'qa/sound_manifest.json': json.dumps(manifest, indent=2),
-    })
+    }, before_publish=before_publish)
 
 
 def main():
     import numpy as np
 
-    timeline = json.loads((ROOT.parent / 'chapters/01-four-elements/narration/timeline.json').read_text(encoding='utf-8'))
+    timeline_path = ROOT.parent / 'chapters/01-four-elements/narration/timeline.json'
+    timeline_bytes = timeline_path.read_bytes()
+    timeline_sha256 = hashlib.sha256(timeline_bytes).hexdigest()
+    timeline = json.loads(timeline_bytes.decode('utf-8'))
+
+    def verify_timeline():
+        try:
+            unchanged = timeline_path.read_bytes() == timeline_bytes
+        except OSError as error:
+            raise RuntimeError('Timeline changed during SFX build; rebuild sound.') from error
+        if not unchanged:
+            raise RuntimeError('Timeline changed during SFX build; rebuild sound.')
+
     out, plan = synthesize(timeline)
     peak = float(np.max(np.abs(out)))
     pcm = (np.clip(out, -1, 1) * 32767).astype('<i2')
+    verify_timeline()
     publish_sound(ROOT, pcm.tobytes(), {
         'source': 'original synthesis in make_sound.py',
         'timing_contract': 'semantic-segment-offset:1',
         'alignment': 'manual-reference',
+        # Exact canonical input identity is separate from speech alignment.
+        'timeline_sha256': timeline_sha256,
         'speech': False,
         'music': False,
         'sample_rate': SR,
@@ -79,7 +95,7 @@ def main():
         'duration': timeline['duration'],
         'peak_dbfs': 20 * math.log10(peak),
         'events': [asdict(event) for event in plan],
-    })
+    }, before_publish=verify_timeline)
     print(f'Original SFX complete, peak={20 * math.log10(peak):.2f} dBFS, {len(plan)} sparse cues.')
 
 

@@ -32,7 +32,7 @@ for(const window of [4.1,1,.000001])test(`Canvas selected fill/border/indicators
    assert.deepEqual(pixel(c,800+col*480,530+r*170),rgb(candidate===key?faint:paper),`${key} fill ${candidate}`);
    assert.deepEqual(pixel(c,783+col*480,550+r*170),rgb(candidate===key?ink:paper),`${key} border ${candidate}`);
   }
-  assert.deepEqual(pixel(c,757,620+row*170),rgb(ink));
+  assert.deepEqual(pixel(c,765,620+row*170),rgb(ink));
   assert.deepEqual(pixel(c,1180+column*480,488),rgb(ink));
   render(start);assert.deepEqual(pixel(c,800+column*480,530+row*170),rgb(paper));
   render(end-window*.001);assert.notDeepEqual(pixel(c,783+column*480,550+row*170),rgb(paper));
