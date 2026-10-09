@@ -12,7 +12,12 @@ import stat
 import tempfile
 
 
-def write_products(directory, products):
+def write_products(directory, products, *, before_publish=None):
+    """Stage the set, optionally revalidate inputs before each replacement.
+
+    A callback failure rolls back prior replacements just like an I/O failure.
+    Callers still must exclude concurrent writers; this is not crash atomic.
+    """
     directory = Path(directory).absolute()
     entries = []
     for name, text in products.items():
@@ -79,6 +84,8 @@ def write_products(directory, products):
                 shutil.copy2(original, backup)
                 backups[relative] = backup
         for relative, _ in entries:
+            if before_publish is not None:
+                before_publish()
             os.replace(staged / relative, directory / relative)
             published.append(relative)
     except BaseException as failure:

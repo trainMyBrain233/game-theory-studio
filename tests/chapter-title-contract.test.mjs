@@ -95,6 +95,11 @@ test('valid Unicode and professional punctuation survive the unchanged two-block
     fs.mkdirSync(path.join(root, 'chapters'));
     for (const script of ['narration_validation.py', 'narration_io.py', 'case_data.py', 'text_contract.py']) copy(root, `scripts/${script}`);
     const scenes = readJSON(path.join(root, 'design/scenes.json'));
+    // Title edits must preserve this case's scaffold, including any longer
+    // speech needed for replacement names, strategies and asymmetric scores.
+    const baselineDirectory = createChapter('09-baseline', '基准标题', root);
+    const baseline = readJSON(path.join(baselineDirectory, 'narration/timeline.json'));
+    validateTimeline(baseline, scenes);
     for (const [i, title] of visible.entries()) {
       const directory = createChapter(`0${i + 2}-example`, title, root);
       assert.equal(readJSON(path.join(directory, 'chapter.json')).title, title);
@@ -103,9 +108,42 @@ test('valid Unicode and professional punctuation survive the unchanged two-block
       assert.equal(timeline.sections[0].title, title);
       validateTimeline(timeline, scenes);
       assert.equal(timeline.segments.length, 2);
-      assert.equal(timeline.duration, 9);
+      assert.equal(timeline.duration, baseline.duration);
+      assert.deepEqual(timeline.segments, baseline.segments);
+      assert.deepEqual(timeline.visual_contract, baseline.visual_contract);
       assert(fs.readFileSync(path.join(directory, 'README.md'), 'utf8').startsWith(`# ${title}\n\n`));
       assert(fs.readFileSync(path.join(directory, 'narration/voiceover_v2_zh.txt'), 'utf8').startsWith(`${title}｜`));
     }
+  } finally {fs.rmSync(root, {recursive: true, force: true});}
+});
+
+
+for (const [name, players, strategies, payoffs, selected, duration] of [
+  ['explicit original', ['小A', '小B'], ['红', '蓝'], [[[3, 3], [0, 5]], [[5, 0], [1, 1]]],
+    {row: 1, column: 0, actorA: 'blue', actorB: 'red'}, 9],
+  ['exact case-reuse', ['明月', '青禾'], ['合作', '退出'], [[[11, 12], [21, 22]], [[31, 32], [41, 42]]],
+    {row: 1, column: 0, actorA: 'blue', actorB: 'red'}, 9.1],
+]) test(`chapter title scaffold retains case-specific timing and semantics: ${name}`, () => {
+  const root = fixture();
+  try {
+    fs.mkdirSync(path.join(root, 'chapters'));
+    for (const script of ['narration_validation.py', 'narration_io.py', 'case_data.py', 'text_contract.py']) copy(root, `scripts/${script}`);
+    const scenes = readJSON(path.join(root, 'design/scenes.json'));
+    scenes.actors.forEach((actor, i) => {actor.label = players[i];});
+    scenes.strategies.forEach((strategy, i) => {strategy.label = strategies[i];});
+    Object.assign(scenes, {payoffs, selected});
+    fs.writeFileSync(path.join(root, 'design/scenes.json'), JSON.stringify(scenes));
+    const title = '选择与收益：Ａ & B（2026）';
+    const directory = createChapter('02-example', title, root);
+    const timeline = readJSON(path.join(directory, 'narration/timeline.json'));
+    validateTimeline(timeline, scenes);
+    assert.equal(timeline.title, title);
+    assert.equal(timeline.sections[0].title, title);
+    assert.equal(timeline.segments.length, 2);
+    assert.equal(timeline.duration, duration);
+    assert.deepEqual(timeline.visual_contract.participants, players);
+    assert.deepEqual(timeline.segments[1].visual_cue.scores, payoffs[0][0]);
+    assert(timeline.segments[0].voiceover.includes(strategies[0]));
+    assert(timeline.segments[0].voiceover.includes(strategies[1]));
   } finally {fs.rmSync(root, {recursive: true, force: true});}
 });

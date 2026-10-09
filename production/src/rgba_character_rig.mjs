@@ -9,6 +9,23 @@ export {RIG} from './character-layers.mjs';
 export const assets={};
 export let assetManifest=characterManifest();
 const ROOT=path.resolve(import.meta.dirname,'../private_characters/pvz');
+// Source coordinates are prepared pixels; flipping preserves intrinsic bounds.
+// Validate the exact rectangle consumed by drawCharacter rather than letting
+// Canvas silently clip a crop or rotate an unrelated tiny bitmap around it.
+function validateSourceGeometry(img,contract){
+ const {width,height}=img,usedHeight=contract.cropHeight??height;
+ const fail=reason=>{
+  const e=new Error(`Private character layer ${contract.id} has invalid rig source geometry (${width}x${height}): ${reason}.`);
+  e.code='PRIVATE_ASSET_GEOMETRY';throw e;
+ };
+ if(!Number.isInteger(width)||width<=0||!Number.isInteger(height)||height<=0)fail('intrinsic dimensions must be positive integers');
+ if(!Number.isInteger(usedHeight)||usedHeight<=0||usedHeight>height)fail(`crop height ${usedHeight} exceeds intrinsic bounds or is invalid`);
+ for(const [name,point] of [['pivot',contract.pivot],['endpoint',contract.end]]){
+  if(point===null)continue;
+  if(!Array.isArray(point)||point.length!==2||!point.every(Number.isFinite)||point[0]<0||point[0]>=width||point[1]<0||point[1]>=usedHeight)fail(`${name} ${JSON.stringify(point)} is outside consumed source rectangle (0,0,${width},${usedHeight})`);
+ }
+ return usedHeight;
+}
 function flipped(img){const c=createCanvas(img.width,img.height),x=c.getContext('2d');x.translate(img.width,0);x.scale(-1,1);x.drawImage(img,0,0);return c;}
 export async function prepareCharacterAssets({directory=ROOT}={}){
  const layers=[],preparedAssets={};
@@ -16,11 +33,11 @@ export async function prepareCharacterAssets({directory=ROOT}={}){
   const file=path.join(directory,'assets',`${id}_${part}.png`);
   if(!fs.existsSync(file)){const e=new Error(`Missing private character layer: ${path.relative(path.resolve(import.meta.dirname,'..'),file)}. Supply the private production assets, or run with --placeholder-cast for the original SVG CI cast.`);e.code='PRIVATE_ASSET_MISSING';throw e;}
   const bytes=fs.readFileSync(file),img=await loadImage(bytes),contract=layerContract(id,part);
+  const usedHeight=validateSourceGeometry(img,contract);
   // Only geometric atlas cropping/flipping: the generated alpha is untouched.
   const prepared=contract.prepare_flip_x?flipped(img):img;
   // Match drawCharacter's source rectangle. Pixels below an upper-arm crop
   // cannot make an otherwise invisible required layer pass acceptance.
-  const usedHeight=Math.min(prepared.height,contract.cropHeight??prepared.height);
   const mask=createCanvas(prepared.width,usedHeight),ctx=mask.getContext('2d');
   ctx.drawImage(prepared,0,0);
   const rgba=ctx.getImageData(0,0,mask.width,mask.height).data;

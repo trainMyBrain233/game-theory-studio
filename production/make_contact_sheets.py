@@ -197,6 +197,7 @@ def main(output=OUT, timeline_path=TIMELINE, font_path=FONT):
     font = ImageFont.truetype(io.BytesIO(font_bytes), LABEL_SIZE)
     titlefont = ImageFont.truetype(io.BytesIO(font_bytes), TITLE_SIZE)
     layouts = {group: board_layout(manifest, group, items, font, titlefont) for group, items in groups.items()}
+    products = {}
     for group, items in groups.items():
         layout = layouts[group]
         tw, th = layout['tile']
@@ -212,14 +213,26 @@ def main(output=OUT, timeline_path=TIMELINE, font_path=FONT):
             sheet.paste(image, (x, y))
         for position, text, _ in layout['placements']:
             draw.text(position, text, (36, 62, 102), font=font, anchor='lt')
-        file = output / f'{group}_contact_sheet.png'
-        # Inputs may change while Pillow lays out/decodes images. Recheck the
-        # producer identity read-only immediately before publishing each board.
+        # Encode every group before touching any published board. A late decode
+        # or PNG encoding failure therefore leaves the entire previous set intact.
+        encoded = io.BytesIO()
+        sheet.save(encoded, format='PNG', optimize=True)
+        products[f'{group}_contact_sheet.png'] = encoded.getvalue()
+
+    def validate_current_inputs():
+        # Inputs may change during layout, decoding, staging or an earlier
+        # replacement. Revalidate the full producer identity before EACH publish.
         current, _ = load_checkpoints(output, timeline_path)
         if current != manifest:
             raise ValueError('Still manifest changed while preparing contact sheets')
-        sheet.save(file, optimize=True)
-        print(file)
+
+    sys.path.insert(0, str(ROOT.parent / 'scripts'))
+    from narration_io import write_products
+    # Ordinary publication failures restore the whole prior set. This is not
+    # atomic to concurrent readers or durable across crashes/power loss.
+    write_products(output, products, before_publish=validate_current_inputs)
+    for name in products:
+        print(output / name)
 
 
 if __name__ == '__main__':

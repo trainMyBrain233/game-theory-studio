@@ -38,6 +38,8 @@ class BoundedStream:
         return self
     def __exit__(self, *args):
         self.stream.close()
+    def fileno(self):
+        return self.stream.fileno()
     def read(self, size=-1):
         global reads, consumed
         if not 0 < size <= limit:
@@ -50,17 +52,28 @@ class BoundedStream:
         consumed += len(data)
         return data
 
+class SnapshotStream(BoundedStream):
+    def read(self, size=-1):
+        if mode == 'hash-error':
+            raise OSError('fixture snapshot hash failed')
+        if not 0 < size <= limit:
+            raise RuntimeError('fixture rejected unbounded media read')
+        return self.stream.read(size)
+
 def checked_open(path, *args, **kwargs):
     global opens
     if path.resolve() != target:
-        return original_open(path, *args, **kwargs)
+        stream = original_open(path, *args, **kwargs)
+        if path.name == 'input.mp4' and (args[0] if args else kwargs.get('mode')) == 'rb':
+            return SnapshotStream(stream)
+        return stream
     opens += 1
     return BoundedStream(original_open(path, *args, **kwargs))
 
 def probe(command, **kwargs):
     global probes
     probes += 1
-    if command != ['ffprobe', '-v', 'error', '-show_streams', '-show_format', '-of', 'json', str(target)]:
+    if command != ['ffprobe', '-v', 'error', '-show_streams', '-show_format', '-of', 'json', command[-1]] or Path(command[-1]).name != 'input.mp4':
         raise RuntimeError('fixture unexpected probe command')
     info = {'format': {'duration': '1.0', 'format_name': 'mov,mp4,m4a,3gp,3g2,mj2',
                       'tags': {'major_brand': 'isom'}},
@@ -78,7 +91,7 @@ def probe(command, **kwargs):
 def decode(command, **kwargs):
     global decodes
     decodes += 1
-    if command != ['ffmpeg', '-v', 'error', '-i', str(target), '-progress', 'pipe:1', '-f', 'null', '-']:
+    if command != ['ffmpeg', '-v', 'error', '-i', command[4], '-progress', 'pipe:1', '-f', 'null', '-'] or Path(command[4]).name != 'input.mp4':
         raise RuntimeError('fixture unexpected decode command')
     return SimpleNamespace(returncode=1 if mode == 'decode-error' else 0,
                            stderr='corrupt input' if mode == 'decode-stderr' else '',
@@ -187,44 +200,51 @@ class MediaHashBounds(unittest.TestCase):
                     result = self.run_main('read-error', flags)
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn('fixture media read failed', result.stderr)
-                    self.assertIn(f'ACCESS opens=1 reads=4 bytes={3 * LIMIT} probes=1 decodes=1', result.stdout)
+                    self.assertIn(f'ACCESS opens=1 reads=4 bytes={3 * LIMIT} probes=0 decodes=0', result.stdout)
                     self.assertNotIn('encoding contract passed', result.stdout)
                     if existing:
                         self.assertEqual(self.report.read_text(encoding='utf-8'), 'previous report')
                     else:
                         self.assertFalse(self.report.exists())
 
-    def test_container_stream_and_full_decode_failures_precede_hash_and_report(self):
+    def test_container_stream_and_full_decode_failures_preserve_reports(self):
         self.media.write_bytes(b'abc')
         for mode, message, decodes in [
                 ('container-error', 'Expected MP4 container', 0),
                 ('stream-error', 'only video or audio', 0),
                 ('decode-error', 'Full decode failed', 1),
                 ('decode-stderr', 'Full decode failed', 1),
-                ('frame-error', 'Decoded frame count mismatch', 1)]:
+                ('frame-error', 'Decoded frame count mismatch', 1),
+                ('hash-error', 'fixture snapshot hash failed', 1)]:
             for flags in MODES:
                 with self.subTest(mode=mode, flags=flags):
-                    result = self.run_main(mode, flags)
-                    self.assertNotEqual(result.returncode, 0)
-                    self.assertIn(message, result.stderr)
-                    self.assertIn(f'ACCESS opens=0 reads=0 bytes=0 probes=1 decodes={decodes}', result.stdout)
-                    self.assertFalse(self.report.exists())
-                    self.assertNotIn('encoding contract passed', result.stdout)
+                    for previous in (None, b'previous verified report'):
+                        self.report.unlink(missing_ok=True)
+                        if previous is not None:
+                            self.report.write_bytes(previous)
+                        result = self.run_main(mode, flags)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn(message, result.stderr)
+                        self.assertIn(f'ACCESS opens=1 reads=2 bytes=3 probes=1 decodes={decodes}', result.stdout)
+                        if previous is None:
+                            self.assertFalse(self.report.exists())
+                        else:
+                            self.assertEqual(self.report.read_bytes(), previous)
+                        self.assertNotIn('encoding contract passed', result.stdout)
 
     def test_previous_read_bytes_implementation_is_rejected_before_allocation(self):
         entry = self.qa / 'verify_media.py'
         source = entry.read_text(encoding='utf-8')
-        needle = "'sha256':sha256_file(path)"
+        needle = "'sha256':sha256_file(snapshot)"
         self.assertIn(needle, source)
-        entry.write_text(source.replace(needle, "'sha256':hashlib.sha256(path.read_bytes()).hexdigest()"), encoding='utf-8')
-        with self.media.open('wb') as stream:
-            stream.truncate(8 * 1024 * 1024 * 1024)
+        entry.write_text(source.replace(needle, "'sha256':hashlib.sha256(snapshot.read_bytes()).hexdigest()"), encoding='utf-8')
+        self.media.write_bytes(b'a' * (3 * LIMIT + 1))
         for flags in MODES:
             with self.subTest(flags=flags):
                 result = self.run_main('normal', flags)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('fixture rejected unbounded media read', result.stderr)
-                self.assertIn('ACCESS opens=1 reads=0 bytes=0 probes=1 decodes=1', result.stdout)
+                self.assertIn(f'ACCESS opens=1 reads=5 bytes={3 * LIMIT + 1} probes=1 decodes=1', result.stdout)
                 self.assertFalse(self.report.exists())
 
 

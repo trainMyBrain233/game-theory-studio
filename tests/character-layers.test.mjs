@@ -79,7 +79,7 @@ test('real loader reports eight original RGBA fixtures and applies preparation m
 
 // All fixtures below are original synthetic pixels; private artwork is never
 // copied into this repository or used to manufacture acceptance evidence.
-function writeSyntheticCast(directory,{width=16,height=320,alpha=255}={}){
+function writeSyntheticCast(directory,{width=320,height=500,alpha=255}={}){
  fs.mkdirSync(path.join(directory,'assets'),{recursive:true});
  const c=createCanvas(width,height),ctx=c.getContext('2d');
  const pixel=ctx.createImageData(1,1);pixel.data.set([188,61,49,alpha]);ctx.putImageData(pixel,1,1);
@@ -92,46 +92,89 @@ test('every required layer rejects empty alpha and upper arms reject pixels outs
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'studio-original-alpha-'));
  try{
   const valid=writeSyntheticCast(directory);
-  const empty=createCanvas(16,320).toBuffer('image/png');
+  const empty=createCanvas(320,500).toBuffer('image/png');
   for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm']){
    const file=path.join(directory,'assets',`${id}_${part}.png`);
    fs.writeFileSync(file,empty);
    await assert.rejects(()=>prepareCharacterAssets({directory}),error=>error.code==='PRIVATE_ASSET_EMPTY_ALPHA'&&error.message.includes(`${id}_${part}`));
    fs.writeFileSync(file,valid);
   }
-  const cropped=createCanvas(16,320),ctx=cropped.getContext('2d');ctx.fillStyle='#243E66';ctx.fillRect(0,270,16,50);
+  const cropped=createCanvas(320,500),ctx=cropped.getContext('2d');ctx.fillStyle='#243E66';ctx.fillRect(0,270,320,230);
   for(const id of ['a','b']){
    const file=path.join(directory,'assets',`${id}_upper.png`);fs.writeFileSync(file,cropped.toBuffer('image/png'));
    await assert.rejects(()=>prepareCharacterAssets({directory}),{code:'PRIVATE_ASSET_EMPTY_ALPHA'});
    // Row 269 is used; row 270 is not. Exercise both preparation directions.
    ctx.fillRect(1,269,1,1);fs.writeFileSync(file,cropped.toBuffer('image/png'));
-   await prepareCharacterAssets({directory});fs.writeFileSync(file,valid);ctx.clearRect(0,269,16,1);
+   await prepareCharacterAssets({directory});fs.writeFileSync(file,valid);ctx.clearRect(0,269,320,1);
   }
-  writeSyntheticCast(directory,{width:8,height:8,alpha:1});
-  assert.equal((await prepareCharacterAssets({directory})).layers.length,8,'Any genuinely nonzero alpha in the used range is valid, including small original fixtures.');
+  writeSyntheticCast(directory,{alpha:1});
+  assert.equal((await prepareCharacterAssets({directory})).layers.length,8,'Any genuinely nonzero alpha in a geometry-valid used range is valid.');
   for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm'])fs.writeFileSync(path.join(directory,'assets',`${id}_${part}.png`),empty);
   await assert.rejects(()=>prepareCharacterAssets({directory}),{code:'PRIVATE_ASSET_EMPTY_ALPHA'});
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
 
-test('late missing, malformed or transparent layers leave the whole accepted cast and manifest unchanged',async()=>{
+test('late missing, malformed, transparent or undersized layers leave the whole accepted cast and manifest unchanged',async()=>{
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'studio-original-atomic-cast-'));
  try{
   writeSyntheticCast(directory);
   await prepareCharacterAssets({directory});
   const accepted={...assets},manifest=assetManifest;
   const last=path.join(directory,'assets','b_forearm.png');
-  for(const failure of ['missing','malformed','transparent']){
-   writeSyntheticCast(directory,{width:24,height:64});
+  for(const failure of ['missing','malformed','transparent','undersized']){
+   writeSyntheticCast(directory,{width:321,height:501});
    if(failure==='missing')fs.unlinkSync(last);
-   else fs.writeFileSync(last,failure==='malformed'?Buffer.from('not an image'):createCanvas(24,64).toBuffer('image/png'));
-   await assert.rejects(()=>prepareCharacterAssets({directory}),error=>failure==='malformed'?error.code==='InvalidArg':error.code===(failure==='missing'?'PRIVATE_ASSET_MISSING':'PRIVATE_ASSET_EMPTY_ALPHA'));
+   else fs.writeFileSync(last,failure==='malformed'?Buffer.from('not an image'):failure==='undersized'?opaquePng(8,8):createCanvas(321,501).toBuffer('image/png'));
+   await assert.rejects(()=>prepareCharacterAssets({directory}),error=>failure==='malformed'?error.code==='InvalidArg':error.code===(failure==='missing'?'PRIVATE_ASSET_MISSING':failure==='undersized'?'PRIVATE_ASSET_GEOMETRY':'PRIVATE_ASSET_EMPTY_ALPHA'));
    assert.equal(assetManifest,manifest,`${failure}: manifest must remain the accepted one`);
    assert.deepEqual(Object.keys(assets),Object.keys(accepted));
    for(const [id,image] of Object.entries(accepted))assert.equal(assets[id],image,`${failure}: ${id} must remain the accepted bitmap`);
   }
-  writeSyntheticCast(directory,{width:24,height:64});
+  writeSyntheticCast(directory,{width:321,height:501});
   const replacement=await prepareCharacterAssets({directory});assert.notEqual(replacement,manifest);
   for(const [id,image] of Object.entries(accepted))assert.notEqual(assets[id],image);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+function opaquePng(width,height){
+ const canvas=createCanvas(width,height),ctx=canvas.getContext('2d');
+ ctx.fillStyle='#243E66';ctx.fillRect(0,0,width,height);
+ return canvas.toBuffer('image/png');
+}
+
+test('opaque 8x8 cast fails geometry before it can replace accepted assets',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'studio-original-tiny-cast-'));
+ try{
+  writeSyntheticCast(directory);await prepareCharacterAssets({directory});
+  const accepted={...assets},manifest=assetManifest;
+  const tiny=opaquePng(8,8);
+  for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm'])fs.writeFileSync(path.join(directory,'assets',`${id}_${part}.png`),tiny);
+  await assert.rejects(()=>prepareCharacterAssets({directory}),error=>error.code==='PRIVATE_ASSET_GEOMETRY'&&/a_head.*113,316/.test(error.message));
+  assert.equal(assetManifest,manifest);
+  for(const [id,image] of Object.entries(accepted))assert.equal(assets[id],image);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('both actors require source bounds for every consumed pivot, endpoint and upper-arm crop',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'studio-original-geometry-'));
+ // Independent minimum dimensions from the rig's consumed geometry. Pivots
+ // and endpoints must be inside [0,width) x [0,usedHeight), not on its far edge.
+ const minimum={a_head:[114,317],b_head:[84,409],a_torso:[1,1],b_torso:[1,1],a_upper:[76,270],b_upper:[62,270],a_forearm:[279,106],b_forearm:[279,106]};
+ try{
+  const valid=writeSyntheticCast(directory);
+  for(const [layer,[width,height]] of Object.entries(minimum)){
+   const file=path.join(directory,'assets',`${layer}.png`);
+   fs.writeFileSync(file,opaquePng(width,height));
+   const manifest=await prepareCharacterAssets({directory});
+   assert.deepEqual(manifest.layers.find(item=>item.id===layer).prepared,{width,height},`${layer}: exact fitting geometry is accepted`);
+   for(const [smallWidth,smallHeight] of [[width-1,height],[width,height-1]]){
+    // PNG cannot express a zero-sized torso; the loader still validates its
+    // intrinsic positive size and origin. No invented torso artwork minimum.
+    if(smallWidth===0||smallHeight===0)continue;
+    fs.writeFileSync(file,opaquePng(smallWidth,smallHeight));
+    await assert.rejects(()=>prepareCharacterAssets({directory}),error=>error.code==='PRIVATE_ASSET_GEOMETRY'&&error.message.includes(layer),`${layer}: ${smallWidth}x${smallHeight} must fail geometry despite opaque pixels`);
+   }
+   fs.writeFileSync(file,valid);
+  }
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
