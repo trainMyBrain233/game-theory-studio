@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {renderOptions} from '../production/src/render-options.mjs';
 test('render CLI has explicit finite episode windows and native dimensions',()=>{
  assert.equal(renderOptions([],173.3).duration,173.3);
- assert.ok(Math.abs(renderOptions(['--start','170'],173.3).duration-3.3)<1e-8);
+ assert.ok(Math.abs(renderOptions(['--start','170','--out','segment.mp4'],173.3).duration-3.3)<1e-8);
  assert.equal(renderOptions(['--preview','--width','3840'],173.3).height,2160);
  assert.deepEqual(renderOptions(['--stills','--times','0,27,172'],173.3).times,[0,27,172]);
 });

@@ -7,10 +7,10 @@ export async function resolve(specifier,context,next){
 export async function load(url,context,next){
  if(url==='test-stub:episode-alpha-canvas')return module('export const createCanvas=(width,height)=>({width,height});');
  if(url.endsWith('/production/src/scenes.mjs'))return module(`
- export const DURATION=process.env.EPISODE_ALPHA_FIXTURE==='regional-empty'?3:.5,content={matrix:{values:[[[],[]],[[],[]]]}},timeline={segments:[],sections:process.env.EPISODE_ALPHA_FIXTURE==='regional-empty'?[{id:'players',start:0,end:3}]:[],visual_contract:{matrix_values:{RR:[],RB:[],BR:[],BB:[]}}};
+ export const DURATION=Number(process.env.EPISODE_ALPHA_DURATION??(process.env.EPISODE_ALPHA_FIXTURE==='regional-empty'?3:.5)),content={matrix:{values:[[[],[]],[[],[]]]}},timeline={segments:[],sections:process.env.EPISODE_ALPHA_FIXTURE==='regional-empty'?[{id:'players',start:0,end:3}]:[],visual_contract:{matrix_values:{RR:[],RB:[],BR:[],BB:[]}}};
  export function drawFrame(canvas,t){globalThis.__alphaFixtureTime=t;}
  `);
- if(url.endsWith('/production/src/model.mjs'))return module('export const CAST={actors:{A:{},B:{}}};export const resolveCastText=x=>x;export const TOKENS={spacing:{figure_name_gap:32,graphic_text_gap_target:24}};');
+ if(url.endsWith('/production/src/model.mjs'))return module('export const CAST={actors:{A:{},B:{}}};export const resolveCastText=x=>x;export const timeline={duration:Number(process.env.EPISODE_ALPHA_DURATION??(process.env.EPISODE_ALPHA_FIXTURE==="regional-empty"?3:.5)),segments:[],sections:[]};export const TOKENS={canvas:{fps:30},spacing:{figure_name_gap:32,graphic_text_gap_target:24}};');
  if(url.endsWith('/production/src/primitives.mjs'))return module(`
  const mode=process.env.EPISODE_ALPHA_FIXTURE;
  export const records=mode==='no-text'?[]:[{text:'original fixture',role:'actor-name',alpha:1,x:100,y:100,width:40,height:30,size:40}],routes=[];

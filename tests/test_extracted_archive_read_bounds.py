@@ -20,7 +20,7 @@ import json
 import runpy
 import sys
 entry, directory, mode = sys.argv[1:]
-target = Path(directory) / 'source.txt'
+target = (Path(directory) / 'source.txt').resolve()
 expected = json.loads((Path(directory) / 'SOURCE_MANIFEST.json').read_text())['files'][0]['bytes']
 original_open = Path.open
 opens = reads = consumed = 0
@@ -39,7 +39,7 @@ class CheckedStream:
 
 def checked_open(path, *args, **kwargs):
     global opens
-    if path != target: return original_open(path, *args, **kwargs)
+    if path.resolve() != target: return original_open(path, *args, **kwargs)
     opens += 1
     if mode == 'oversize': raise RuntimeError('fixture rejected opening oversized source')
     with original_open(target, 'r+b') as stream:
@@ -58,7 +58,7 @@ from pathlib import Path
 import runpy
 import sys
 entry, directory, mode = sys.argv[1:]
-target = Path(directory) / 'SOURCE_MANIFEST.json'
+target = (Path(directory) / 'SOURCE_MANIFEST.json').resolve()
 original_open = Path.open
 opens = reads = consumed = 0
 limit = 15 * 1024 * 1024
@@ -77,7 +77,7 @@ class CheckedStream:
 
 def checked_open(path, *args, **kwargs):
     global opens
-    if path != target: return original_open(path, *args, **kwargs)
+    if path.resolve() != target: return original_open(path, *args, **kwargs)
     opens += 1
     if mode == 'manifest-oversize': raise RuntimeError('fixture rejected opening oversized metadata')
     with original_open(target, 'r+b') as stream:
@@ -122,6 +122,73 @@ class ExtractedArchiveReadBoundsTests(unittest.TestCase):
         args = ['-c', wrapper, str(verifier), str(root), mode] if mode else [str(verifier), str(root)]
         return subprocess.run([sys.executable, *flags, *args], env=env, capture_output=True,
                               text=True, timeout=15)
+
+    def test_directory_alias_hooks_reach_growth_shrink_and_mutation_failures(self):
+        # Model macOS /var -> /private/var even when running on Linux.
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            real_root = self.extract(base)
+            root = base / 'alias'
+            root.symlink_to(real_root, target_is_directory=True)
+            manifest = (real_root / 'SOURCE_MANIFEST.json').read_bytes()
+            source = VERIFIER.read_text()
+            mutations = {
+                'source-mutation': source.replace(
+                    'stream.read(min(HASH_CHUNK_BYTES, expected_size - consumed + 1))', 'stream.read()'),
+                'manifest-mutation': source.replace('stream.read(MAX_MANIFEST_BYTES + 1)', 'stream.read()'),
+            }
+            for kind in ['growth', 'shrink', 'manifest-growth', *mutations]:
+                verifier = VERIFIER
+                mode = kind
+                if kind in mutations:
+                    verifier = base / (kind + '.py')
+                    verifier.write_text(mutations[kind])
+                    mode = 'growth' if kind == 'source-mutation' else 'manifest-growth'
+                for flags, optimization in MODES:
+                    with self.subTest(kind=kind, flags=flags, optimization=optimization):
+                        (real_root / 'SOURCE_MANIFEST.json').write_bytes(manifest)
+                        (real_root / 'source.txt').write_bytes(b'synthetic original source')
+                        result = self.command(root, flags, optimization, mode, verifier)
+                        output = result.stdout + result.stderr
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn('ACCESS opens=1 reads=', output)
+                        if kind in mutations:
+                            self.assertIn('fixture rejected an unbounded', output)
+                            self.assertIn('ACCESS opens=1 reads=0 bytes=0', output)
+                        else:
+                            self.assertNotIn('Traceback', output)
+                            self.assertIn('Archive manifest exceeds 15 MiB' if kind == 'manifest-growth'
+                                          else 'Archive source differs', output)
+                            expected_bytes = 15 * LIMIT + 1 if kind == 'manifest-growth' else (
+                                26 if kind == 'growth' else 0)
+                            self.assertIn(f'bytes={expected_bytes}', output)
+
+    def test_old_literal_path_hooks_miss_directory_alias(self):
+        # Reproduce the former harness bug without an unbounded payload read:
+        # neither growth nor shrink occurs, so the original valid archive passes.
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            real_root = self.extract(base)
+            root = base / 'alias'
+            root.symlink_to(real_root, target_is_directory=True)
+            for wrapper, mode in [(WRAPPER, 'growth'), (MANIFEST_WRAPPER, 'manifest-growth')]:
+                old_wrapper = wrapper.replace(
+                    "target = (Path(directory) / 'source.txt').resolve()",
+                    "target = Path(directory) / 'source.txt'").replace(
+                    "target = (Path(directory) / 'SOURCE_MANIFEST.json').resolve()",
+                    "target = Path(directory) / 'SOURCE_MANIFEST.json'").replace(
+                    'if path.resolve() != target:', 'if path != target:')
+                for flags, optimization in MODES:
+                    env = {key: value for key, value in os.environ.items() if key != 'PYTHONOPTIMIZE'}
+                    env['PYTHONDONTWRITEBYTECODE'] = '1'
+                    if optimization:
+                        env['PYTHONOPTIMIZE'] = optimization
+                    result = subprocess.run(
+                        [sys.executable, *flags, '-c', old_wrapper, str(VERIFIER), str(root), mode],
+                        env=env, capture_output=True, text=True, timeout=15)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn('ACCESS opens=0 reads=0 bytes=0', result.stdout)
+                    self.assertIn('Archive integrity verified: 1 source files', result.stdout)
 
     def test_sparse_manifest_rejected_before_read_and_growth_read_is_bounded(self):
         for mode in ['manifest-oversize', 'manifest-growth']:

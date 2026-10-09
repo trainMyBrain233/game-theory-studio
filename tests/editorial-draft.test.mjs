@@ -252,3 +252,13 @@ test('build and check reject malformed editorial subtitles and inherited tokens 
   }
  });
 });
+
+
+test('editorial full blocks reject paired stale speech/chunks even when current cues remain valid',()=>{
+ for(const [number,voiceover] of [[26,'小A选红，小B选蓝。'],[27,'小A得零分，小B得五分。']]){
+  withTemplateMutation(draft=>{
+   const item=block(draft,number);item.voiceover=voiceover;
+   item.subtitle_chunks=[draftChunk('stale',voiceover)];
+  },()=>assert.throws(currentProducts,/Editorial semantic contract:.*voiceover has wrong cell or owner references/));
+ }
+});

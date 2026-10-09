@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {presentationModel} from '../../../../design/experiments/tabletop/presentation.mjs';
 import {validateScenes,validateTimeline} from '../../../../scripts/validate-data.mjs';
-import {TEXT_UNICODE_VERSION,protectedSubtitleTokens,readableCount,validateSubtitleLines} from '../../../../scripts/text-contract.mjs';
+import {TEXT_UNICODE_VERSION,protectedSubtitleTokens,readableCount,validateSubtitleLines,validateSubtitleChunk} from '../../../../scripts/text-contract.mjs';
 const directory=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(directory,'../../../..');
 const read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8')),hash=b=>createHash('sha256').update(b).digest('hex');
 export const template=read('chapters/01-four-elements/editorial/zombie-kingdom-r2/blocks.template.json');
@@ -59,7 +59,11 @@ function validateEditorialSubtitles(blocks,timeline,words){
   const cues=block.original_segment_ids.map(id=>sourceById.get(id)?.visual_cue??{});
   for(const chunk of chunks){
    validateSubtitleLines(chunk.suggested_lines,chunk.spoken_span,players,strategies,{},`${role}/${chunk.id}`);
-   for(const cue of cues)validateSubtitleLines(chunk.suggested_lines,chunk.spoken_span,players,strategies,cue,`${role}/${chunk.id}`);
+   // A source cue describes the entire canonical segment, not every editorial
+   // chunk. The editorial template contract above verifies full-block meaning;
+   // here retain its cue-derived protected phrases without requiring both owners
+   // to be repeated in each partial spoken span.
+   for(const cue of cues)validateSubtitleChunk(chunk.suggested_lines,chunk.spoken_span,players,strategies,cue,`${role}/${chunk.id}`);
   }
   for(const chunk of chunks.slice(0,-1))assert('，；。！？：'.includes(chunk.spoken_span.at(-1)),`${role}: subtitle chunks must break only after clause punctuation`);
   // Chunk boundaries must protect the same current-case names, choices and

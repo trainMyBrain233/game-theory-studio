@@ -1,5 +1,6 @@
 """Unicode 15.0 text policy shared with text-contract.mjs; independent of host UCD."""
 import json
+import re
 import sys
 import unicodedata
 from pathlib import Path
@@ -105,7 +106,51 @@ def protected_subtitle_tokens(players, strategies, cue=None):
     return tokens
 
 
-def validate_subtitle_lines(lines, voiceover, players, strategies, cue=None, role='Subtitle'):
+# Mirrored clause grammar in text-contract.mjs. Match current owner + predicate,
+# rather than freezing an entire authored sentence or counting absent tokens.
+CHOICE_VERB = r'(?:也)?(?:决定)?(?:选择|选)(?:了)?'
+SCORE_VERB = r'(?:也)?(?:得到|获得|拿到|得|拿)(?:了)?'
+
+
+def matching_clauses(voiceover, subjects, predicate):
+    subject = '|'.join(re.escape(subject) for subject in subjects)
+    return re.findall(rf'(?:^|[{BREAKS}])(?:现在|这时|其中|而|那么)?((?:{subject})，?{predicate})(?=$|[{BREAKS}])', voiceover)
+
+
+def clauses_stay_whole(clauses, lines, voiceover):
+    return all(sum(line.count(clause) for line in lines) == voiceover.count(clause) for clause in clauses)
+
+
+def validate_cue_narration(lines, voiceover, players, cue=None, role='Subtitle'):
+    cue = cue or {}
+    if cue.get('action') not in ('highlight_choices', 'reveal_scores'):
+        return
+
+    def require_clause(subjects, predicate, description):
+        clauses = matching_clauses(voiceover, subjects, predicate)
+        if not clauses:
+            raise ValueError(f'{role}: narration missing current-case {description} clause')
+        if not clauses_stay_whole(clauses, lines, voiceover):
+            raise ValueError(f'{role}: subtitle splits protected current-case token or clause: {description}')
+
+    if cue['action'] == 'highlight_choices':
+        for index, owner in enumerate(('A', 'B')):
+            choice = re.escape(cue.get('choices', {}).get(owner, ''))
+            require_clause([players[index]], rf'{CHOICE_VERB}{choice}(?:牌)?', f'{owner} choice')
+    else:
+        scores = cue.get('scores', [])
+        if len(scores) == 2 and scores[0] == scores[1]:
+            collective = matching_clauses(voiceover, ['两个人', '两人', '双方', '他们'],
+                                          rf'(?:各|都){SCORE_VERB}{spoken_number(scores[0])}分')
+            if collective:
+                if not clauses_stay_whole(collective, lines, voiceover):
+                    raise ValueError(f'{role}: subtitle splits protected current-case token or clause: collective score')
+                return
+        for index, owner in enumerate(('A', 'B')):
+            require_clause([players[index]], rf'{SCORE_VERB}{spoken_number(scores[index])}分', f'{owner} score')
+
+
+def validate_subtitle_chunk(lines, voiceover, players, strategies, cue=None, role='Subtitle'):
     if not isinstance(lines, list) or not 1 <= len(lines) <= 2:
         raise ValueError(f'{role}: subtitles require one or two lines')
     for line in lines:
@@ -117,3 +162,8 @@ def validate_subtitle_lines(lines, voiceover, players, strategies, cue=None, rol
     for token in protected_subtitle_tokens(players, strategies, cue):
         if sum(line.count(token) for line in lines) != voiceover.count(token):
             raise ValueError(f'{role}: subtitle splits protected current-case token or clause: {token}')
+
+
+def validate_subtitle_lines(lines, voiceover, players, strategies, cue=None, role='Subtitle'):
+    validate_subtitle_chunk(lines, voiceover, players, strategies, cue, role)
+    validate_cue_narration(lines, voiceover, players, cue, role)

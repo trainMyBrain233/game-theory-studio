@@ -59,7 +59,6 @@ export function validateTimeline(timeline, scenes) {
     close(s.display_duration, s.end - s.start);
     if (i) close(timeline.segments[i - 1].end, s.start);
     assert.equal(s.lines.join('\n'), s.text);
-    validateSubtitleLines(s.lines, s.voiceover, labels, scenes.strategies.map(strategy => strategy.label), s.visual_cue, s.id);
     assert(s.breath_points.every(breath => s.voiceover.includes(breath)), `${s.id}: breath point not in voiceover`);
     const section = timeline.sections.find(section => section.id === s.section);
     assert(section && s.start >= section.start && s.end <= section.end);
@@ -93,6 +92,7 @@ export function validateTimeline(timeline, scenes) {
         assert.equal(reveal.value, cue.scores[reveal.player === 'A' ? 0 : 1]);
       }
     }
+    validateSubtitleLines(s.lines, s.voiceover, labels, scenes.strategies.map(strategy => strategy.label), s.visual_cue, s.id);
   }
   for (const [i, section] of timeline.sections.entries()) {
     if (i) close(timeline.sections[i - 1].end, section.start);

@@ -26,11 +26,11 @@ test('CLI and encoder count contract reject explicit and trailing zero-frame win
  for(const args of [['--duration','0.01'],['--start','174.09']])assert.throws(()=>renderOptions(args,174.1),/at least one frame/);
  assert.throws(()=>videoFrameCount(.01,30),/at least one frame/);
  for(const [seconds,fps] of [[0,30],[Infinity,30],[1,0],[1,NaN],[Number.MAX_VALUE,30]])assert.throws(()=>videoFrameCount(seconds,fps));
- const options=renderOptions(['--start','10','--duration','0.04'],174.1,{fps:30});
+ const options=renderOptions(['--start','10','--duration','0.04','--out','segment.mp4'],174.1,{fps:30});
  assert.equal(options.frameCount,1);
  assert.equal(videoFrameCount(13,30),390);
  assert.equal(videoFrameCount(.02,30),1,'The contract rejects zero quantized frames, not every mathematical sub-frame duration.');
- assert.equal(renderOptions(['--duration','.01'],174.1,{fps:120}).frameCount,1,'The contract follows the configured FPS.');
+ assert.equal(renderOptions(['--duration','.01','--out','segment.mp4'],174.1,{fps:120}).frameCount,1,'The contract follows the configured FPS.');
 });
 
 test('proposal geometry allows a single uniform scale and rejects stretched canvases',()=>{

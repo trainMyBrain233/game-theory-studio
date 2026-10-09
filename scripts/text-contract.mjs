@@ -72,8 +72,52 @@ export function protectedSubtitleTokens(players, strategies, cue = {}) {
   if (cue.scores && cue.scores[0] === cue.scores[1]) tokens.push(`两个人，各得${spokenNumber(cue.scores[0])}分`);
   return tokens;
 }
+// These are clause patterns, not prescribed utterances. Authors can reorder
+// owners, add introductory clauses, and use ordinary choice/result synonyms.
+// Literal labels are escaped: punctuation in a valid current name is data.
+const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const CHOICE_VERB = '(?:也)?(?:决定)?(?:选择|选)(?:了)?';
+const SCORE_VERB = '(?:也)?(?:得到|获得|拿到|得|拿)(?:了)?';
+function matchingClauses(voiceover, subjects, predicate) {
+  const subject = subjects.map(escapeRegex).join('|');
+  const pattern = new RegExp(`(?:^|[${BREAKS}])(?:现在|这时|其中|而|那么)?((?:${subject})，?${predicate})(?=$|[${BREAKS}])`, 'gu');
+  return Array.from(voiceover.matchAll(pattern), match => match[1]);
+}
+function clausesStayWhole(clauses, lines, voiceover) {
+  return clauses.every(clause => {
+    const count = text => text.split(clause).length - 1;
+    return lines.reduce((sum, line) => sum + count(line), 0) === count(voiceover);
+  });
+}
+export function validateCueNarration(lines, voiceover, players, cue = {}, role = 'Subtitle') {
+  if (!['highlight_choices', 'reveal_scores'].includes(cue.action)) return;
+  const requireClause = (subjects, predicate, description) => {
+    const clauses = matchingClauses(voiceover, subjects, predicate);
+    requireText(clauses.length > 0, `${role}: narration missing current-case ${description} clause`);
+    requireText(clausesStayWhole(clauses, lines, voiceover),
+      `${role}: subtitle splits protected current-case token or clause: ${description}`);
+  };
+  if (cue.action === 'highlight_choices') {
+    for (const [index, owner] of ['A', 'B'].entries()) {
+      requireClause([players[index]], `${CHOICE_VERB}${escapeRegex(cue.choices?.[owner] ?? '')}(?:牌)?`, `${owner} choice`);
+    }
+  } else {
+    const scores = cue.scores ?? [];
+    if (scores.length === 2 && scores[0] === scores[1]) {
+      const collective = matchingClauses(voiceover, ['两个人', '两人', '双方', '他们'], `(?:各|都)${SCORE_VERB}${spokenNumber(scores[0])}分`);
+      if (collective.length) {
+        requireText(clausesStayWhole(collective, lines, voiceover),
+          `${role}: subtitle splits protected current-case token or clause: collective score`);
+        return;
+      }
+    }
+    for (const [index, owner] of ['A', 'B'].entries()) {
+      requireClause([players[index]], `${SCORE_VERB}${spokenNumber(scores[index])}分`, `${owner} score`);
+    }
+  }
+}
 /** Break only at authored clause punctuation, never inside current-case labels/results. */
-export function validateSubtitleLines(lines, voiceover, players, strategies, cue = {}, role = 'Subtitle') {
+export function validateSubtitleChunk(lines, voiceover, players, strategies, cue = {}, role = 'Subtitle') {
   requireText(Array.isArray(lines) && lines.length >= 1 && lines.length <= 2, `${role}: subtitles require one or two lines`);
   lines.forEach(line => validateSubtitleLine(line, role));
   requireText(lines.join('') === voiceover, `${role}: subtitle lines must preserve the exact voiceover`);
@@ -82,4 +126,9 @@ export function validateSubtitleLines(lines, voiceover, players, strategies, cue
     const occurrences = text => text.split(token).length - 1;
     requireText(lines.reduce((sum, line) => sum + occurrences(line), 0) === occurrences(voiceover), `${role}: subtitle splits protected current-case token or clause: ${token}`);
   }
+}
+/** A complete cue-bearing spoken segment needs every current owner/predicate. */
+export function validateSubtitleLines(lines, voiceover, players, strategies, cue = {}, role = 'Subtitle') {
+  validateSubtitleChunk(lines, voiceover, players, strategies, cue, role);
+  validateCueNarration(lines, voiceover, players, cue, role);
 }

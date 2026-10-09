@@ -57,7 +57,7 @@ npm run qa:fonts
 | `npm run test:render` | 重建 6 静帧/3 对照板、具名动态设计检查（以实际报告为准）、15状态文字边界/碰撞、归档只读比较与角色净空；包含合法更章复用回归 |
 | `npm run test:case-reuse` | 隔离副本更改中文姓名/策略/不对称收益/默认BR；真实重建、内容/核心/设计/布局/归档QA通过，录音说明无旧例残留 |
 | `npm run render:smoke` | 12 个变异矩阵、4 选牌状态、48px/宋体实际像素、原创几何 0/0.5/1s 确定性 |
-| `npm run test:episode` | 整集Schema/语义、按当前时间轴派生的布局采样（当前默认1163）、4格变更案例实际像素/字形、字体与5 SVG、导出文本与5张1080p占位帧 |
+| `npm run test:episode` | 整集Schema/语义、按当前时间轴派生的完整段落/转场布局采样、4格变更案例实际像素/字形、字体与5 SVG、导出文本与5张1080p占位帧 |
 | `npm run render:episode:preview -- --placeholder-cast` | 13秒原创占位视频预览，需FFmpeg；整片/4K/音效/联系图命令见生产模块 |
 | `npm run pack:source` | Git checkout公开源码归档；manifest含真实commit/dirty、分发类型、项目/Schema/章节版本、逐文件SHA256；CRC/边界检查通过后写回 |
 | `npm run qa:source` | 候选源码中的常见秘密、私有路径、二进制、嵌入图片 SVG 和过大文件 |
@@ -69,7 +69,7 @@ npm run qa:fonts
 
 设计检查由 [design/qa.mjs](design/qa.mjs) 按当前样式、场景、选择及实际颜色配对生成，逐项结果和数量见本次 `design/qa/checks.json`；[case-reuse 合同](scripts/case-reuse-contract.mjs) 还核对必需具名覆盖、每项通过、名称无重复和计数一致，不固定旧检查总数。
 
-布局采样计划见 [production/qa/validate.mjs](production/qa/validate.mjs)：默认 0.5 秒网格与当前语义边界周边 0.1 秒采样合并、去重并限于有效时间窗。1163 仅对应当前 174.1 秒默认时间轴；更章或 `--all-frames` 会改变计数，以该次 `production/qa/checks.json` 的 `samples` 为准。
+布局采样计划见 [production/qa/layout-samples.mjs](production/qa/layout-samples.mjs)：完整语义窗口采用不大于 0.1 秒间隔，叠加实际转场的起止、25/50/75% 与相邻帧；样本由轻量调度器分批绘制并核对总数。更章或 `--all-frames` 会改变计数，以该次 `production/qa/checks.json` 的 `samples` 与 `sampling` 为准。
 
 整集制作/配置与素材模式见 [production/README](production/README.md)。视频编码需要外部 FFmpeg/libx264；可选 `setup:media` 安装固定 NumPy/Pillow，用于原创音效和联系图。
 

@@ -11,17 +11,25 @@ function phase(t,segment,budget,offset,duration) {
  if(window>=budget)return ramp(t,start+offset,duration);
  return ramp((t-start)/window*budget,offset,duration);
 }
+// One phase contract drives rendering and QA sampling, including the late
+// branches that are more than two seconds after their subtitle boundary.
+export const comparisonPhases=Object.freeze({
+ 's16_comparison_intro':{budget:1.65,phases:[['multi',0,1.05],['alpha',1.05,.4],['hidden',0,.55]]},
+ 's17_comparison_example':{budget:4,phases:[['unhide',0,.6],['first',0,.55],['plan',1.55,.7],['red',2.2,.55],['blue',3,.55]]},
+ 's18_return_single_round':{budget:4.8,phases:[['comparisonExit',2.05,.35],['back',2.5,1.1],['names',3.55,.25],['single',3.4,.4]]},
+});
 export function comparisonState(t,timeline) {
- const segment=id=>timeline.segments.find(s=>s.id===id);
- const intro=segment('s16_comparison_intro'),example=segment('s17_comparison_example'),back=segment('s18_return_single_round');
- const enter=(offset,duration)=>phase(t,intro,1.65,offset,duration);
- const plan=(offset,duration)=>phase(t,example,4,offset,duration);
- const leave=(offset,duration)=>phase(t,back,4.8,offset,duration);
+ const values={};
+ for(const [id,{budget,phases}] of Object.entries(comparisonPhases)){
+  const segment=timeline.segments.find(s=>s.id===id);
+  for(const [name,offset,duration] of phases)values[name]=phase(t,segment,budget,offset,duration);
+ }
+ const back=timeline.segments.find(s=>s.id==='s18_return_single_round');
  return {
-  multi:enter(0,1.05),comparisonAlpha:enter(1.05,.4)*(1-leave(2.05,.35)),
-  hidden:enter(0,.55)*(1-plan(0,.6)),
-  first:plan(0,.55),plan:plan(1.55,.7),red:plan(2.2,.55),blue:plan(3,.55),
-  back:leave(2.5,1.1),names:leave(3.55,.25),single:leave(3.4,.4),
+  multi:values.multi,comparisonAlpha:values.alpha*(1-values.comparisonExit),
+  hidden:values.hidden*(1-values.unhide),
+  first:values.first,plan:values.plan,red:values.red,blue:values.blue,
+  back:values.back,names:values.names,single:values.single,
   singleExit:phase(t,back,4.8,Math.max(back.end-back.start,4.8)-.3,.25),
  };
 }

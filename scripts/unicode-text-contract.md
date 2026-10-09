@@ -42,3 +42,45 @@ later license; it is not used as the historical notice. Preserve the included
 notice when distributing the table or its derived ranges. See the
 [third-party boundary](../docs/third-party-content.md#unicode-150-属性数据与生成工具)
 for the distinction between Unicode data, the project's MIT code and Python tooling.
+
+## Current-cue narration clauses
+
+`highlight_choices` and `reveal_scores` require positive evidence of the current
+case in speech and captions; equal counts of an absent token are insufficient.
+This is an explicit, machine-verifiable Chinese teaching-script contract, not a
+natural-language truth checker. Other actions retain free-form narration.
+
+- Choice cues require a clause for each current named player with that owner's
+  exact current strategy. Supported verbs are 选 / 选择, optionally preceded by
+  也 and/or 决定, followed by 了, and optionally followed by 牌 after the strategy.
+- Score cues require each current named player's own Chinese-number score and 分.
+  Supported verbs are 得 / 得到 / 获得 / 拿到 / 拿, optionally prefixed by 也 and
+  suffixed by 了. Swapped owners, stale numbers and missing owners fail.
+- Only equal scores may use a collective subject 两个人 / 两人 / 双方 / 他们,
+  followed by 各 or 都 and a supported score verb. This preserves the shipped
+  “两个人，各得三分。” without requiring redundant names.
+- A subject may be followed by a comma. Clauses start at the beginning or after
+  ，；。！？： and end at one of those marks or the end. Optional lead-ins 现在 /
+  这时 / 其中 / 而 / 那么 are accepted. Names and strategies are literal data,
+  including punctuation or regex metacharacters; no substring-name substitution.
+- Authors may reorder the two owners, add introductory sentences, and mix these
+  ordinary phrasings. The complete matched owner/predicate must fit on one subtitle
+  line; exact voiceover/caption equality remains mandatory. This does not prescribe
+  a full utterance, audio timing, or the surrounding non-cue explanation.
+
+Additional wording requires an explicit mirrored grammar change and positive and
+negative tests; a checker cannot safely infer arbitrary paraphrases, negation or
+pronoun references. Manual editorial review still checks the entire explanation,
+including contradictions outside the verified clauses. Tests cover paired stale
+speech/captions with current metadata/cues, changed names/strategies/asymmetric
+payoffs, customized wording, all three builders and normal/-O/-OO/environment
+optimization modes, without altering tracked narration products.
+
+`validateSubtitleLines` / `validate_subtitle_lines` validate a complete canonical
+cue-bearing segment. `validateSubtitleChunk` / `validate_subtitle_chunk` are the
+explicit partial-span API: layout, exact speech equality and protected tokens
+still apply, but a partial chunk need not repeat every owner. Editorial uses that
+API only after its full-block template-reference contract has verified the exact
+current cell/owner token sequence; paired stale full-block speech/chunks fail that
+contract before expansion. Canonical builders and timeline QA always use the
+complete-segment API, with no opt-out flag.

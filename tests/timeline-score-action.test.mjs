@@ -83,6 +83,9 @@ for (const name of ['default', 'rebuilt changed']) {
           const document = structuredClone(fixture.timeline);
           const segment = document.segments.find(segment => segment.visual_cue.action === action && segment.visual_cue.matrix_cell === cell);
           document.segments[0].visual_cue = structuredClone(segment.visual_cue);
+          // Isolate duplicate cue structure: speech and captions must still
+          // describe the copied current choices/scores before episode validation.
+          for (const field of ['voiceover', 'text', 'lines', 'breath_points']) document.segments[0][field] = structuredClone(segment[field]);
           validateTimeline(document, fixture.scenes);
           assert.throws(() => validateFirstEpisodeTimeline(document, fixture.scenes), new RegExp(`exactly one ${action} for ${cell}`));
         });
@@ -170,7 +173,7 @@ const rendererAnchors = [...new Set([
   'production/src/character_adapter.mjs', 'production/src/checkpoints.mjs',
   // Timing helpers are live renderer consumers too, even after extraction from scenes.
   'production/src/comparison-timing.mjs', 'production/src/payoff-entry-timing.mjs',
-  'production/src/payoff-recap-timing.mjs'
+  'production/src/payoff-recap-timing.mjs', 'production/qa/layout-samples.mjs'
 ].flatMap(relative => [...fs.readFileSync(path.join(ROOT, relative), 'utf8').matchAll(/'(s\d\d_[a-z_]+)'/g)].map(match => match[1])))];
 
 test('every actual renderer/checkpoint anchor rejects omission, renaming and duplicate IDs', () => {
@@ -229,6 +232,7 @@ test('fixed sections, anchor ownership and walkthrough order reject silent chang
   const score = scoreSegment(reversed, 'RR');
   [choice.visual_cue, score.visual_cue] = [score.visual_cue, choice.visual_cue];
   [choice.id, score.id] = [score.id, choice.id];
+  for (const field of ['voiceover', 'text', 'lines', 'breath_points']) [choice[field], score[field]] = [score[field], choice[field]];
   validateTimeline(reversed, scenes);
   assert.throws(() => validateFirstEpisodeTimeline(reversed, scenes), /matrix cues must be unique choice\/reveal pairs/);
 

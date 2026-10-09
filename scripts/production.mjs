@@ -10,6 +10,6 @@ if(entry==='qa/validate.mjs'){
  const mode=layoutMode(args);
  if(mode.placeholder&&!args.includes('--placeholder-cast'))args.push('--placeholder-cast');
 }
-const result=spawnSync(process.execPath,['--import',path.join(ROOT,'scripts/isolated-fonts.mjs'),path.join(ROOT,'production',entry),...args],{cwd:path.join(ROOT,'production'),stdio:'inherit'});
+const result=spawnSync(process.execPath,['--import',path.join(ROOT,'scripts/isolated-fonts.mjs'),path.join(ROOT,'production',entry==='qa/validate.mjs'?'qa/layout-runner.mjs':entry),...args],{cwd:path.join(ROOT,'production'),stdio:'inherit'});
 if(result.error)throw result.error;
 process.exitCode=result.status??1;

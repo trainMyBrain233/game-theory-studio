@@ -16,7 +16,6 @@ def validate_narration(rows, case):
     previous_end = 0
     for row in rows:
         context = row['id']
-        case.validate_lines(row['lines'], row['voiceover'], row['visual_cue'])
         for field in ('start', 'end', 'voiceover_end', 'spoken_duration', 'pause_after', 'display_duration'):
             require(finite_number(row[field]), f'{context}: {field} must be finite')
         require(row['spoken_duration'] > 0 and row['pause_after'] >= 0,
@@ -72,3 +71,4 @@ def validate_narration(rows, case):
                         f'{context}: score reveal value does not match its player')
             require(sorted(owners) == ['A', 'B'],
                     f'{context}: complete cell reveal needs one event per player A and B')
+        case.validate_lines(row['lines'], row['voiceover'], row['visual_cue'])

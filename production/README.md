@@ -21,9 +21,9 @@ npm run setup:fonts -- --download
 npm run test:episode
 ```
 
-`test:episode` 包含语义/Schema、按当前时间轴派生的布局采样（当前默认1163个）和转场中间帧、26个乱序得分事件等价帧、共享卡色像素和非占位模式显示名、SC 字符覆盖、变更案例回归、5 个原创 SVG、文本导出和 5 张原生1080p帧。公开 checkout 一律使用显式 `--placeholder-cast`，使用原创中性人物；普通生产模式缺少八个私有 RGBA 层时以 `PRIVATE_ASSET_MISSING` 失败，不静默换角色。CI 只使用原创占位角色。
+`test:episode` 包含语义/Schema、按当前时间轴派生的完整段落/转场布局采样和转场中间帧、26个乱序得分事件等价帧、共享卡色像素和非占位模式显示名、SC 字符覆盖、变更案例回归、5 个原创 SVG、文本导出和 5 张原生1080p帧。公开 checkout 一律使用显式 `--placeholder-cast`，使用原创中性人物；普通生产模式缺少八个私有 RGBA 层时以 `PRIVATE_ASSET_MISSING` 失败，不静默换角色。CI 只使用原创占位角色。
 
-布局采样以 [qa/validate.mjs](qa/validate.mjs) 的实际计划为准：默认 0.5 秒网格与当前段落起点/章节终点周边 0.1 秒采样合并、去重并限于 `[0, DURATION)`。1163 仅对应当前 174.1 秒默认时间轴；更章或 `--all-frames` 会改变计数，实际数量读取本次 `qa/checks.json` 的 `samples`，不能沿用历史通过数。
+布局采样以 [qa/layout-samples.mjs](qa/layout-samples.mjs) 的实际计划为准：完整语义窗口按不大于 0.1 秒间隔采样，再加入转场起止、25/50/75% 与相邻帧，限于 `[0, DURATION)`；[qa/layout-runner.mjs](qa/layout-runner.mjs) 分批绘制并汇总。更章或 `--all-frames` 会改变计数，实际数量与区间读取本次 `qa/checks.json` 的 `samples` / `sampling`，不能沿用历史通过数。
 
 ## 制作与验收命令
 

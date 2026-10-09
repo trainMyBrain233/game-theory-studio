@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 /** One rounding contract shared by CLI validation and the encoder loop. */
 export function videoFrameCount(seconds,fps=30) {
  const count=Math.round(fps*seconds);
@@ -34,5 +36,13 @@ export function renderOptions(args,duration,{fps=30,defaultTimes}={}) {
  const frameCount=still?null:videoFrameCount(seconds,fps);
  if(times.some(t=>!Number.isFinite(t)||t<0||t>=duration))throw Error('Still times must be finite and inside the episode.');
  if(new Set(times.map(t=>t.toFixed(2))).size!==times.length)throw Error('Still times must have unique two-decimal filenames.');
- return {width,height:width*9/16,still,preview,start,duration:seconds,frameCount,times,explicitTimes,file:options['--out']??`output/${preview?'transition_preview':'game_theory_textbook_v2_clean'}_${width}.mp4`};
+ const output=options['--out'];
+ if(output!==undefined&&!output.trim())throw Error('--out must name an output file.');
+ const partial=!still&&(start!==0||seconds!==duration);
+ // A successful short encode must not atomically replace a completed full film.
+ // Full-window requests (even with explicit time flags) keep the default name.
+ if(partial&&!preview&&output===undefined)throw Error('Partial video renders require an explicit --out separate from the full-film output.');
+ const file=output??`output/${preview?'transition_preview':'game_theory_textbook_v2_clean'}_${width}.mp4`;
+ if(partial&&[1920,3840].some(size=>path.resolve(file)===path.resolve(`output/game_theory_textbook_v2_clean_${size}.mp4`)))throw Error('Partial video renders cannot use a canonical full-film output; choose a separate --out.');
+ return {width,height:width*9/16,still,preview,start,duration:seconds,frameCount,times,explicitTimes,file};
 }
