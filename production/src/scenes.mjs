@@ -1,6 +1,7 @@
 export {timeline,content} from './model.mjs';
 import {timeline,content,sceneData} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
+import {fourQuestionsState} from './four-questions-timing.mjs';
 import {comparisonState} from './comparison-timing.mjs';
 import {beyondMoneyState,recapState} from './payoff-recap-timing.mjs';
 import {payoffEntryState} from './payoff-entry-timing.mjs';
@@ -47,14 +48,14 @@ function duo(c,t,{alpha=1,spread=0,cards=true,names=true,hidden=0,cardY=786}={})
 }
 function intro(c,t){
  duo(c,t,{alpha:ramp(t,.4,.75),names:t>1.6});
- const q=ramp(t,T('s02_four_questions'),.6);
+ const four=fourQuestionsState(t,S('s02_four_questions')),q=four.enter;
  group(c,1-ramp(t,T('s02_four_questions')-.32,.27),0,-q*16,()=>{
   reveal(c,t,1.4,()=>{tx(c,'我的选择',810,497,34,700,C.ink,'center');tx(c,'对方的选择',1110,497,34,700,C.ink,'center');
    arrow(c,760,550,895,550,ramp(t,2,.7));arrow(c,1160,550,1025,550,ramp(t,2.35,.7));
    tx(c,'怎样影响得分？',960,631,43,700,C.ink,'center');});
  });
- if(q>0)group(c,q*(1-ramp(t,SEC('intro').end-.3,.25)),0,(1-q)*16,()=>{
-  ['参与者','信息','策略','收益'].forEach((str,i)=>{const p=ramp(t,T('s02_four_questions')+.35*i,.4);group(c,p,0,(1-p)*12,()=>{tx(c,String(i+1).padStart(2,'0'),745+i*143,478,27,700,C.muted,'center');tx(c,str,745+i*143,548,34,700,C.ink,'center');line(c,698+i*143,575,792+i*143,575,C.light,2)})});
+ if(q>0)group(c,four.alpha,0,(1-q)*16,()=>{
+  ['参与者','信息','策略','收益'].forEach((str,i)=>{const p=four.items[i];group(c,p,0,(1-p)*12,()=>{tx(c,String(i+1).padStart(2,'0'),745+i*143,478,27,700,C.muted,'center');tx(c,str,745+i*143,548,34,700,C.ink,'center');line(c,698+i*143,575,792+i*143,575,C.light,2)})});
   tx(c,'把一场博弈，先说明白。',960,661,36,400,C.ink,'center');
  });
 }

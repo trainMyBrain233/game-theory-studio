@@ -113,7 +113,7 @@ const FIRST_EPISODE_ANCHORS = {
   information: ['s08_known_unknown', 's09_simultaneous', 's10_distinction', 's11_timing'],
   strategy: ['s13_options', 's14_simple_case', 's15_definition', 's16_comparison_intro', 's17_comparison_example', 's18_return_single_round'],
   payoffs: ['s19_question', 's20_definition', 's21_rows', 's22_columns', 's23_score_order', 's25_rr_score', 's27_rb_score', 's29_br_score', 's31_bb_score', 's32_joint_choices', 's33_beyond_money'],
-  recap: ['s35_first_pair', 's36_second_pair', 's37_closing'],
+  recap: ['s34_intro', 's35_first_pair', 's36_second_pair', 's37_closing'],
 };
 const FIRST_EPISODE_SCORES = {RR: 's25_rr_score', RB: 's27_rb_score', BR: 's29_br_score', BB: 's31_bb_score'};
 

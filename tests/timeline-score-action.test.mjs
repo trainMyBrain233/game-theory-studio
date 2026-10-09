@@ -167,7 +167,10 @@ test('generic two-block chapters remain valid without the first-episode matrix w
 // Read literal consumers without importing any Canvas/font/character modules.
 const rendererAnchors = [...new Set([
   'production/src/scenes.mjs', 'production/src/choreography.mjs',
-  'production/src/character_adapter.mjs', 'production/src/checkpoints.mjs'
+  'production/src/character_adapter.mjs', 'production/src/checkpoints.mjs',
+  // Timing helpers are live renderer consumers too, even after extraction from scenes.
+  'production/src/comparison-timing.mjs', 'production/src/payoff-entry-timing.mjs',
+  'production/src/payoff-recap-timing.mjs'
 ].flatMap(relative => [...fs.readFileSync(path.join(ROOT, relative), 'utf8').matchAll(/'(s\d\d_[a-z_]+)'/g)].map(match => match[1])))];
 
 test('every actual renderer/checkpoint anchor rejects omission, renaming and duplicate IDs', () => {
@@ -234,6 +237,22 @@ test('fixed sections, anchor ownership and walkthrough order reject silent chang
   assert.throws(() => validateFirstEpisodeTimeline(declared, scenes), /matrix reveal order/);
 });
 
+test('recap layout anchor stays in recap before the paired summaries', () => {
+  validateFirstEpisodeTimeline(timeline, scenes);
+  for (const [otherId, expected] of [
+    ['s35_first_pair', /anchors must retain their order/],
+    ['s03_question', /anchor belongs in recap/],
+  ]) {
+    const document = structuredClone(timeline);
+    const intro = document.segments.find(segment => segment.id === 's34_intro');
+    const other = document.segments.find(segment => segment.id === otherId);
+    assert(other, `Fixture must contain ${otherId}`);
+    [intro.id, other.id] = [other.id, intro.id];
+    validateTimeline(document, scenes);
+    assert.throws(() => validateFirstEpisodeTimeline(document, scenes), expected);
+  }
+});
+
 test('production model and qa:data apply the first-episode contract before rendering or rebuilding', () => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'episode-model-contract-'));
   try {
@@ -248,14 +267,19 @@ test('production model and qa:data apply the first-episode contract before rende
     fs.symlinkSync(path.join(ROOT, 'node_modules'), path.join(temporary, 'node_modules'), 'dir');
     const runModel = () => spawnSync(process.execPath, ['production/src/model.mjs'], {cwd: temporary, encoding: 'utf8'});
     assert.equal(runModel().status, 0, 'The unchanged model loads without Canvas or fonts.');
-    for (const action of ['highlight_choices', 'reveal_scores']) {
+    for (const action of ['highlight_choices', 'reveal_scores', 'recap_anchor']) {
       const document = structuredClone(timeline);
-      document.segments.find(segment => segment.visual_cue.action === action && segment.visual_cue.matrix_cell === 'RR').visual_cue = {action: 'note'};
+      const expected = action === 'recap_anchor'
+        ? /exactly one segment anchor: s34_intro/
+        : new RegExp(`exactly one ${action} for RR`);
+      if (action === 'recap_anchor') document.segments.find(segment => segment.id === 's34_intro').id = 'renamed_recap';
+      else document.segments.find(segment => segment.visual_cue.action === action && segment.visual_cue.matrix_cell === 'RR').visual_cue = {action: 'note'};
+      validateTimeline(document, scenes);
       fs.writeFileSync(path.join(temporary, 'chapters/01-four-elements/narration/timeline.json'), JSON.stringify(document));
       for (const script of ['production/src/model.mjs', 'scripts/qa-data.mjs']) {
         const result = spawnSync(process.execPath, [script], {cwd: temporary, encoding: 'utf8'});
         assert.notEqual(result.status, 0);
-        assert.match(result.stderr, new RegExp(`exactly one ${action} for RR`));
+        assert.match(result.stderr, expected);
       }
     }
   } finally {

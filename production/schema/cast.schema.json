@@ -68,8 +68,7 @@
           "type": "object",
           "properties": {
             "asset": {
-              "type": "string",
-              "pattern": "^assets/[a-z_]+\\.svg$"
+              "const": "assets/card_red.svg"
             }
           },
           "required": [
@@ -81,8 +80,7 @@
           "type": "object",
           "properties": {
             "asset": {
-              "type": "string",
-              "pattern": "^assets/[a-z_]+\\.svg$"
+              "const": "assets/card_blue.svg"
             }
           },
           "required": [
@@ -94,8 +92,7 @@
           "type": "object",
           "properties": {
             "asset": {
-              "type": "string",
-              "pattern": "^assets/[a-z_]+\\.svg$"
+              "const": "assets/card_back.svg"
             },
             "label": {
               "type": "null"

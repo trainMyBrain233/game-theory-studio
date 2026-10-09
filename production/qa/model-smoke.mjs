@@ -7,6 +7,7 @@ import {CAST,resolveCastText} from '../src/cast.mjs';
 import {SERIF_FAMILY} from '../../typography/fonts.mjs';
 import {informationChoreography} from '../src/choreography.mjs';
 import {sceneData} from '../src/model.mjs';
+import {assertPayoffOwnership} from './payoff-ownership.mjs';
 import {validateTimeline} from '../../scripts/validate-data.mjs';
 await prepareAssets(1.15);
 assert.equal(CAST.actors.A.display_name,'甲');assert.equal(resolveCastText('{{A}}选{{red}}'),'甲选合作');
@@ -18,14 +19,9 @@ let orderSamples=0;
 for(const [i,key] of ['RR','RB','BR','BB'].entries()){
  const cue=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key);
  drawFrame(canvas,cue.end-.1);
- const row=Math.floor(i/2),col=i%2,cx=1020+col*480;
+ const row=Math.floor(i/2),col=i%2;
  assert.deepEqual([...ctx.getImageData(800+col*480,523+row*170,1,1).data].slice(0,3),rgb(C.faint),`Actual selected cell ${key}`);
- for(let owner=0;owner<2;owner++){
-  const expected=cue.visual_cue.scores[owner],center=cx+(owner===0?-64:64);
-  const glyph=records.find(r=>r.text===String(expected)&&r.size===64&&Math.abs(r.x+r.width/2-center)<1);
-  assert(glyph,`${key} score ${expected} must be at owner ${owner}'s matrix position`);
-  assert.match(glyph.appliedFont,/64px/);
- }
+ assertPayoffOwnership(records,sceneData.payoffs[row][col],row,col,key);
  assert(records.filter(r=>r.y>950).every(r=>r.size===48&&r.appliedFont.includes('48px')));
  assert(records.some(r=>r.size===72&&r.appliedFont.includes(SERIF_FAMILY)));
  assert(records.every(r=>!r.text.includes('小A')&&!r.text.includes('小B')&&!r.text.includes('{{')));

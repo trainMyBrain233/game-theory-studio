@@ -118,7 +118,8 @@ def scan_sources(root, files):
         file = root / relative
         if file.is_symlink() or any(parent.is_symlink() for parent in file.parents if parent != root and root in parent.parents):
             errors.append((relative, 'symlinks are not source artifacts')); continue
-        if not file.is_file(): continue
+        if not file.is_file():
+            errors.append((relative, 'nonregular or missing source candidate')); continue
         if file.suffix.lower() in forbidden_suffixes or file.name.startswith('.env') or any(part in {'node_modules', 'private_characters'} for part in Path(relative).parts):
             errors.append((relative, 'forbidden source file type/path')); continue
         if file.stat().st_size > MAX_SOURCE_BYTES:
