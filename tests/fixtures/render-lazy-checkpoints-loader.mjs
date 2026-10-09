@@ -13,9 +13,12 @@ export async function load(url,context,nextLoad){
   export function createCanvas(width,height){record('canvas',width,height);return {width,height,data:()=>Buffer.alloc(4),toBuffer:()=>Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6OCEAAAAASUVORK5CYII=','base64')};}
  `);
  if(url==='test-cli:encoder')return source(`${recorder}
-  import {EventEmitter} from 'node:events';import {Writable} from 'node:stream';
   export const spawnSync=(command,args)=>{record('encoder-check',command,args);return {status:0};};
-  export function spawn(command,args){record('encoder',command,args);const child=new EventEmitter();child.stderr=new EventEmitter();child.stdin=new Writable({write(bytes,encoding,done){record('encoded-frame');done();}});child.stdin.on('finish',()=>queueMicrotask(()=>child.emit('close',0)));child.kill=()=>{};queueMicrotask(()=>child.emit('spawn'));return child;}
+ `);
+ // This fixture tests CLI time/checkpoint routing, not encoder publication.
+ // Publication and real child/pipe lifecycle are covered by video-publication.
+ if(url.endsWith('/production/src/encode-video.mjs'))return source(`${recorder}
+  export async function encodeVideo({file,args,frameCount,frame}){record('encoder','ffmpeg',[...args,file]);for(let i=0;i<frameCount;i++){frame(i);record('encoded-frame');}}
  `);
  if(url.endsWith('/production/src/primitives.mjs'))return source(`${recorder}export let ready=false;export const prepareAssets=async scale=>{record('assets',scale);await Promise.resolve();ready=true;};`);
  if(url.endsWith('/production/src/scenes.mjs'))return source(`${recorder}

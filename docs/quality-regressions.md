@@ -236,6 +236,40 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** 四项代码候选及上述有界专项证据已冻结；新发布 head 的完整双平台 CI/复审仍待完成，PR 未记为合并，不新增真实私有素材、全片、编码或音频接受结论。
 
+### `ee152fb` CI：不对称案例的负例须保持非目标约束有效
+
+`ee152fb452776a9cf7ae3191e418f3799a907ad2` 的 [Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37907149945) 双平台默认 JS 772/772 通过；默认 Python 在 Ubuntu 为 115 项全通过，macOS 的 115 项中 1 项 skip、其余通过。字体与公开 animatic 阶段通过，changed-case 内层 JS 也在双平台 772/772 通过；随后 Python 的同一 duplicate-owner 负例在五种优化模式子用例中失败，macOS 另有 1 项 skip。静态/changed-case 阶段因此未完整通过，后续 render smoke、episode、联系图及最终源码 QA 跳过，不能把默认 core 成功写成完整 CI 成功。
+
+`tests/test_narration_validation.py` 只把第二个收益事件的 player 改为 A，却保留 B 的 value；默认对称收益碰巧仍合法，changed-case 的不对称收益先触发正确的 score-value 拒绝，未到达测试要求的唯一 owner 错误。生产拒绝没有缺陷；测试修补使变异事件的 value 与它声明的 A 匹配，仅留下重复 A/缺 B 这一目标违规。同型检查另把错误 scores 改为各当前值加一后模 100、错误 reveal value 改为当前 A 加一后模 100，RR 的错误 choices 使用当前第二策略，避免固定数字/标签恰好成为新案例的合法输入。全部精确错误字符串、原产品字节及缺失输出目录检查保留，生产代码不改，不能改为接受任意异常。教训：针对某一校验的负例必须在所有支持的当前案例中先满足其他约束，否则前置错误会掩盖目标检查是否有效。
+
+**专项证据：** 最终目标文件在默认、标准 changed-case，以及两种不对称边界（RR=99/8 和 RR=7/8，策略“错误/正确”、默认 BR）分别 5/5 通过（44.069/44.146/43.632/45.193 秒），每套内部覆盖普通、`-O`、`-OO`、`PYTHONOPTIMIZE=1/2`。在三种不对称输入分别恢复旧 owner 变异，每组五模式均未命中所需诊断而失败；独立恢复旧固定负例也实证 RR=7/8 时错误 scores、RR=99/8 时错误 value=99、首策略为“错误”时错误 choices 都会被五模式接受。运行环境 Linux、Python 3.12.14，属于当前未提交工作树的纯 Python 目标文件验证，未在本地跑完整 `npm test`、完整 case-reuse 或 macOS。
+
+**当前状态：** fixture 修补及上述四套定向证据已冻结；该 head 安全复审于 2026-10-09 08:52:08 UTC 完成，无新增项，代码复审于 09:03:57 UTC 完成并提出下节六项 P2（summary 于 09:03:58 更新）。修补后完整 CI 与最终复审待验，PR 未记为合并。
+
+## PR #4 `ee152fb` 新增 6 项：输出原子性、当前文档、容器与短窗
+
+[自动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5468002020)针对 `ee152fb452776a9cf7ae3191e418f3799a907ad2` 于 2026-10-09 09:03:57 UTC 完成，提出以下六项 P2；同 head 安全复审无新增项。上节 duplicate-owner fixture 的四套各 5/5 证据保留，不能用测试修正代替新生产问题的验证。
+
+- **新增-1：编码失败不能破坏上一份完整视频。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228448170)中 FFmpeg 的覆盖输出已打开最终文件，之后绘制、管道、磁盘或编码失败会截断旧影片并留下不完整同名文件。`production/render.mjs` 改用 `src/encode-video.mjs`，先写同目录 UUID 临时文件并保留扩展名；只有全部帧写入、stdin finish、子进程 close code=0 且无 signal/管道错误、候选非空后才 rename 到最终名。绘制/EPIPE/编码或磁盘/启动/rename 失败、提前成功退出/空输出、子进程 signal 及父进程可捕获的 SIGINT/SIGTERM/SIGHUP 都保留旧影片，无旧文件也不留下最终名；终止后等待 close 再清临时，对不退出的子进程两秒后升级 KILL。父进程自身 SIGKILL/断电不能承诺临时清理，编码仍不直接写旧成片。受控发布测试覆盖上述边界，真实两帧 16×16 RGBA/单线程 FFmpeg 与 ffprobe 仅验证管道成功及 30fps/两帧，不是生产分辨率媒体合同或完整影片验收。教训：有错误退出码仍不等于失败无副作用，已交付产物必须保留到替代品完成。
+- **新增-2：用户说明必须引用当前采样计划。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228448177)中根/production 两份 README 仍把历史 633 当成当前布局样本数。现改为当前默认 1163，并链接 `production/qa/validate.mjs`：0.5 秒基础网格与当前语义边界周边的 0.1 秒采样合并、去重、限于有效时间窗；更章或 `--all-frames` 可改变数量，以该次 `production/qa/checks.json.samples` 为准。纯读取当前 174.1 秒、37 段/六节时间轴按实际算法复算得到 1163，没有重跑原生绘制或改写历史日志。同型文档核对还修正旧 `DURATION-1/30` 说明：合法 `[0,DURATION)` 原样保留，负数取 0，终点及其后有限输入取共享 `beforeEnd` Float64 前驱，依据现有实现/片尾测试说明。根 README 的旧 53 项设计检查也改为当前具名动态覆盖与实际设计报告，核对 `design/qa.mjs`/`case-reuse-contract.mjs` 后说明每项通过、无重复、必需覆盖和计数一致；历史 53 项实测不改。教训：当前命令行为、历史通过记录和本次实测必须分开，不能把一个旧数字长期当作不变合同。
+- **新增-3：文件扩展名与正确流编码不能证明 MP4 容器。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228448190)中包含合法 H.264/AAC 流的其他容器也可通过仅查 duration 的 QA。`production/qa/media_contract.py` 现要求 ffprobe `format_name` 的逗号分隔别名含精确 `mp4`，且 `major_brand` 属于项目允许集 isom、iso2–iso9、avc1、mp41、mp42；这不是 MP4 品牌全集。缺失/未知主品牌、QuickTime MOV、3GP/3G2、M4A/M4V、MJ2 拒绝，`compatible_brands` 不能提升不支持的主品牌。`tests/test_media_container.py` 用真实 FFmpeg 生成六帧 1080p H.264/AAC 再 remux，不改实际 ffprobe JSON：有声 MP4 命名为 .bin、静音 MP4 命名为 .mov 仍通过，Matroska/MOV/3GP 伪装成 .mp4 均命中具体容器拒绝。教训：容器、流白名单、编码参数和完整解码是不同检查，不能由其中一项代替全部交付合同。
+- **新增-4：源码大小上限必须约束读取本身。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228448195)中先 `read_bytes()` 再检查 1 MiB，会把任意大候选完整载入内存。`scripts/qa_source.py` 冻结候选先拒绝 stat 大于上限，再只读 `MAX_SOURCE_BYTES + 1` 字节，捕获 stat 后增长；超过上限直接拒绝，不继续扫描截断内容。专属测试以 8 GiB 稀疏文件验证 QA/pack 在内容 open 前拒绝，受控最后 stat 后增长路径验证单次最多读取 1,048,577 字节，并保留现有 ZIP、无临时残留和不回显内容；1 MiB-1 与恰好 1 MiB 的合法文本可打包且核对内容，旧无界读取变异被拒。教训：拒绝策略不能等资源耗尽后才执行；这限制普通文件内容分配，不是原子文件快照、OS sandbox 或并发路径替换防护，原 archive producer/verifier 未改。
+- **新增-5：共同亮牌及手部阶段须落在实际 s08/s09 窗口。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228448206)中合法 0.3 倍时间轴的“一起亮牌”已结束，固定延迟仍未揭牌，握持继续越过后续信息段。`production/src/choreography.mjs` 使用共享 `scene-window-timing.mjs` 本地时钟：s08 的 4.8 秒预算统一选牌/隐牌/抬放/握持/观察与公开规则，s09 的 4.1 秒预算统一观察退场、翻面、抬放、释放及亮牌说明退出。短窗归一化整个计划，足够长窗口保留原绝对运算顺序；真实 scenes 消费对应文字/观察状态，不留下旧固定延迟。教训：视觉合同必须覆盖关联动作与结束状态，正确字幕或单独一张最终帧不能证明句内完成。
+- **新增-6：行说明出现时矩阵和关联标签必须已形成。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4228448213)中合法 0.3 倍 `s21_rows` 结束前，固定 +1.5 秒的网格/行标签尚未开始，直到列说明时才形成。`production/src/payoff-entry-timing.mjs` 以 s21 的 2.5 秒预算同步 badge/牌迁移、名字、网格、行标签与说明门槛，s22 的 1.1 秒预算包含列标签和说明持留/退场；s20 仅相邻旧场景退出使用自身窗口压缩，避免抢跑。`scenes.mjs` 消费共同计划；本轮未改 comparison/choice 计划。教训：不能只修一个标签而让背景/角色布局仍在旧时间轴上，语义锚点应驱动完整阶段。
+
+**已取得专项证据：** 原子发布受控 18 项，与 lazy/window/boundary 合并 40/40；另一组 options/片尾/比例/解释器 26/26 通过，真实微型 FFmpeg 输出为两帧、30/1 fps（Linux、Node 24.19.0）。实际容器相关 `test_media*.py` 九项在普通/`-O`/`-OO` 分别通过，原优化专项 5/5（内部含 flags 与 PYTHONOPTIMIZE 模式）通过；真实 MP4/伪装容器共五文件每模式检查，环境 Linux、Python 3.12.14、FFmpeg 7.1.5，仅极短容器/流合同，不是全片完整解码。源码有界读取新 5 项（8.579 秒）覆盖普通/`-O`/`-OO`/`PYTHONOPTIMIZE=1/2` 下实际 QA/pack 负例与边界正例；`test_source_*.py` 共 39/39、公开边界 21/21、源码 QA 通过（当时工作树 322 文件），原 symlink/类型/UTF-8/SVG/凭证规则未放宽。信息/矩阵短窗纯专项 11 项、与 comparison/choice/attachment 组合 31/31 通过：合法 1/0.3/1.3/1e-8 倍时间轴、旧缺陷复现、默认/1.3 倍各 1001 点严格相等、预算阈值连续、ULP/零宽防非有限值及真实 scenes 的边界/25/50/75%/乱序记录；零宽只作 helper 防御测试。实际 Canvas 两个独立单帧进程 2/2 通过，0.3 倍 s09 的 80% 与 s21 的 90% 验证字幕/说明 alpha=1、两张牌面色块与矩阵竖线像素（Linux、Node 24.19.0）；两张 PNG 已保存并实际查看：t13.284 的双牌正面/说明/对应字幕完整，t30.675 的矩阵全线/行说明/对应字幕完整且未抢显列说明，未见这两帧错位叠字；原生重跑 2/2 通过，只证明这两个有界静态时刻，不覆盖全部转场或私有角色。组间有重叠，不能相加作为完整测试数。
+
+**当前状态：** 六项候选实现、文档与上述有界专项证据已冻结；新 head 完整双平台 CI 与复审仍待完成，PR 未记为合并，不新增全片、真实私图或音频接受结论。
+
+### 主动同类排查：收益例子与复盘高亮的短窗
+
+以下两项来自对同一候选场景的主动只读语义排查，**不是上述 Codex 六项自动审查发现**。已被接受的 0.3 倍时间轴同时暴露了两个关联遗漏：s33 的非金钱收益例子仍用固定秒数，复盘的每组第二个高亮也落到下一段；因此不能只修被自动审查点名的 s08/s09/s21。
+
+- **收益例子要连同父级透明度和尾部停留一起压缩。** 0.3 倍 s33 位于 `[44.64,46.98)`，旧“声誉”46.89 秒才入场，与父级退场重叠而几乎不可见，“对结果的偏好”48.04 秒才开始，已到复盘。新增 `production/src/payoff-recap-timing.mjs` 的 `beyondMoneyState` 使用整个 s33 的 4.5 秒本地预算；三项及父级入/退场共享时钟，末项在局部 3.4–3.8 秒完成，4.2 秒才开始淡出，留 0.4 秒预算停留。短窗等比压缩，默认/1.3 倍保持历史算术；该局部预算停留不是压缩后仍有 0.4 秒实际阅读时间的承诺。
+- **复盘每组高亮必须在所属口播内完成，父级布局先就绪。** 0.3 倍 s35/s36 各约 1.08 秒，旧每组第二项固定 +1.4 秒使“信息/收益”延至后段。`recapState` 以 s34 的 1.95 秒预算统一矩阵迁移与父级文字入场，保证 s35 前就绪；s35/s36 各用 2.2 秒预算，第二项局部 1.4–1.85 秒完成后有 0.35 秒预算停留。`scenes.mjs` 消费同一组状态。教训：子项能算到 alpha=1 还不够，还要看父级是否可见、位置是否就绪及当时字幕属于哪段。
+
+**专项状态：** 新纯测试 11/11 通过，覆盖合法默认/0.3/1.3/极短时间轴、旧缺陷复现、默认/1.3 倍逐值精确一致、阈值、ULP/零宽防御以及真实 `drawFrame` 的文本 alpha/高亮记录、边界/25/50/75% 和乱序；记录测试使用受控 primitives，不能当作实际像素验收。两个独立 Node 进程已生成并实际查看 1920×1080 placeholder 帧：0.3 倍 s33 的 t46.6758，三例全显且字幕仍属本段；s36 的 t49.8996，四条高亮、四问和矩阵布局稳定且仍为 s36 字幕。只覆盖这两个稳态视觉时刻，边界/四分点/乱序的证据仍来自受控 consumer 记录，不声称全部过渡视觉、真实角色或音轨验收。实现及上述证据已冻结；新 head 完整 CI/复审继续待验，不新增全片或私有图稿接受结论。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

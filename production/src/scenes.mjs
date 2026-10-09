@@ -2,6 +2,8 @@ export {timeline,content} from './model.mjs';
 import {timeline,content,sceneData} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
 import {comparisonState} from './comparison-timing.mjs';
+import {beyondMoneyState,recapState} from './payoff-recap-timing.mjs';
+import {payoffEntryState} from './payoff-entry-timing.mjs';
 import {textTransitionState} from './motion.mjs';
 import {proposalScale} from '../../design/canvas-geometry.mjs';
 import {beforeEnd} from './frame-time.mjs';
@@ -76,10 +78,10 @@ function information(c,t){
  cardFlip(c,ca.kind,'back',ca.x,ca.y,ca.w,hidden,{angle:ca.angle});
  cardFlip(c,cb.kind,'back',cb.x,cb.y,cb.w,hidden,{angle:cb.angle});
  group(c,choreography.unused,0,choose*34,()=>{card(c,sceneData.selected.row===0?'blue':'red',sceneData.selected.row===0?546:408,786,105);card(c,sceneData.selected.column===0?'blue':'red',sceneData.selected.column===0?1508:1370,786,105)});
- reveal(c,t,T('s08_known_unknown'),()=>tag(c,'计分规则：双方都知道',738,377,444,{size:30}));
+ group(c,choreography.rules,0,(1-choreography.rules)*12,()=>tag(c,'计分规则：双方都知道',738,377,444,{size:30}));
  const dist=ramp(t,T('s10_distinction'),.5),summ=ramp(t,T('s11_timing'),.55);
- group(c,1-ramp(t,T('s10_distinction')-.3,.25),0,-dist*10,()=>{
-  const observation=ramp(t,T('s08_known_unknown')+2.6,.65)*(1-ramp(t,T('s09_simultaneous')+1.35,.3));
+ group(c,choreography.explanation,0,-dist*10,()=>{
+  const observation=choreography.observation;
   group(c,observation,0,0,()=>{
    eye(c,690,507,.8);line(c,737,507,1192,507,C.muted,3,1,true);line(c,1192,507,1374,699,C.muted,3,1,true);
    line(c,1359,686,1390,710,C.ink,4); // the opaque card is the stopping boundary
@@ -132,7 +134,7 @@ function strategy(c,t){
  group(c,comparison.single*(1-comparison.singleExit),0,0,()=>{tx(c,'回到本片',960,483,33,400,C.muted,'center');tx(c,'仍然只玩一轮',960,570,43,700,C.ink,'center')});
 }
 function payoffs(c,t){
- const move=ramp(t,T('s21_rows')+.1,1.2),rows=ramp(t,T('s21_rows')+1.5,.45),cols=ramp(t,T('s22_columns'),.65),oldExit=1-ramp(t,T('s21_rows')-.45,.42);
+ const entry=payoffEntryState(t,timeline),{move,rows,cols,oldExit}=entry;
  group(c,oldExit,0,(1-oldExit)*120,()=>{duo(c,t,{cards:false,names:false});
   reveal(c,t,T('s19_question'),()=>tx(c,'不同选择的结果',960,505,41,700,C.ink,'center'));
   reveal(c,t,T('s20_definition'),()=>tx(c,'收益（支付）',960,603,48,700,C.ink,'center'));
@@ -140,28 +142,28 @@ function payoffs(c,t){
  // Identity and choice objects physically migrate into row/column labels.
  const ba={x:mix(330,565,move),y:mix(356,630,move)},bb={x:mix(1335,1211,move),y:mix(324,350,move)};
  badge(c,'A',ba.x,ba.y,25);badge(c,'B',bb.x,bb.y,25);
- group(c,oldExit,0,0,()=>{tx(c,'{{A}}',371,367,32,700);tx(c,'{{B}}',1376,335,32,700)});group(c,ramp(t,T('s21_rows')+1.35,.3),0,0,()=>{tx(c,'{{A}}',565,699,32,700,C.ink,'center');tx(c,'{{B}}',1263,361,32,700)});
+ group(c,oldExit,0,0,()=>{tx(c,'{{A}}',371,367,32,700);tx(c,'{{B}}',1376,335,32,700)});group(c,entry.names,0,0,()=>{tx(c,'{{A}}',565,699,32,700,C.ink,'center');tx(c,'{{B}}',1263,361,32,700)});
  card(c,'red',mix(408,707,move),mix(786,588,move),mix(105,82,move),{angle:mix(-.035,0,move)});card(c,'blue',mix(546,707,move),mix(786,758,move),mix(105,82,move));
  card(c,'red',mix(1370,1020,move),mix(786,426,move),mix(105,73,move));card(c,'blue',mix(1508,1500,move),mix(786,426,move),mix(105,73,move));
- if(move>0)group(c,move,0,0,()=>{matrix(c,t,{progress:ramp(t,T('s21_rows')+1.5,.7)});
+ if(move>0)group(c,move,0,0,()=>{matrix(c,t,{progress:entry.grid});
   group(c,rows,0,0,()=>tx(c,'行',565,566,29,700,C.muted,'center'));
   group(c,cols,0,0,()=>tx(c,'列',1157,361,29,700,C.muted,'right'));
  });
- if(t>=T('s21_rows')+1.5){
-  const order=ramp(t,T('s23_score_order'),.5),key=currentCell(t),summary=ramp(t,T('s32_joint_choices'),.5),beyond=ramp(t,T('s33_beyond_money'),.6);
-  group(c,1-ramp(t,T('s23_score_order')-.3,.25),0,0,()=>{tx(c,t<T('s22_columns')?'先找{{A}}的行':'再找{{B}}的列',100,465,40,700);tx(c,t<T('s22_columns')?'{{red}}与{{blue}}，两种选择':'{{red}}与{{blue}}，两种选择',100,533,31,400,C.muted)});
+ if(entry.showExplanation){
+  const order=ramp(t,T('s23_score_order'),.5),key=currentCell(t),summary=ramp(t,T('s32_joint_choices'),.5),beyondState=beyondMoneyState(t,timeline),beyond=beyondState.entrance;
+  group(c,entry.explanation,0,0,()=>{tx(c,t<T('s22_columns')?'先找{{A}}的行':'再找{{B}}的列',100,465,40,700);tx(c,t<T('s22_columns')?'{{red}}与{{blue}}，两种选择':'{{red}}与{{blue}}，两种选择',100,533,31,400,C.muted)});
   group(c,order*(1-ramp(t,T('s33_beyond_money')-.3,.25)),0,0,()=>{
    tx(c,'每格的读法',100,400,31,400,C.muted);tx(c,'先{{A}}，再{{B}}',100,465,39,700);
    if(key&&!summary){choiceLabels(c,t);
    const rs=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key),lastReveal=rs.start+Math.max(...rs.visual_cue.score_reveals.map(event=>event.offset));if(t>=lastReveal)reveal(c,t,lastReveal,()=>{tx(c,'得分',100,739,30,400,C.muted);tx(c,`(${rs.visual_cue.scores[0]}, ${rs.visual_cue.scores[1]})`,208,744,52,700)});
    } else if(summary){tx(c,'两个人的选择',100,583,35,700);tx(c,'共同决定收益',100,646,35,700);}
   });
-  group(c,beyond*(1-ramp(t,SEC('payoffs').end-.3,.25)),0,(1-beyond)*10,()=>{tx(c,'收益可以表示',100,418,37,700);[['省下的时间',519],['声誉',625],['对结果的偏好',731]].forEach(([a,y],i)=>{const pp=ramp(t,T('s33_beyond_money')+1.1+i*1.15,.4);group(c,pp,0,0,()=>{circle(c,124,y-12,17,C.paper,C.ink,2.5);if(i===0){line(c,124,y-12,124,y-23,C.ink,2);line(c,124,y-12,134,y-7,C.ink,2)}else if(i===1){line(c,116,y-11,122,y-5,C.ink,2);line(c,122,y-5,132,y-20,C.ink,2)}else{circle(c,124,y-12,6,C.ink,null)}tx(c,a,164,y,34,400)})})});
+  group(c,beyondState.alpha,0,(1-beyond)*10,()=>{tx(c,'收益可以表示',100,418,37,700);[['省下的时间',519],['声誉',625],['对结果的偏好',731]].forEach(([a,y],i)=>{const pp=beyondState.examples[i];group(c,pp,0,0,()=>{circle(c,124,y-12,17,C.paper,C.ink,2.5);if(i===0){line(c,124,y-12,124,y-23,C.ink,2);line(c,124,y-12,134,y-7,C.ink,2)}else if(i===1){line(c,116,y-11,122,y-5,C.ink,2);line(c,122,y-5,132,y-20,C.ink,2)}else{circle(c,124,y-12,6,C.ink,null)}tx(c,a,164,y,34,400)})})});
   reveal(c,t,T('s23_score_order'),()=>{tx(c,'数对顺序：',786,899,30,400,C.muted);tx(c,'（{{A}}得分，{{B}}得分）',958,899,32,700)});
  }
 }
 function recap(c,t){
- const p=ramp(t,SEC('recap').start,1.15);
+ const state=recapState(t,timeline),p=state.move;
  // The same complete matrix changes geometry, without old/new text crossfades.
  const x=mix(780,1190,p),y=mix(503,522,p),cw=mix(480,267,p),ch=mix(170,137,p);
  matrix(c,SEC('recap').start-.001,{geometry:{x,y,cw,ch},fontSize:mix(64,48,p)});
@@ -170,11 +172,11 @@ function recap(c,t){
  const cardAlpha=1-ramp(p,.45,.3),wordAlpha=ramp(p,.98,.02);
  ['red','blue'].forEach((k,i)=>{card(c,k,mix(707,1136,p),mix(588+170*i,590.5+137*i,p),mix(82,70,p),{alpha:cardAlpha});card(c,k,mix(1020+480*i,1323.5+267*i,p),mix(426,462,p),73,{alpha:cardAlpha});
  group(c,wordAlpha,0,0,()=>{tx(c,k==='red'?'{{red}}':'{{blue}}',1136,602+137*i,31,700,C.ink,'center');tx(c,k==='red'?'{{red}}':'{{blue}}',1323.5+267*i,492,31,700,C.ink,'center')});});
- group(c,ramp(t,SEC('recap').start+1.1,.55),0,0,()=>{
+ group(c,state.rows,0,0,()=>{
   line(c,959,359,959,849,C.light,2);tx(c,'同一轮游戏',1448,381,31,400,C.muted,'center');
   tx(c,'（{{A}}得分，{{B}}得分）',1457,853,28,400,C.muted,'center');
   const rows=[['参与者','谁来决定？'],['信息','知道什么？'],['策略','怎么选择？'],['收益','各得什么？']];
-  rows.forEach(([label,q],i)=>{const yy=451+i*103,at=i<2?T('s35_first_pair')+i*1.4:T('s36_second_pair')+(i-2)*1.4,active=ramp(t,at,.45);
+  rows.forEach(([label,q],i)=>{const yy=451+i*103,active=state.active[i];
    tx(c,'0'+(i+1),101,yy,31,700,C.muted);tx(c,label,188,yy,36,700);tx(c,q,430,yy,37,700);
    line(c,187,yy+23,821,yy+23,C.light,1);line(c,86,yy-32,86,yy+4,C.ink,4,active);
   });

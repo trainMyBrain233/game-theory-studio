@@ -54,10 +54,10 @@ npm run qa:fonts
 | `npm run qa:data` | scenes/tokens/所有章节 Schema、语义/收益/时间窗、临时重建逐字节比较；不覆写被检查文件 |
 | `npm run test:core` | 配置/选择/得分/暂停负向样本、只读 QA、非 UTF-8 locale、生成失败保留与字体恢复 |
 | `npm run qa:fonts` | 明确SC家族/400/700、实际ctx.font字号/字重/完整家族、同字像素差异、篡改缓存/manifest负例与所有章节字符覆盖 |
-| `npm run test:render` | 重建 6 静帧/3 对照板、53 基础检查、15状态文字边界/碰撞、归档只读比较与角色净空；包含合法更章复用回归 |
+| `npm run test:render` | 重建 6 静帧/3 对照板、具名动态设计检查（以实际报告为准）、15状态文字边界/碰撞、归档只读比较与角色净空；包含合法更章复用回归 |
 | `npm run test:case-reuse` | 隔离副本更改中文姓名/策略/不对称收益/默认BR；真实重建、内容/核心/设计/布局/归档QA通过，录音说明无旧例残留 |
 | `npm run render:smoke` | 12 个变异矩阵、4 选牌状态、48px/宋体实际像素、原创几何 0/0.5/1s 确定性 |
-| `npm run test:episode` | 整集Schema/语义、633布局采样、4格变更案例实际像素/字形、字体与5 SVG、导出文本与5张1080p占位帧 |
+| `npm run test:episode` | 整集Schema/语义、按当前时间轴派生的布局采样（当前默认1163）、4格变更案例实际像素/字形、字体与5 SVG、导出文本与5张1080p占位帧 |
 | `npm run render:episode:preview -- --placeholder-cast` | 13秒原创占位视频预览，需FFmpeg；整片/4K/音效/联系图命令见生产模块 |
 | `npm run pack:source` | Git checkout公开源码归档；manifest含真实commit/dirty、分发类型、项目/Schema/章节版本、逐文件SHA256；CRC/边界检查通过后写回 |
 | `npm run qa:source` | 候选源码中的常见秘密、私有路径、二进制、嵌入图片 SVG 和过大文件 |
@@ -66,6 +66,10 @@ npm run qa:fonts
 | `npm run build:cast` | 显式重建归档9 SVG/2 JSON及PNG；先审查生成器，QA失败不会代替用户覆盖编辑 |
 | `npm run test:font-mutations -- --full-pipeline` | 隔离副本强制regular/8px/Sans负例；确认完整npm test在实际字重断言处失败 |
 | `npm run chapter:new -- 02-example "章节标题"` | 创建原创两段原型章节，不覆盖已有章节 |
+
+设计检查由 [design/qa.mjs](design/qa.mjs) 按当前样式、场景、选择及实际颜色配对生成，逐项结果和数量见本次 `design/qa/checks.json`；[case-reuse 合同](scripts/case-reuse-contract.mjs) 还核对必需具名覆盖、每项通过、名称无重复和计数一致，不固定旧检查总数。
+
+布局采样计划见 [production/qa/validate.mjs](production/qa/validate.mjs)：默认 0.5 秒网格与当前语义边界周边 0.1 秒采样合并、去重并限于有效时间窗。1163 仅对应当前 174.1 秒默认时间轴；更章或 `--all-frames` 会改变计数，以该次 `production/qa/checks.json` 的 `samples` 为准。
 
 整集制作/配置与素材模式见 [production/README](production/README.md)。视频编码需要外部 FFmpeg/libx264；可选 `setup:media` 安装固定 NumPy/Pillow，用于原创音效和联系图。
 

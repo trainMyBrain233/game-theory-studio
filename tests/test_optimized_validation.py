@@ -31,7 +31,8 @@ spec.loader.exec_module(qa_glyphs)
 
 
 def media_fixture():
-    return {'format': {'duration': '1.000'}, 'streams': [dict(
+    return {'format': {'duration': '1.000', 'format_name': 'mov,mp4,m4a,3gp,3g2,mj2',
+                           'tags': {'major_brand': 'isom', 'compatible_brands': 'isomiso2avc1mp41'}}, 'streams': [dict(
         codec_type='video', codec_name='h264', r_frame_rate='30/1',
         avg_frame_rate='30/1', nb_frames='30', width=1920, height=1080,
         pix_fmt='yuv420p', sample_aspect_ratio='1:1', color_range='tv',

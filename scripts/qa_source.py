@@ -7,6 +7,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
+MAX_SOURCE_BYTES = 1024 * 1024
 forbidden_suffixes = {'.otf', '.ttf', '.ttc', '.woff', '.woff2', '.mp4', '.mov', '.webm', '.wav', '.mp3', '.zip', '.png', '.jpg', '.jpeg', '.webp', '.pem', '.key', '.p12', '.pfx'}
 patterns = {
     'private key': re.compile(r'-----BEGIN (?:[A-Z ]+)?PRIVATE' + r' KEY-----'),
@@ -120,8 +121,16 @@ def scan_sources(root, files):
         if not file.is_file(): continue
         if file.suffix.lower() in forbidden_suffixes or file.name.startswith('.env') or any(part in {'node_modules', 'private_characters'} for part in Path(relative).parts):
             errors.append((relative, 'forbidden source file type/path')); continue
-        data = file.read_bytes(); total += len(data)
-        if len(data) > 1024 * 1024: errors.append((relative, 'source file exceeds 1 MiB'))
+        if file.stat().st_size > MAX_SOURCE_BYTES:
+            errors.append((relative, 'source file exceeds 1 MiB')); continue
+        # Bound allocation even if the regular file grows after stat. These
+        # path checks are not an OS sandbox or an atomic filesystem snapshot;
+        # concurrent path replacement remains outside this guard's guarantees.
+        with file.open('rb') as stream:
+            data = stream.read(MAX_SOURCE_BYTES + 1)
+        total += len(data)
+        if len(data) > MAX_SOURCE_BYTES:
+            errors.append((relative, 'source file exceeds 1 MiB')); continue
         if b'\0' in data: errors.append((relative, 'binary content')); continue
         try: text = data.decode('utf-8')
         except UnicodeDecodeError:

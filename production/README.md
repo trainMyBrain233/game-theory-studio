@@ -21,7 +21,9 @@ npm run setup:fonts -- --download
 npm run test:episode
 ```
 
-`test:episode` 包含语义/Schema、633个布局采样和转场中间帧、26个乱序得分事件等价帧、共享卡色像素和非占位模式显示名、SC 字符覆盖、变更案例回归、5 个原创 SVG、文本导出和 5 张原生1080p帧。公开 checkout 一律使用显式 `--placeholder-cast`，使用原创中性人物；普通生产模式缺少八个私有 RGBA 层时以 `PRIVATE_ASSET_MISSING` 失败，不静默换角色。CI 只使用原创占位角色。
+`test:episode` 包含语义/Schema、按当前时间轴派生的布局采样（当前默认1163个）和转场中间帧、26个乱序得分事件等价帧、共享卡色像素和非占位模式显示名、SC 字符覆盖、变更案例回归、5 个原创 SVG、文本导出和 5 张原生1080p帧。公开 checkout 一律使用显式 `--placeholder-cast`，使用原创中性人物；普通生产模式缺少八个私有 RGBA 层时以 `PRIVATE_ASSET_MISSING` 失败，不静默换角色。CI 只使用原创占位角色。
+
+布局采样以 [qa/validate.mjs](qa/validate.mjs) 的实际计划为准：默认 0.5 秒网格与当前段落起点/章节终点周边 0.1 秒采样合并、去重并限于 `[0, DURATION)`。1163 仅对应当前 174.1 秒默认时间轴；更章或 `--all-frames` 会改变计数，实际数量读取本次 `qa/checks.json` 的 `samples`，不能沿用历史通过数。
 
 ## 制作与验收命令
 
@@ -50,7 +52,7 @@ npm run pack:source
 
 视频无音轨；SFX 是固定随机种子合成的原创轻音效，不包含语音或音乐，也不会自动混进视频。录音后须重新对齐字幕、图形和数字揭示。参数仅支持原生1920/3840宽；无效、重复、非有限参数和越界时窗明确报错。
 
-直接调用 `drawFrame(canvas, t)` 时，`t` 必须是有限 number；NaN、Infinity 和隐式类型转换在绘图状态、角色层或 Canvas 被访问前即拒绝。有限时间继续按既有规则限制到 `[0, DURATION - 1/30]`，包括负数与片尾之后的请求；CLI 的越界时窗仍拒绝。
+直接调用 `drawFrame(canvas, t)` 时，`t` 必须是有限 number；NaN、Infinity 和隐式类型转换在绘图状态、角色层或 Canvas 被访问前即拒绝。`[0, DURATION)` 内的所有有限时间原样保留；负数取 0，等于或超过 `DURATION` 的有限输入取 [beforeEnd(DURATION)](src/frame-time.mjs)，即排他性终点的 Float64 前驱，不减去固定帧长或 epsilon。CLI 的越界时窗仍拒绝。
 
 视频窗口按 `Math.round(FPS * duration)` 统一量化，**拒绝量化后零帧**，再启动编码器。在30fps下，0.01秒被拒绝，0.02秒四舍五入为1帧；并非拒绝所有数学意义上不足一帧的正时长。编码循环使用同一份已校验帧数。
 

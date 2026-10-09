@@ -39,6 +39,24 @@ def validate_streams(info, duration, fps=30):
     audio = [stream for stream in streams if stream['codec_type'] == 'audio']
     if len(videos) != 1 or len(audio) > 1:
         raise ValueError('Expected one video and at most one audio stream')
+    container = info.get('format')
+    if not isinstance(container, dict):
+        raise ValueError('Expected MP4 container metadata')
+    # ffprobe shares this demuxer across MP4, QuickTime, 3GP and JPEG 2000.
+    # Neither its name nor a .mp4 filename alone proves an MP4 delivery.
+    names = container.get('format_name')
+    if not isinstance(names, str) or 'mp4' not in names.split(','):
+        raise ValueError('Expected MP4 container')
+    tags = container.get('tags')
+    brand = tags.get('major_brand') if isinstance(tags, dict) else None
+    # Project delivery allowlist, not an exhaustive registry of MP4 brands.
+    # Support common ISO base/AVC/MP4 brands for our H.264 MP4 contract.
+    # Fail closed on missing/unknown brands, qt  (MOV), 3gp*/3g2*, M4A/M4V,
+    # and MJ2. compatible_brands must not override a non-MP4 major brand.
+    mp4_brands = ('isom', 'iso2', 'iso3', 'iso4', 'iso5', 'iso6', 'iso7',
+                  'iso8', 'iso9', 'avc1', 'mp41', 'mp42')
+    if brand not in mp4_brands:
+        raise ValueError('Expected supported MP4 major brand')
     video = videos[0]
     expected = count / fps
     if video['codec_name'] != 'h264':

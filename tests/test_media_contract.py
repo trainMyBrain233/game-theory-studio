@@ -11,7 +11,36 @@ spec.loader.exec_module(module)
 
 class MediaContract(unittest.TestCase):
     def fixture(self):
-        return {'format': {'duration': '1.000'}, 'streams': [dict(codec_type='video',codec_name='h264',r_frame_rate='30/1',avg_frame_rate='30/1',nb_frames='30',width=1920,height=1080,pix_fmt='yuv420p',sample_aspect_ratio='1:1',color_range='tv',color_space='bt709',color_primaries='bt709',color_transfer='bt709',start_time='0.0',duration='1.0')]}
+        return {'format': {'duration': '1.000', 'format_name': 'mov,mp4,m4a,3gp,3g2,mj2',
+                           'tags': {'major_brand': 'isom', 'compatible_brands': 'isomiso2avc1mp41'}}, 'streams': [dict(codec_type='video',codec_name='h264',r_frame_rate='30/1',avg_frame_rate='30/1',nb_frames='30',width=1920,height=1080,pix_fmt='yuv420p',sample_aspect_ratio='1:1',color_range='tv',color_space='bt709',color_primaries='bt709',color_transfer='bt709',start_time='0.0',duration='1.0')]}
+
+    def test_container_identity_is_required_and_fail_closed(self):
+        for container in [None, [], {}, {'duration': '1'},
+                          {'duration': '1', 'format_name': 'matroska,webm'},
+                          {'duration': '1', 'format_name': ['mp4']},
+                          {'duration': '1', 'format_name': 'notmp4'}]:
+            with self.subTest(container=container):
+                info = self.fixture()
+                info['format'] = container
+                with self.assertRaisesRegex(ValueError, 'MP4'):
+                    module.validate_streams(info, 1)
+        for brand in [None, '', 'qt  ', '3gp4', '3g2a', 'M4A ', 'M4V ',
+                      'mjp2', 'unknown', 'ISOM', [], {}]:
+            with self.subTest(brand=brand):
+                info = self.fixture()
+                # A compatible MP4 brand cannot promote MOV/3GP/unknown files.
+                info['format']['tags']['major_brand'] = brand
+                with self.assertRaisesRegex(ValueError, 'MP4 major brand'):
+                    module.validate_streams(info, 1)
+        for tags in [None, [], {}, 'isom']:
+            info = self.fixture()
+            info['format']['tags'] = tags
+            with self.assertRaisesRegex(ValueError, 'MP4 major brand'):
+                module.validate_streams(info, 1)
+        for brand in ['isom', 'iso2', 'iso6', 'avc1', 'mp41', 'mp42']:
+            info = self.fixture()
+            info['format']['tags']['major_brand'] = brand
+            self.assertEqual(module.validate_streams(info, 1)[2], 30)
 
     def test_silent_and_sfx_tracks(self):
         info = self.fixture()
