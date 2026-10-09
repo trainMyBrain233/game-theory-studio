@@ -31,7 +31,7 @@ TEXT = '参与者知道什么信息，选择红色还是蓝色策略？每种组
 
 
 def fixture(directory, text=TEXT):
-    """Real standalone directory and valid producer metadata, no renderer mocks."""
+    """Synthetic PNG board fixture with current source identity; not renderer proof."""
     root = Path(directory)
     production = root / 'production'
     output = production / 'output'

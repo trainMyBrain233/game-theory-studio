@@ -95,17 +95,22 @@ finally:
 class ExtractedArchiveReadBoundsTests(unittest.TestCase):
     @staticmethod
     def extract(base, content=b'synthetic original source'):
+        package = b'{"version": "0.1.0"}'
         manifest = {
             'manifest_schema_version': '1.0',
             'distribution': 'public_source_original_svg_only',
             'font_binaries_included': False, 'character_art_included': False,
             'source': {'commit': None, 'working_tree_dirty': True, 'reproducible_from_commit': False},
+            'versions': {'project': '0.1.0', 'schemas': {}, 'chapters': {}},
             'files': [{'path': 'source.txt', 'bytes': len(content),
-                       'sha256': hashlib.sha256(content).hexdigest()}],
+                       'sha256': hashlib.sha256(content).hexdigest()},
+                      {'path': 'package.json', 'bytes': len(package),
+                       'sha256': hashlib.sha256(package).hexdigest()}],
         }
         archive = base / 'source.zip'
         with zipfile.ZipFile(archive, 'w') as stream:
             stream.writestr('source.txt', content)
+            stream.writestr('package.json', package)
             stream.writestr('SOURCE_MANIFEST.json', json.dumps(manifest))
         root = base / 'extracted'
         with zipfile.ZipFile(archive) as stream:
@@ -188,7 +193,7 @@ class ExtractedArchiveReadBoundsTests(unittest.TestCase):
                         env=env, capture_output=True, text=True, timeout=15)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertIn('ACCESS opens=0 reads=0 bytes=0', result.stdout)
-                    self.assertIn('Archive integrity verified: 1 source files', result.stdout)
+                    self.assertIn('Archive integrity verified: 2 source files', result.stdout)
 
     def test_sparse_manifest_rejected_before_read_and_growth_read_is_bounded(self):
         for mode in ['manifest-oversize', 'manifest-growth']:
@@ -290,7 +295,7 @@ class ExtractedArchiveReadBoundsTests(unittest.TestCase):
                     with self.subTest(size=size, flags=flags, optimization=optimization):
                         result = self.command(root, flags, optimization)
                         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                        self.assertIn('Archive integrity verified: 1 source files', result.stdout)
+                        self.assertIn('Archive integrity verified: 2 source files', result.stdout)
 
     def test_same_length_hash_and_size_mismatches_fail(self):
         for content in [b'b' * 25, b'a' * 24, b'a' * 26]:

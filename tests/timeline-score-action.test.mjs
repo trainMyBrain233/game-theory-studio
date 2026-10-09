@@ -173,7 +173,8 @@ const rendererAnchors = [...new Set([
   'production/src/character_adapter.mjs', 'production/src/checkpoints.mjs',
   // Timing helpers are live renderer consumers too, even after extraction from scenes.
   'production/src/comparison-timing.mjs', 'production/src/payoff-entry-timing.mjs',
-  'production/src/payoff-recap-timing.mjs', 'production/qa/layout-samples.mjs'
+  'production/src/payoff-recap-timing.mjs', 'production/src/hook-timing.mjs',
+  'production/src/four-questions-timing.mjs', 'production/qa/layout-samples.mjs'
 ].flatMap(relative => [...fs.readFileSync(path.join(ROOT, relative), 'utf8').matchAll(/'(s\d\d_[a-z_]+)'/g)].map(match => match[1])))];
 
 test('every actual renderer/checkpoint anchor rejects omission, renaming and duplicate IDs', () => {

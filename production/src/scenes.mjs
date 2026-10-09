@@ -1,6 +1,7 @@
 export {timeline,content} from './model.mjs';
 import {timeline,content,sceneData} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
+import {hookState} from './hook-timing.mjs';
 import {fourQuestionsState} from './four-questions-timing.mjs';
 import {comparisonState} from './comparison-timing.mjs';
 import {beyondMoneyState,recapState} from './payoff-recap-timing.mjs';
@@ -47,11 +48,12 @@ function duo(c,t,{alpha=1,spread=0,cards=true,names=true,hidden=0,cardY=786}={})
  });
 }
 function intro(c,t){
- duo(c,t,{alpha:ramp(t,.4,.75),names:t>1.6});
+ const hook=hookState(t,S('s01_hook'));
+ duo(c,t,{alpha:hook.actors,names:hook.names});
  const four=fourQuestionsState(t,S('s02_four_questions')),q=four.enter;
- group(c,1-ramp(t,T('s02_four_questions')-.32,.27),0,-q*16,()=>{
-  reveal(c,t,1.4,()=>{tx(c,'我的选择',810,497,34,700,C.ink,'center');tx(c,'对方的选择',1110,497,34,700,C.ink,'center');
-   arrow(c,760,550,895,550,ramp(t,2,.7));arrow(c,1160,550,1025,550,ramp(t,2.35,.7));
+ group(c,hook.alpha,0,-q*16,()=>{
+  group(c,hook.reveal,0,(1-hook.reveal)*12,()=>{tx(c,'我的选择',810,497,34,700,C.ink,'center');tx(c,'对方的选择',1110,497,34,700,C.ink,'center');
+   arrow(c,760,550,895,550,hook.arrowA);arrow(c,1160,550,1025,550,hook.arrowB);
    tx(c,'怎样影响得分？',960,631,43,700,C.ink,'center');});
  });
  if(q>0)group(c,four.alpha,0,(1-q)*16,()=>{

@@ -58,6 +58,25 @@ def verify(file, kind, weight, required_characters=None):
                   'glyph_count':len(f.getGlyphOrder()),'sha256':hashlib.sha256(file.read_bytes()).hexdigest()}
         return result
 
+def official_source(kind, weight):
+    return f'{BASE}/{COMMITS[kind]}/{kind}/OTF/SimplifiedChinese/Noto{kind}CJKsc-{weight}.otf'
+
+
+def verify_manifest(previous, derived):
+    """Check required provenance, allowing unrelated historical annotations.
+
+    Compare types as well as values: bool is not a valid face index or weight.
+    The expected fields come from verified bytes or independent TTC extraction,
+    never from the manifest's family/version/weight declarations.
+    """
+    if not isinstance(previous, dict):
+        raise ValueError('Prepared manifest entry must be an object')
+    for field, expected in derived.items():
+        if field not in previous or type(previous[field]) is not type(expected) or previous[field] != expected:
+            raise ValueError(f'Prepared manifest does not match independently verified provenance: {field}')
+    return derived
+
+
 def prepare(source, target, kind, weight, required_characters=None):
     temp = target.with_suffix('.tmp.otf')
     face_index = None
@@ -86,18 +105,20 @@ def prepare(source, target, kind, weight, required_characters=None):
         os.replace(temp, target)
     finally:
         temp.unlink(missing_ok=True)
-    result.update({'source':str(source),'face_index':face_index,'source_sha256':source_hash,
+    result.update({'source':str(source) if face_index is not None else official_source(kind, weight),'face_index':face_index,'source_sha256':source_hash,
                    'source_kind':'local_ttc_extraction' if face_index is not None else 'official_pinned_otf'})
     return result
 
 def verify_cached(target, kind, weight, previous, required_characters=None):
+    if not isinstance(previous, dict):
+        raise ValueError('Prepared manifest entry must be an object')
     actual = hashlib.sha256(target.read_bytes()).hexdigest()
     pinned = OFFICIAL_SHA256[(kind, weight)]
     if actual == pinned:
         result = verify(target, kind, weight, required_characters)
         result.update({'source_kind':'official_pinned_otf','source_sha256':pinned,'face_index':None,
-                       'source':f'{BASE}/{COMMITS[kind]}/{kind}/OTF/SimplifiedChinese/Noto{kind}CJKsc-{weight}.otf'})
-        return result
+                       'source':official_source(kind, weight)})
+        return verify_manifest(previous, result)
     if previous.get('source_kind') != 'local_ttc_extraction':
         raise ValueError('Prepared OTF checksum differs from the pinned official file; unknown modifications cannot be re-certified')
     source = Path(previous.get('source', ''))
@@ -110,7 +131,7 @@ def verify_cached(target, kind, weight, previous, required_characters=None):
         derived = prepare(source, Path(temporary)/target.name, kind, weight, required_characters)
     if actual != derived['sha256'] or previous.get('face_index') != derived['face_index']:
         raise ValueError('Prepared font does not match the complete SC face re-extracted from its recorded TTC source')
-    return derived
+    return verify_manifest(previous, derived)
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)

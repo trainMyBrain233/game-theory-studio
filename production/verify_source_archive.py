@@ -95,7 +95,7 @@ def archive_inventory(root):
     return actual
 
 
-def verify_source_bytes(target, expected_size, expected_sha256):
+def verify_source_bytes(target, expected_size, expected_sha256, *, capture=False):
     """Reject oversized sources before opening; bound reads even if a file grows."""
     size = target.stat().st_size
     require(size <= MAX_SOURCE_BYTES and expected_size <= MAX_SOURCE_BYTES,
@@ -103,6 +103,7 @@ def verify_source_bytes(target, expected_size, expected_sha256):
     require(size == expected_size, 'Archive source differs')
     digest = hashlib.sha256()
     consumed = 0
+    chunks = [] if capture else None
     with target.open('rb') as stream:
         while True:
             # One extra byte distinguishes exact length from growth after stat.
@@ -112,8 +113,106 @@ def verify_source_bytes(target, expected_size, expected_sha256):
             consumed += len(data)
             require(consumed <= expected_size, 'Archive source differs')
             digest.update(data)
+            if capture:
+                chunks.append(data)
     require(consumed == expected_size and digest.hexdigest() == expected_sha256,
             'Archive source differs')
+    return b''.join(chunks) if capture else None
+
+
+def version_source(name):
+    if name == 'package.json':
+        return 'project', None
+    if name.startswith(('schemas/', 'production/schema/')) and name.endswith('.schema.json'):
+        return 'schemas', name
+    if name.startswith('chapters/') and name.endswith('/chapter.json'):
+        return 'chapters', name.split('/')[1]
+    return None
+
+
+def source_version(name, data):
+    """Derive one metadata entry from verified bytes, without executing code."""
+    try:
+        document = json.loads(data.decode('utf-8'))
+        section, _ = version_source(name)
+        if section == 'project':
+            return document['version']
+        if section == 'schemas':
+            properties = document.get('properties', {})
+            version = properties.get('schemaVersion', properties.get('schema_version', {})).get('const')
+            return {'id': document.get('$id'), 'dialect': document.get('$schema'),
+                    'data_version': version, 'sha256': hashlib.sha256(data).hexdigest()}
+        return {'schema': document['schemaVersion'], 'content': document['contentVersion']}
+    except (KeyError, TypeError, AttributeError, ValueError, UnicodeError):
+        raise ArchiveValidationError('Invalid archive version source') from None
+
+
+def source_versions(payloads):
+    """Independent producer contract, used by contract tests, not archive reads."""
+    require('package.json' in payloads, 'Invalid archive version source')
+    result = {'schemas': {}, 'chapters': {}}
+    for name in sorted(payloads):
+        identity = version_source(name)
+        if identity is None:
+            continue
+        section, key = identity
+        value = source_version(name, payloads[name])
+        if section == 'project':
+            result[section] = value
+        else:
+            result[section][key] = value
+    return result
+
+
+class VersionChecks:
+    """Compare one source at a time; never retain source bytes or parsed values.
+
+    The manifest is already capped at 15 MiB. Additional retained state consists
+    only of names and booleans bounded by its file list, not total payload size.
+    """
+    def __init__(self, versions):
+        self.versions = versions if isinstance(versions, dict) else {}
+        self.valid = (self.versions.keys() == {'project', 'schemas', 'chapters'} and
+                      isinstance(self.versions.get('schemas'), dict) and
+                      isinstance(self.versions.get('chapters'), dict))
+        self.project_seen = False
+        self.schemas = set()
+        self.chapters = {}
+
+    def consume(self, name, data):
+        section, key = version_source(name)
+        value = source_version(name, data)
+        if section == 'project':
+            self.project_seen = True
+            self.valid = self.valid and same_json(self.versions.get('project'), value)
+        elif section == 'schemas':
+            self.schemas.add(key)
+            self.valid = self.valid and same_json(self.versions['schemas'].get(key), value)
+        else:
+            # Producer uses sorted source names and keeps the last chapter key.
+            previous = self.chapters.get(key)
+            if previous is None or name > previous[0]:
+                expected = self.versions.get('chapters')
+                matches = isinstance(expected, dict) and same_json(expected.get(key), value)
+                self.chapters[key] = (name, matches)
+
+    def finish(self):
+        require(self.valid and self.project_seen and
+                self.schemas == self.versions['schemas'].keys() and
+                self.chapters.keys() == self.versions['chapters'].keys() and
+                all(matches for _, matches in self.chapters.values()),
+                'Archive versions differ from source')
+
+
+def same_json(left, right):
+    """Compare JSON with exact types as well as keys (true must not equal 1)."""
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(same_json(left[key], right[key]) for key in left)
+    if isinstance(left, list):
+        return len(left) == len(right) and all(same_json(a, b) for a, b in zip(left, right))
+    return left == right
 
 
 def verify_archive(root):
@@ -142,6 +241,7 @@ def verify_archive(root):
     require(isinstance(manifest.get('files'), list), 'Invalid manifest file list')
     expected = set()
     portable_paths = {}
+    versions = VersionChecks(manifest.get('versions'))
     for entry in manifest['files']:
         require(isinstance(entry, dict), 'Invalid manifest file entry')
         name = entry.get('path')
@@ -154,9 +254,15 @@ def verify_archive(root):
                 'Invalid manifest file checksum')
         expected.add(name)
         target = regular_source(root, relative)
-        verify_source_bytes(target, entry['bytes'], entry['sha256'])
+        capture = version_source(name) is not None
+        data = verify_source_bytes(target, entry['bytes'], entry['sha256'], capture=capture)
+        if capture:
+            versions.consume(name, data)
+        # Drop this source reference before opening the next file.
+        del data
     require(archive_inventory(root) == expected | {'SOURCE_MANIFEST.json'},
             'Archive contains missing or unlisted files')
+    versions.finish()
     # Use this verifier's own guard, never execute code from a caller-supplied directory.
     # All manifest, inventory and byte checks finish before importing source code.
     guard_file = Path(__file__).resolve().parents[1] / 'scripts/qa_source.py'

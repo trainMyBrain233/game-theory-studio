@@ -10,7 +10,10 @@ import {assertAppliedFont} from '../typography/font-contract.mjs';
 const pixels=(canvas,x,y,w,h)=>Buffer.from(canvas.getContext('2d').getImageData(x,y,w,h).data);
 const source=fs.readFileSync(new URL('../design/render-proposals.mjs',import.meta.url),'utf8');
 const badgeSource=source.slice(source.indexOf('function brightLabelInk('),source.indexOf('function brightPayoff(scene)'));
-function stress(row=DATA.selected.row,column=DATA.selected.column){const d=structuredClone(DATA);d.selected.row=row;d.selected.column=column;d.selected.actorA=d.strategies[row].id;d.selected.actorB=d.strategies[column].id;d.actors[0].label='甲方同学';d.actors[1].label='乙方同学';d.payoffs[d.selected.row][d.selected.column]=[99,99];return d;}
+function shortBaseline(){const d=structuredClone(DATA);d.actors[0].label='小A';d.actors[1].label='小B';d.strategies[0].label='红';d.strategies[1].label='蓝';d.payoffs=[[[3,3],[0,5]],[[5,0],[1,1]]];d.selected={row:0,column:1,actorA:'red',actorB:'blue'};return d;}
+function secondCase(){const d=structuredClone(DATA);d.actors[0].label='晨光小组';d.actors[1].label='晚风小组';d.strategies[0].label='留下';d.strategies[1].label='离开';d.payoffs=[[[7,8],[19,20]],[[61,62],[87,88]]];d.selected={row:1,column:1,actorA:'blue',actorB:'blue'};return d;}
+function reusedCase(){const d=structuredClone(DATA);d.actors[0].label="明月";d.actors[1].label="青禾";d.strategies[0].label="合作";d.strategies[1].label="退出";d.payoffs=[[[11,12],[21,22]],[[31,32],[41,42]]];d.selected={row:1,column:0,actorA:"blue",actorB:"red"};return d;}
+function stress(row=DATA.selected.row,column=DATA.selected.column,base=DATA){const d=structuredClone(base);d.selected.row=row;d.selected.column=column;d.selected.actorA=d.strategies[row].id;d.selected.actorB=d.strategies[column].id;d.actors[0].label='甲方同学';d.actors[1].label='乙方同学';d.payoffs[d.selected.row][d.selected.column]=[99,99];return d;}
 function render(data,width=1920){
  const canvas=createCanvas(width,width*9/16),c=canvas.getContext('2d'),cards=[],texts=[];
  const rect=c.fillRect.bind(c),text=c.fillText.bind(c);
@@ -20,7 +23,8 @@ function render(data,width=1920){
 }
 
 test('default and four-character 99-point badges retain 34px type, real pixels and padded containment',()=>{
- for(const data of [DATA,stress(0,0),stress(0,1),stress(1,0),stress(1,1)])for(const width of [1920,960]){
+ const baseline=shortBaseline();
+ for(const data of [baseline,DATA,reusedCase(),secondCase(),...[DATA,reusedCase()].flatMap(base=>[stress(0,0,base),stress(0,1,base),stress(1,0,base),stress(1,1,base)])])for(const width of [1920,960]){
   const {canvas,cards,texts,bounds}=render(data,width),scale=width/1920;
   assert.equal(cards.length,2);
   for(const [i,card] of cards.entries()){
@@ -29,7 +33,11 @@ test('default and four-character 99-point badges retain 34px type, real pixels a
    assert.equal(run.font,`700 34px "${FONT_FAMILY}"`);assert.equal(box.size,34*scale);
    assert.ok(box.x>=(card.x+14)*scale);assert.ok(box.x+box.width<=(card.x+card.width-14)*scale);
    assert.ok(box.y>=(card.y+10)*scale);assert.ok(box.y+box.height<=(card.y+card.height-10)*scale);
-   if(data===DATA)assert.equal(card.width,190);else assert.ok(card.width>270&&card.width<=360);
+   // DATA may itself be the changed-case fixture. Preserve 190 only if its real ink fits.
+   const measure=createCanvas(1,1).getContext('2d');measure.font=`700 34px "${FONT_FAMILY}"`;measure.textAlign='center';measure.textBaseline='middle';
+   const ink=measure.measureText(value),fitsOriginal=Math.max(ink.actualBoundingBoxLeft,ink.actualBoundingBoxRight)<=95-14;
+   if(data===baseline)assert.equal(card.width,190);
+   if(fitsOriginal)assert.equal(card.width,190);else assert.ok(card.width>190&&card.width<=360);
    // Independent glyph and shape rendering, deliberately without canvasFont or badge helper.
    const expected=createCanvas(width,width*9/16),ctx=expected.getContext('2d');ctx.scale(scale,scale);
    ctx.fillStyle=TOKENS.styles.bright.paper;ctx.fillRect(0,0,1920,1080);
@@ -37,7 +45,14 @@ test('default and four-character 99-point badges retain 34px type, real pixels a
    ctx.strokeStyle=TOKENS.styles.bright.ink;ctx.lineWidth=4;ctx.lineJoin='round';ctx.strokeRect(card.x,769,card.width,69);
    ctx.font=`700 34px "${FONT_FAMILY}"`;ctx.fillStyle=TOKENS.styles.bright.ink;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(value,i===0?1218:1620,801);
    const crop=[Math.floor((card.x-4)*scale),Math.floor(765*scale),Math.ceil((card.width+8)*scale),Math.ceil(77*scale)];
-   assert.deepEqual(pixels(canvas,...crop),pixels(expected,...crop),'Actual badge pixels must match the requested 34px face and card');
+   const actualPixels=pixels(canvas,...crop);
+   assert.deepEqual(actualPixels,pixels(expected,...crop),'Actual badge pixels must match the requested 34px face and card');
+   // Mutate this fixture's current score, never a hardcoded historical selection.
+   const wrongScore=score===99?98:score+1;assert.notEqual(wrongScore,score);
+   ctx.fillStyle=TOKENS.styles.bright.paper;ctx.fillRect(0,0,1920,1080);
+   ctx.fillStyle=i===0?TOKENS.styles.bright.accent:'#DAD4EA';ctx.fillRect(card.x,769,card.width,69);ctx.strokeRect(card.x,769,card.width,69);
+   ctx.fillStyle=TOKENS.styles.bright.ink;ctx.fillText(`${label} · ${wrongScore}分`,i===0?1218:1620,801);
+   assert.notDeepEqual(actualPixels,pixels(expected,...crop),'A wrong current score must change actual badge glyph pixels');
   }
   assert.ok(cards[0].x>974&&cards[0].x+cards[0].width+32<cards[1].x,'Cards stay in their result lanes with clear separation');
   const rowName=bounds.find(b=>b.text===data.actors[0].label);
@@ -45,7 +60,7 @@ test('default and four-character 99-point badges retain 34px type, real pixels a
   // Choice labels must clear the visible symbol, not just other text bounds.
   for(const [i,origin] of [1082,1482].entries()){
    const run=texts.find(t=>t.value===`${data.actors[i].label}选`),box=bounds.find(b=>b.text===run.value);
-   const choice=texts.find(t=>t.y===380&&t.x>origin&&['红','蓝'].includes(t.value));
+   const choice=texts.find(t=>t.y===380&&t.x>origin&&data.strategies.map(s=>s.label).includes(t.value));
    assert.ok(box.x+box.width<=(choice.x-34*.6-34*.32-8)*scale);
   }
  }

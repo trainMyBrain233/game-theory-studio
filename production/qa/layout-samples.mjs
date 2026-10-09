@@ -1,3 +1,4 @@
+import {hookBudget,hookPhases,hookExit} from '../src/hook-timing.mjs';
 import {comparisonPhases} from '../src/comparison-timing.mjs';
 import {beforeEnd} from '../src/frame-time.mjs';
 
@@ -10,7 +11,8 @@ export function transitionIntervals(timeline) {
  const intervals=[];
  if(!timeline.segments.length)return intervals;
  const segment=id=>timeline.segments.find(s=>s.id===id);
- const add=(id,start,end)=>{if(end>start)intervals.push({id,start,end});};
+ // Zero-duration phases are discrete switches: still sample their adjacent frames.
+ const add=(id,start,end)=>{if(end>=start)intervals.push({id,start,end});};
  const phase=(s,budget,name,offset,duration)=>{
   const scale=Math.min(1,(s.end-s.start)/budget);
   add(`${s.id}:${name}`,s.start+offset*scale,s.start+(offset+duration)*scale);
@@ -19,6 +21,8 @@ export function transitionIntervals(timeline) {
  const exit=(id,budget,name='exit')=>{const s=segment(id);phase(s,budget,name,Math.max(budget,s.end-s.start)-.3,.25);};
  for(const s of timeline.segments)add(`${s.id}:subtitle`,s.start,Math.min(s.end,s.start+.09));
  for(const s of timeline.sections){add(`${s.id}:heading`,s.start+(s.id==='intro'?0:.06),s.start+(s.id==='intro'?.55:.48));if(s.id!=='recap')add(`${s.id}:heading-exit`,s.end-.3,s.end-.05);}
+ phases('s01_hook',hookBudget,hookPhases);
+ const hook=segment('s01_hook');phase(hook,hookBudget,'exit',Math.max(hookBudget,hook.end-hook.start)-hookExit.beforeEnd,hookExit.duration);
  phases('s02_four_questions',2,[['enter',0,.6],...[0,1,2,3].map(i=>[`item-${i}`,i*.35,.4])]);exit('s02_four_questions',2);
  phases('s08_known_unknown',4.8,[['rules',0,.55],['pick',1.25,.5],['unused',1.65,.6],['move',1.75,1.3],['hide',2.35,.85],['observation',2.6,.65],['grip-release',3.9,.65],['lift',1.6,2.4]]);
  phases('s09_simultaneous',4.1,[['grip',1.15,.45],['observation-exit',1.35,.3],['reveal',1.7,.9],['grip-release',3.15,.65],['lift',1.3,2.1]]);exit('s09_simultaneous',4.1,'explanation-exit');
@@ -44,7 +48,7 @@ export function transitionIntervals(timeline) {
  // Uncompressed scene-local ramps/reveals, expressed against live cues.
  const fixed=(id,name,offset,duration)=>{const s=segment(id);add(`${id}:${name}`,s.start+offset,s.start+offset+duration);};
  for(const [id,name,offset,duration] of [
-  ['s02_four_questions','prior-exit',-.32,.27],['s05_goal','prior-exit',-.3,.25],['s05_goal','goal',0,.6],['s06_definition','definition',0,.6],
+  ['s05_goal','prior-exit',-.3,.25],['s05_goal','goal',0,.6],['s06_definition','definition',0,.6],
   ['s10_distinction','distinction',0,.5],['s11_timing','summary',0,.55],['s11_timing','prior-exit',-.3,.25],
   ['s13_options','options',0,.55],['s14_simple_case','simple',0,.55],['s15_definition','definition',0,.55],['s15_definition','prior-exit',-.35,.3],
   ['s16_comparison_intro','names-exit',-.3,.25],['s16_comparison_intro','base-exit',-.45,.3],['s19_question','question',0,.55],['s20_definition','definition',0,.55],
@@ -53,8 +57,7 @@ export function transitionIntervals(timeline) {
  for(const [id,cue] of [['players','s06_definition'],['information','s11_timing']]){
   fixed(cue,'definition-label',0,.5);const s=timeline.sections.find(s=>s.id===id);add(`${id}:body-exit`,s.end-.3,s.end-.05);
  }
- const intro=timeline.sections.find(s=>s.id==='intro'),strategy=timeline.sections.find(s=>s.id==='strategy');
- for(const [name,offset,duration] of [['actors',.4,.75],['reveal',1.4,.55],['arrow-A',2,.7],['arrow-B',2.35,.7]])add(`intro:${name}`,intro.start+offset,intro.start+offset+duration);
+ const strategy=timeline.sections.find(s=>s.id==='strategy');
  add('strategy:spread',strategy.start,strategy.start+.9);
  return intervals;
 }

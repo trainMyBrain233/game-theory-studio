@@ -82,7 +82,7 @@ def load_checkpoints(output=OUT, timeline_path=TIMELINE):
 
 
 def checkpoint_metadata(manifest, point):
-    return {'timeline_sha256': manifest['timeline']['sha256'], 'mode': manifest['mode'],
+    return {'timeline_sha256': manifest['timeline']['sha256'], 'render_sha256': manifest['render']['sha256'], 'mode': manifest['mode'],
             'checkpoint': {key: value for key, value in point.items() if key != 'sha256'}}
 
 
@@ -213,6 +213,11 @@ def main(output=OUT, timeline_path=TIMELINE, font_path=FONT):
         for position, text, _ in layout['placements']:
             draw.text(position, text, (36, 62, 102), font=font, anchor='lt')
         file = output / f'{group}_contact_sheet.png'
+        # Inputs may change while Pillow lays out/decodes images. Recheck the
+        # producer identity read-only immediately before publishing each board.
+        current, _ = load_checkpoints(output, timeline_path)
+        if current != manifest:
+            raise ValueError('Still manifest changed while preparing contact sheets')
         sheet.save(file, optimize=True)
         print(file)
 

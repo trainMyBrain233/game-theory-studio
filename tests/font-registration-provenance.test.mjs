@@ -121,3 +121,19 @@ fs.writeFileSync(manifestPath,JSON.stringify(manifest));const forged=fs.readFile
 assert.throws(()=>registerFonts(),/re-extracted/);assert.deepEqual(fs.readFileSync(manifestPath),forged);
 `);
 }));
+
+test('correct real font bytes with forged canonical metadata fail before native first registration',()=>withFonts((root,run)=>{
+ const filename=path.join(root,'typography/fonts/prepared_font_manifest.json');
+ const original=fs.readFileSync(filename),manifest=JSON.parse(original);
+ manifest['NotoSansCJKSC-Regular.otf'].family='False canonical family';
+ fs.writeFileSync(filename,JSON.stringify(manifest));const before=fs.readFileSync(filename);
+ run(`
+import assert from 'node:assert/strict';
+import {GlobalFonts} from '@napi-rs/canvas';
+import {registerFonts,FONT_FAMILY} from './typography/fonts.mjs';
+assert.equal(GlobalFonts.has(FONT_FAMILY),false);
+assert.throws(()=>registerFonts(),/manifest does not match independently verified provenance: family/);
+assert.equal(GlobalFonts.has(FONT_FAMILY),false);
+`);
+ assert.deepEqual(fs.readFileSync(filename),before);
+}));

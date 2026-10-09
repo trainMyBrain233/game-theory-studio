@@ -6,21 +6,24 @@ import path from 'node:path';
 import {prepareAssets} from './src/primitives.mjs';
 import {drawFrame,FPS,DURATION,timeline} from './src/scenes.mjs';
 import {renderOptions} from './src/render-options.mjs';
-import {checkpointPlan,createStillsManifest,stampCheckpointPng,sha256,STILLS_MANIFEST,TIMELINE_PATH} from './src/checkpoints.mjs';
+import {checkpointPlan,createStillsManifest,stampCheckpointPng,verifyStillsManifest,sha256,STILLS_MANIFEST,TIMELINE_PATH} from './src/checkpoints.mjs';
 const {width,height,still,times,explicitTimes,start,frameCount,file}=renderOptions(process.argv.slice(2),DURATION,{fps:FPS,defaultTimes:()=>checkpointPlan(timeline).map(point=>point.time)});
 if(!still){const check=spawnSync('ffmpeg',['-version'],{encoding:'utf8'});if(check.error||check.status!==0)throw Error('Video encoding requires ffmpeg on PATH with libx264. Still rendering does not require it.');}
+// Snapshot inputs before asynchronous asset loading, then recheck before publishing.
+const timelineBytes=still?fs.readFileSync(new URL(`../${TIMELINE_PATH}`,import.meta.url)):null;
+const stillManifest=still?createStillsManifest(timelineBytes,{width,placeholderCast:process.argv.includes('--placeholder-cast'),...(explicitTimes?{times}:{})}):null;
 await prepareAssets(width/1920*1.15);
 fs.mkdirSync('output',{recursive:true});
 const canvas=createCanvas(width,height);
 if(still){
- const timelineBytes=fs.readFileSync(new URL(`../${TIMELINE_PATH}`,import.meta.url));
  if(JSON.stringify(JSON.parse(timelineBytes))!==JSON.stringify(timeline))throw Error('Timeline changed after loading the renderer; rerun still rendering.');
- const manifest=createStillsManifest(timelineBytes,{width,...(explicitTimes?{times}:{})});
+ const manifest=stillManifest;
  const manifestFile=path.join('output',STILLS_MANIFEST);
  // Invalidate the previous set before touching any images. A failed render must
  // never leave an apparently complete manifest pointing to mixed generations.
  fs.rmSync(manifestFile,{force:true});
  for(const point of manifest.checkpoints){drawFrame(canvas,point.time);const png=stampCheckpointPng(canvas.toBuffer('image/png'),manifest,point);fs.writeFileSync(path.join('output',point.file),png);point.sha256=sha256(png);}
+ verifyStillsManifest(manifest,fs.readFileSync(new URL(`../${TIMELINE_PATH}`,import.meta.url)));
  fs.writeFileSync(`${manifestFile}.tmp`,JSON.stringify(manifest,null,2)+'\n');fs.renameSync(`${manifestFile}.tmp`,manifestFile);
  console.log(`Rendered ${manifest.checkpoints.length} native ${width}x${height} frames and ${manifestFile}.`);
 }else{

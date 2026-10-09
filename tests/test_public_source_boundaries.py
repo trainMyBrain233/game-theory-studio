@@ -224,7 +224,8 @@ class WindowsPathBoundaryTests(unittest.TestCase):
 class ArchiveBoundaryTests(unittest.TestCase):
     @staticmethod
     def fixture(root, payloads=None):
-        payloads = payloads or {'source.txt': b'original source\n'}
+        payloads = dict(payloads or {'source.txt': b'original source\n'})
+        payloads.setdefault('package.json', b'{"version": "0.1.0"}')
         for name, data in payloads.items():
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -233,6 +234,7 @@ class ArchiveBoundaryTests(unittest.TestCase):
             'manifest_schema_version': '1.0', 'distribution': 'public_source_original_svg_only',
             'font_binaries_included': False, 'character_art_included': False,
             'source': {'commit': None, 'working_tree_dirty': True, 'reproducible_from_commit': False},
+            'versions': {'project': '0.1.0', 'schemas': {}, 'chapters': {}},
             'files': [{'path': name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
                       for name, data in payloads.items()],
         }

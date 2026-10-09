@@ -50,7 +50,7 @@ test('actual CLI accepts 0.3x custom stills and video without evaluating invalid
   assert(!custom.calls.some(call=>call[0].startsWith('encoder')));
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'output',STILLS_MANIFEST)));
   assert.equal(manifest.mode,'custom');assert.deepEqual(manifest.explicit_times,times);
-  verifyStillsManifest(manifest,bytes);
+  verifyStillsManifest(manifest,bytes,{root});
   for(const point of manifest.checkpoints){assert.equal(point.group,'custom');assert.equal(point.sha256,sha256(fs.readFileSync(path.join(root,'output',point.file))));}
   for(const args of [[],['--start','1','--duration','0.04','--out','segment.mp4'],['--preview']]){
    const result=run(root,args);assert.equal(result.status,0,result.stdout+result.stderr);
@@ -79,9 +79,9 @@ test('actual CLI still produces default semantic checkpoints for a fitting timel
  withSourceFixture(root=>{
   const bytes=fs.readFileSync(path.join(root,TIMELINE_PATH));
   const expected=checkpointPlan(JSON.parse(bytes));
-  const result=run(root,['--stills']);assert.equal(result.status,0,result.stdout+result.stderr);
+  const result=run(root,['--stills','--placeholder-cast']);assert.equal(result.status,0,result.stdout+result.stderr);
   assert.deepEqual(result.calls.filter(call=>call[0]==='draw').map(call=>call[1]),expected.map(point=>point.time));
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'output',STILLS_MANIFEST)));
-  assert.equal(manifest.mode,'default');verifyStillsManifest(manifest,bytes);
+  assert.equal(manifest.mode,'default');verifyStillsManifest(manifest,bytes,{root});
  });
 });

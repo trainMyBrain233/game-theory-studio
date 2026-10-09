@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {isDeepStrictEqual} from 'node:util';
+import {renderFingerprint} from './render-fingerprint.mjs';
 import {beforeEnd} from './frame-time.mjs';
 
 export const TIMELINE_PATH = 'chapters/01-four-elements/narration/timeline.json';
@@ -59,7 +60,7 @@ export function checkpointPlan(timeline) {
   return [...keyframes, ...transitions];
 }
 
-export function createStillsManifest(timelineBytes, {width = 1920, times} = {}) {
+export function createStillsManifest(timelineBytes, {width = 1920, times, placeholderCast = true, root} = {}) {
   const timeline = JSON.parse(timelineBytes.toString());
   if (times !== undefined && (!Array.isArray(times) || !times.length || times.some(time => !Number.isFinite(time)))) throw Error('Explicit still times must be a nonempty finite array.');
   if (![1920, 3840].includes(width)) throw Error('Still manifest width must be 1920 or 3840.');
@@ -78,7 +79,7 @@ export function createStillsManifest(timelineBytes, {width = 1920, times} = {}) 
     if (files.has(point.file)) throw Error('Still times must have unique two-decimal filenames.');
     files.add(point.file);
   }
-  return {schema_version: 1, mode: times === undefined ? 'default' : 'custom', ...(times === undefined ? {} : {explicit_times: [...times]}), timeline: {path: TIMELINE_PATH, sha256: sha256(timelineBytes), duration: timeline.duration}, width, height: width * 9 / 16, checkpoints};
+  return {schema_version: 2, render: renderFingerprint({root,placeholderCast}), mode: times === undefined ? 'default' : 'custom', ...(times === undefined ? {} : {explicit_times: [...times]}), timeline: {path: TIMELINE_PATH, sha256: sha256(timelineBytes), duration: timeline.duration}, width, height: width * 9 / 16, checkpoints};
 }
 
 /** Embed the checkpoint identity in the rendered PNG before hashing it. This
@@ -86,7 +87,7 @@ export function createStillsManifest(timelineBytes, {width = 1920, times} = {}) 
  * requests; an unchanged PNG cannot silently acquire a different checkpoint. */
 export function stampCheckpointPng(png, manifest, point) {
   const {sha256: imageHash, ...checkpoint} = point;
-  const metadata = {timeline_sha256: manifest.timeline.sha256, mode: manifest.mode, checkpoint};
+  const metadata = {timeline_sha256: manifest.timeline.sha256, render_sha256: manifest.render.sha256, mode: manifest.mode, checkpoint};
   // ASCII JSON makes a standards-compliant PNG tEXt chunk; Unicode label text
   // round-trips through JSON escapes instead of putting UTF-8 in a Latin-1 field.
   const json = JSON.stringify(metadata).replace(/[^\x20-\x7e]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
@@ -103,10 +104,13 @@ export function stampCheckpointPng(png, manifest, point) {
 }
 
 /** One producer/consumer metadata contract, without a second Python schedule. */
-export function verifyStillsManifest(manifest, timelineBytes) {
-  if (manifest?.schema_version !== 1 || !['default', 'custom'].includes(manifest.mode)) throw Error('Invalid still checkpoint manifest mode or version; render episode stills again.');
+export function verifyStillsManifest(manifest, timelineBytes, {root} = {}) {
+  if (manifest?.schema_version !== 2 || !['default', 'custom'].includes(manifest.mode)) throw Error('Invalid still checkpoint manifest mode or version; render episode stills again.');
   if (manifest.timeline?.sha256 !== sha256(timelineBytes)) throw Error('Stale still checkpoint manifest: timeline changed; render episode stills again.');
-  const expected = createStillsManifest(timelineBytes, {width: manifest.width, ...(manifest.mode === 'custom' ? {times: manifest.explicit_times} : {})});
+  if (!['placeholder','private'].includes(manifest.render?.cast_mode)) throw Error('Invalid still render identity; render episode stills again.');
+  const current = renderFingerprint({root,placeholderCast:manifest.render.cast_mode==='placeholder'});
+  if (!isDeepStrictEqual(manifest.render,current)) throw Error('Stale still render identity: renderer, config, assets, fonts or runtime changed; render episode stills again.');
+  const expected = createStillsManifest(timelineBytes, {root,placeholderCast:manifest.render.cast_mode==='placeholder',width: manifest.width, ...(manifest.mode === 'custom' ? {times: manifest.explicit_times} : {})});
   if (manifest.mode === 'custom' && !Array.isArray(manifest.explicit_times)) throw Error('Custom checkpoint manifest requires its explicit requested times.');
   if (!Array.isArray(manifest.checkpoints) || manifest.checkpoints.some(point => !point || !/^[a-f0-9]{64}$/.test(point.sha256))) throw Error('Still checkpoint manifest requires a SHA256 for every rendered PNG.');
   const metadata = {...manifest, checkpoints: manifest.checkpoints.map(({sha256: imageHash, ...point}) => point)};
@@ -115,7 +119,8 @@ export function verifyStillsManifest(manifest, timelineBytes) {
 }
 
 // The Python contact-sheet consumer calls this same verifier with a byte-exact
-// timeline snapshot. No images, native Canvas, fonts or encoder are loaded here.
+// timeline snapshot. Source, asset and font bytes are hashed read-only; no native Canvas, font
+// registration, asset preparation or encoder is loaded here.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     if (process.argv.length !== 3 || process.argv[2] !== '--verify-manifest') throw Error('Usage: checkpoints.mjs --verify-manifest (JSON on stdin)');
