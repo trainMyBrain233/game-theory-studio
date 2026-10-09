@@ -1,10 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createCanvas,loadImage} from '@napi-rs/canvas';
-import {registerFonts,canvasFont} from '../../../../typography/fonts.mjs';
 const sourceOnly=process.argv.includes('--source-only');
-if(!sourceOnly)registerFonts();
+let createCanvas,loadImage,canvasFont;
+if(!sourceOnly){
+ const fonts=await import('../../../../typography/fonts.mjs');
+ fonts.registerFonts();canvasFont=fonts.canvasFont;
+ ({createCanvas,loadImage}=await import('@napi-rs/canvas'));
+}
 const OUT=path.dirname(fileURLToPath(import.meta.url));
 for (const dir of ['svg', 'png', 'qa']) fs.mkdirSync(path.join(OUT, dir), {recursive:true});
 const P={paper:'#FFFEF8',ink:'#243E66',muted:'#51617A',line:'#B9C5D4',wash:'#EAF0F6',warm:'#D5B47D',warmLight:'#EADBBD',cool:'#9DB4CA',coolLight:'#DCE6EF',skin:'#E6C5A7',fur:'#B2A18D',cream:'#F2EBDE',steel:'#CAD1D7',dark:'#45516B'};

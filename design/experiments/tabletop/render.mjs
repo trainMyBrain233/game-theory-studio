@@ -9,6 +9,7 @@ import {presentationModel} from './presentation.mjs';
 import {drawAvatar} from './avatar.mjs';
 import {loadPublicCast} from './public-cast.mjs';
 import {drawIdentityMatrix} from './identity-matrix.mjs';
+import {DISPLAY_TEXT,candidateHeader,comparisonHeading,tabletopStatus} from './display-text.mjs';
 const args=process.argv.slice(2);
 if(args[0]!=='--placeholder-cast'||args.length>2||(args.length===2&&args[1]!=='--flat-regression'))throw Error('This prototype accepts only explicit --placeholder-cast; no external character layers are loaded.');
 await prepareAssets(2);
@@ -24,7 +25,7 @@ function figure(c,id,p){
 function header(c,left){
  tx(c,left,84,84,33,700);
  tx(c,presentation.headerLines[0],1836,54,27,400,C.muted,'right');
- tx(c,`${presentation.headerLines[1]}（候选）`,1836,96,31,700,C.ink,'right');
+ tx(c,candidateHeader(presentation),1836,96,31,700,C.ink,'right');
  line(c,84,116,1836,116,C.light,1.5);
 }
 function polygon(c,points,fill,stroke=C.ink,width=3){c.beginPath();c.moveTo(...points[0]);for(const p of points.slice(1))c.lineTo(...p);c.closePath();c.fillStyle=fill;c.fill();if(stroke){c.lineWidth=width;c.strokeStyle=stroke;c.stroke();}}
@@ -38,7 +39,7 @@ function rail(c,x,width){
 }
 function draw(c,state){
  c.fillStyle=C.paper;c.fillRect(0,0,1920,1080);
- header(c,'桌牌支撑原型 · 公共原创头像');
+ header(c,DISPLAY_TEXT.tabletopHeader);
  const variant=VARIANTS.find(v=>v.id===state.variant);
  tx(c,variant.title,84,213,65,700);tx(c,variant.note,84,277,33,400,C.muted);
  for(const [id,p] of Object.entries(CAMERA.actors)){
@@ -57,32 +58,32 @@ function draw(c,state){
  if(state.variant==='shared-rail')for(const x of [495,1420])round(c,x-135,906,270,5,1,C.ink,null);
  if(state.variant==='separate-stands')for(const x of [430,560,1354,1484])round(c,x-38,906,76,5,1,C.ink,null);
  line(c,84,969,1836,969,C.light,1.5);
- tx(c,`${state.time.toFixed(1)}s · ${state.phase} · 手姿未注册`,84,1019,34,700);
- tx(c,'只比较桌面 / 支撑 / 落点；真实手势与接触待验',1836,1019,31,400,C.muted,'right');
+ tx(c,tabletopStatus(state),84,1019,34,700);
+ tx(c,DISPLAY_TEXT.supportNote,1836,1019,31,400,C.muted,'right');
 }
 const schedule=interactionSchedule(timeline);
 const times=[Math.max(0,schedule.idleEnd-1),schedule.reachEnd+.85,(schedule.placeStart+schedule.contact)/2,(schedule.releaseStart+schedule.releaseEnd)/2],reports=[];
 for(const variant of VARIANTS){
  const board=createCanvas(2624,906),b=board.getContext('2d');b.fillStyle=C.paper;b.fillRect(0,0,2624,906);
- tx(b,`${variant.title} / 同镜头停留与放回 / 公共原创占位`,32,57,34,700);
+ tx(b,comparisonHeading(variant),32,57,34,700);
  for(const time of times){
   const canvas=createCanvas(1920,1080),state=tabletopState(variant.id,time,{scene:presentation.scene,timeline});draw(canvas.getContext('2d'),state);
   const name=`${variant.id}_${time.toFixed(1)}.png`;fs.writeFileSync(path.join(output,name),canvas.toBuffer('image/png'));reports.push({...state,image:name});
   if(time===times[0]||time===times[3])b.drawImage(canvas,32+(time===times[0]?0:1312),92,1280,720);
  }
- tx(b,'阶段接口：idle → reach → grasp → place（先接触承托）→ release；静态手不代表已验动作。',32,864,30,400,C.muted);
+ tx(b,DISPLAY_TEXT.stageNote,32,864,30,400,C.muted);
  fs.writeFileSync(path.join(output,`${variant.id}-comparison.png`),board.toBuffer('image/png'));
 }
 // Separate identity/layout proof: the same supplied head appears on body and matrix.
 const identity=createCanvas(1920,1080),c=identity.getContext('2d');c.fillStyle=C.paper;c.fillRect(0,0,1920,1080);
-header(c,'人物 → 头像 → 收益矩阵');
-tx(c,'同一角色，从人物一直读到数对',84,218,62,700);tx(c,'公共预览使用原创人物头部；真实生产复用批准头层，包含完整路障轮廓。',84,282,32,400,C.muted);
+header(c,DISPLAY_TEXT.identityHeader);
+tx(c,DISPLAY_TEXT.identityTitle,84,218,62,700);tx(c,DISPLAY_TEXT.identityNote,84,282,32,400,C.muted);
 for(const [id,x] of [['A',110],['B',470]])figure(c,id,{x,y:370,scale:.72});
 // Keep the proof-only tabletop clear of the inset lower-row portrait.
 polygon(c,[[70,716],[800,716],[840,807],[28,807]],C.faint);polygon(c,[[28,807],[840,807],[840,823],[28,823]],C.paper);
 for(const [id,x] of [['a',110],['b',470]])c.drawImage(arms[id],x,370,420*.72,500*.72);
 drawIdentityMatrix(c,presentation,avatars);
-line(c,84,969,1836,969,C.light,1.5);tx(c,'身份接口草稿 · 字号固定 · 新口播与时间轴待修订',84,1019,34,700);tx(c,'真实头层与矩阵净空仍需实际像素验收',1836,1019,30,400,C.muted,'right');
+line(c,84,969,1836,969,C.light,1.5);tx(c,DISPLAY_TEXT.identityFooter,84,1019,34,700);tx(c,DISPLAY_TEXT.identityReviewNote,1836,1019,30,400,C.muted,'right');
 fs.writeFileSync(path.join(output,'identity-matrix.png'),identity.toBuffer('image/png'));
 fs.writeFileSync(path.join(output,'prototype-manifest.json'),JSON.stringify({status:'prototype',sourceCommit:spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),workingTreeDirty:Boolean(spawnSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}).stdout.trim()),originalPublicOnly:true,timelineDuration:timeline.duration,times,handArtLinked:false,presentation:{header:presentation.header,headerLines:presentation.headerLines,narrationNames:presentation.narrationNames,status:presentation.status,timingRevision:presentation.timingRevision},reports},null,2)+'\n');
 console.log(`Wrote 3 comparison boards, 12 native 1080p original-placeholder frames and 1 identity/matrix proof to ${path.relative(root,output)}. Prototype only; no production render changed.`);

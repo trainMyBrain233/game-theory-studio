@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {withSourceFixture} from './source-fixture.mjs';
 import {ROOT,pythonCommand} from './python.mjs';
+const diagnostics=result=>`status=${result.status}, signal=${result.signal??'none'}, spawn error=${result.error?.message??'none'}\n${result.stdout??''}${result.stderr??''}`;
 withSourceFixture(temp=>{
  const scenes=JSON.parse(fs.readFileSync(path.join(temp,'design/scenes.json'),'utf8'));
  scenes.actors[0].label='甲';scenes.actors[1].label='乙';scenes.strategies[0].label='合作';scenes.strategies[1].label='退出';
@@ -15,11 +16,11 @@ withSourceFixture(temp=>{
  tokens.styles.textbook.paper='#FFF7E6';tokens.styles.textbook.ink='#1E304F';
  fs.writeFileSync(path.join(temp,'design/tokens.json'),JSON.stringify(tokens));
  const build=spawnSync(pythonCommand(),[path.join(temp,'chapters/01-four-elements/narration/build_narration.py')],{encoding:'utf8'});
- assert.equal(build.status,0,build.stderr);
+ assert.equal(build.status,0,diagnostics(build));
  const args=['--import',path.join(temp,'scripts/isolated-fonts.mjs'),path.join(temp,'production/qa/model-smoke.mjs')];
- const run=spawnSync(process.execPath,[...args,'--placeholder-cast'],{encoding:'utf8',cwd:temp});
- assert.equal(run.status,0,run.stderr+run.stdout);console.log(run.stdout.trim());
- const missing=spawnSync(process.execPath,args,{encoding:'utf8',cwd:temp});
- assert.notEqual(missing.status,0);assert.match(missing.stderr,/PRIVATE_ASSET_MISSING/);
+ const run=spawnSync(process.execPath,[...args,'--placeholder-cast'],{encoding:'utf8',cwd:temp,env:{...process.env,PYTHON:pythonCommand()}});
+ assert.equal(run.status,0,diagnostics(run));console.log(run.stdout.trim());
+ const missing=spawnSync(process.execPath,args,{encoding:'utf8',cwd:temp,env:{...process.env,PYTHON:pythonCommand()}});
+ assert.notEqual(missing.status,0,diagnostics(missing));assert.match(missing.stderr,/PRIVATE_ASSET_MISSING/,diagnostics(missing));
  console.log('Public episode smoke: changed case, actual matrix pixels/glyphs, typography, selection and explicit missing-private failure passed.');
 });

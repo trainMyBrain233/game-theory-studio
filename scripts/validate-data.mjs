@@ -48,7 +48,13 @@ export function validateTimeline(timeline, scenes) {
     const section = timeline.sections.find(section => section.id === s.section);
     assert(section && s.start >= section.start && s.end <= section.end);
     const cue = s.visual_cue;
-    if(cue.action==='reveal_scores')assert.deepEqual(cue.score_reveals.map(event=>event.player).sort(),['A','B'],`${s.id}: a complete cell reveal requires one event per player; storage order is irrelevant`);
+    // Score payloads must use the same action that production uses to find reveals.
+    if (Object.hasOwn(cue, 'scores') || Object.hasOwn(cue, 'score_reveals')) {
+      assert.equal(cue.action, 'reveal_scores', `${s.id}: scores and score_reveals require action reveal_scores`);
+    }
+    if (cue.action === 'reveal_scores') {
+      assert.deepEqual(cue.score_reveals.map(event => event.player).sort(), ['A', 'B'], `${s.id}: a complete cell reveal requires one event per player; storage order is irrelevant`);
+    }
     if (cue.matrix_cell) assert(Object.hasOwn(values, cue.matrix_cell), `${s.id}: unknown matrix cell`);
     if (cue.choices) {
       assert(cue.matrix_cell, `${s.id}: choices need a matrix cell`);

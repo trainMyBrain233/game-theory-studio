@@ -9,6 +9,7 @@ import os
 import re
 import stat
 import sys
+import unicodedata
 
 
 class ArchiveValidationError(ValueError):
@@ -19,6 +20,41 @@ def require(condition, message):
     # Never use assert for untrusted input: -O and PYTHONOPTIMIZE remove it.
     if not condition:
         raise ArchiveValidationError(message)
+
+
+# Win32 resolves these names as devices even when an extension is appended.
+WINDOWS_RESERVED_NAMES = {'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} | {
+    prefix + suffix for prefix in ('COM', 'LPT') for suffix in '123456789¹²³'
+}
+
+
+def portable_path_collision(name, seen):
+    """Reject NFC/case-folded member and directory aliases, including file/dir clashes."""
+    parts = name.split('/')
+    portable_parts = [unicodedata.normalize('NFC', unicodedata.normalize('NFC', part).casefold())
+                      for part in parts]
+    for count in range(1, len(parts) + 1):
+        prefix = '/'.join(parts[:count])
+        identity = (prefix, count == len(parts))
+        key = '/'.join(portable_parts[:count])
+        if key in seen and seen[key] != identity:
+            return True
+        seen[key] = identity
+    return False
+
+
+def validate_source_path(name):
+    """Match pack_source's pre-extraction filename contract without importing it."""
+    require(isinstance(name, str) and bool(name), 'Unsafe manifest path')
+    relative = PurePosixPath(name)
+    require(not relative.is_absolute() and not PureWindowsPath(name).drive and
+            not any(character in '<>:"\\|?*' for character in name) and
+            all(part not in {'', '.', '..'} and not part.endswith((' ', '.')) for part in name.split('/')) and
+            not any(ord(character) < 32 for character in name) and relative.as_posix() == name and
+            not any(part.partition('.')[0].rstrip(' ').upper() in WINDOWS_RESERVED_NAMES for part in name.split('/')),
+            'Unsafe manifest path')
+    require(name.split('/')[0].casefold() != 'source_manifest.json', 'Reserved manifest path')
+    return relative
 
 
 def regular_source(root, relative):
@@ -67,18 +103,14 @@ def verify_archive(root):
             'Invalid archive reproducibility provenance')
     require(isinstance(manifest.get('files'), list), 'Invalid manifest file list')
     expected = set()
+    portable_paths = {}
     for entry in manifest['files']:
         require(isinstance(entry, dict), 'Invalid manifest file entry')
         name = entry.get('path')
-        require(isinstance(name, str) and bool(name), 'Unsafe manifest path')
-        relative = PurePosixPath(name)
-        # Archives use canonical POSIX names even when verified on Windows.
-        require(not relative.is_absolute() and not PureWindowsPath(name).drive and
-                '\\' not in name and ':' not in name and
-                all(part not in {'', '.', '..'} and not part.endswith((' ', '.')) for part in name.split('/')) and
-                not any(ord(character) < 32 for character in name) and relative.as_posix() == name,
-                'Unsafe manifest path')
-        require(name not in expected and name != 'SOURCE_MANIFEST.json', 'Duplicate/reserved manifest path')
+        relative = validate_source_path(name)
+        require(name not in expected, 'Duplicate manifest path')
+        require(not portable_path_collision(name, portable_paths),
+                'Archive paths collide after portable normalization')
         require(type(entry.get('bytes')) is int and entry['bytes'] >= 0 and
                 isinstance(entry.get('sha256'), str) and re.fullmatch(r'[0-9a-f]{64}', entry['sha256']) is not None,
                 'Invalid manifest file checksum')

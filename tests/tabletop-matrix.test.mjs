@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {withSourceFixture} from '../scripts/source-fixture.mjs';
-const run=root=>spawnSync(process.execPath,['--import','./scripts/isolated-fonts.mjs','design/experiments/tabletop/qa-matrix.mjs'],{cwd:root,encoding:'utf8'});
+import {pythonCommand} from '../scripts/python.mjs';
+const run=root=>spawnSync(process.execPath,['--import','./scripts/isolated-fonts.mjs','design/experiments/tabletop/qa-matrix.mjs'],{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()}});
 test('tabletop matrix checks eight actual rasters for four choices, asymmetric ownership and alpha clearance',()=>{
  withSourceFixture(root=>{const result=run(root);assert.equal(result.status,0,result.stdout+result.stderr);});
 });

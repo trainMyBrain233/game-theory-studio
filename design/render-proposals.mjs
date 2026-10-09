@@ -174,13 +174,20 @@ export function drawScene(canvas,styleId,sceneId,override={}){
  const fn={editorial:{participants:editorialPlayers,payoff:editorialPayoff},textbook:{participants:textbookPlayers,payoff:textbookPayoff},bright:{participants:brightPlayers,payoff:brightPayoff}}[styleId][sceneId];fn(scene);footer(scene);c.restore();
  const result=[...bounds];checkTextLayout(result,canvas.width,canvas.height,{collisions:true});return result;
 }
+// Shared by the CLI board compositor and focused typography regressions.
+export function drawComparisonHeader(canvas,styleId){
+ c=canvas.getContext('2d');S=TOKENS.styles[styleId];if(!S)throw Error('Unknown style');
+ bounds.length=0;
+ rect(0,0,canvas.width,canvas.height,S.paper);txt(S.name,84,83,62,700,S.ink,'left',S.titleFamily);txt(S.subtitle,3756,83,38,400,S.muted,'right');line(84,155,3756,155,S.line,2);
+ return [...bounds];
+}
 async function main(){
  fs.mkdirSync(path.join(HERE,'qa'),{recursive:true});fs.mkdirSync(path.join(HERE,'frames'),{recursive:true});fs.mkdirSync(path.join(HERE,'boards'),{recursive:true});
  const manifest={generatedAt:new Date().toISOString(),width:1920,height:1080,renderer:'@napi-rs/canvas',images:[]};
  for(const id of Object.keys(TOKENS.styles)){
   for(const scene of DATA.frames){const canvas=createCanvas(1920,1080);const textBounds=drawScene(canvas,id,scene.id);let file=`frames/${id}_${scene.id}_1920x1080.png`;fs.writeFileSync(path.join(HERE,file),canvas.toBuffer('image/png'));manifest.images.push({style:id,scene:scene.id,file,textBounds});console.log(file)}
   // Comparison board uses two native 1080p frames without raster upscaling.
-  const board=createCanvas(3840,1320);c=board.getContext('2d');S=TOKENS.styles[id];rect(0,0,3840,1320,S.paper);txt(S.name,84,83,62,700,S.ink,'left',id==='editorial'?'serif':'sans');txt(S.subtitle,3756,83,38,400,S.muted,'right');line(84,155,3756,155,S.line,2);
+  const board=createCanvas(3840,1320);drawComparisonHeader(board,id);
   for(const [i,scene] of DATA.frames.entries()){let im=await loadImage(path.join(HERE,`frames/${id}_${scene.id}_1920x1080.png`));c.drawImage(im,i*1920,200);}
   txt('场景一 · 参与者',84,181,25,700);txt('场景二 · 收益矩阵',2004,181,25,700);fs.writeFileSync(path.join(HERE,`boards/${id}_comparison_3840x1320.png`),board.toBuffer('image/png'));
  }

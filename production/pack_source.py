@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Archive the unified public source candidate list after the same source guard as CI."""
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import argparse
 import hashlib
 import importlib.util
@@ -8,9 +8,65 @@ import json
 import os
 import subprocess
 import tempfile
+import unicodedata
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+# Win32 resolves these names as devices even when an extension is appended.
+WINDOWS_RESERVED_NAMES = {'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} | {
+    prefix + suffix for prefix in ('COM', 'LPT') for suffix in '123456789¹²³'
+}
+
+
+def portable_path_collision(name, seen):
+    """Reject NFC/case-folded member and directory aliases, including file/dir clashes."""
+    parts = name.split('/')
+    portable_parts = [unicodedata.normalize('NFC', unicodedata.normalize('NFC', part).casefold())
+                      for part in parts]
+    for count in range(1, len(parts) + 1):
+        prefix = '/'.join(parts[:count])
+        identity = (prefix, count == len(parts))
+        key = '/'.join(portable_parts[:count])
+        if key in seen and seen[key] != identity:
+            return True
+        seen[key] = identity
+    return False
+
+
+def validate_source_path(name):
+    """Match the verifier's canonical path contract before writing any ZIP entry.
+
+    Kept dependency-free so an extracted verifier need not import another source
+    module before checking its bytes. Regression tests enforce contract parity.
+    """
+    if not isinstance(name, str) or not name:
+        raise ValueError('Unsafe public source filename')
+    relative = PurePosixPath(name)
+    if (relative.is_absolute() or PureWindowsPath(name).drive or
+            any(character in '<>:"\\|?*' for character in name) or
+            any(part in {'', '.', '..'} or part.endswith((' ', '.')) for part in name.split('/')) or
+            any(ord(character) < 32 for character in name) or relative.as_posix() != name or
+            any(part.partition('.')[0].rstrip(' ').upper() in WINDOWS_RESERVED_NAMES for part in name.split('/'))):
+        raise ValueError('Unsafe public source filename')
+    if name.split('/')[0].casefold() == 'source_manifest.json':
+        raise ValueError('Reserved public source manifest filename')
+
+
+def source_candidates(root, git_output):
+    """Validate the entire list before selecting or reading candidate files."""
+    try:
+        candidates = sorted({item.decode('utf-8') for item in git_output.split(b'\0') if item})
+    except UnicodeDecodeError:
+        raise ValueError('Public source filenames must be UTF-8') from None
+    portable_paths = {}
+    for name in candidates:
+        validate_source_path(name)
+        if portable_path_collision(name, portable_paths):
+            raise ValueError('Public source filenames collide after portable normalization')
+    return [name for name in candidates if (root / name).is_file()]
+
 
 def source_provenance(root):
     """Do not equate a Git HEAD with uncommitted source candidate bytes."""
@@ -49,7 +105,11 @@ def main():
     if repository.returncode or Path(repository.stdout.strip()).resolve() != ROOT.resolve():
         raise SystemExit('Source packaging requires a Git checkout; exported ZIP supports integrity inspection only. Use git clone for development/repacking.')
     output = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT)
-    files = sorted({x.decode('utf-8') for x in output.split(b'\0') if x and (ROOT / x.decode('utf-8')).is_file()})
+    try:
+        files = source_candidates(ROOT, output)
+    except ValueError as error:
+        # A filename may itself contain private data or terminal controls.
+        raise SystemExit(str(error)) from None
     errors, _ = guard.scan_sources(ROOT, files)
     if errors:
         raise SystemExit('\n'.join(f'{file}: {reason}' for file, reason in errors))

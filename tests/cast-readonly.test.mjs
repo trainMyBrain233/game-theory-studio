@@ -11,11 +11,10 @@ test('tracked archived SVG and metadata are compared without overwriting edits',
  const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'studio-cast-edit-'));
  try{
   fs.cpSync(path.join(ROOT,relative),path.join(temporary,relative),{recursive:true,filter:file=>!file.endsWith('.png')&&!file.includes('/qa/')});
-  fs.mkdirSync(path.join(temporary,'typography'));
-  fs.copyFileSync(path.join(ROOT,'typography/fonts.mjs'),path.join(temporary,'typography/fonts.mjs'));
   fs.mkdirSync(path.join(temporary,'scripts'));
-  for(const script of ['python.mjs','isolated-fonts.mjs','qa-cast-source.mjs'])fs.copyFileSync(path.join(ROOT,'scripts',script),path.join(temporary,'scripts',script));
-  fs.symlinkSync(path.join(ROOT,'node_modules'),path.join(temporary,'node_modules'),'dir');
+  for(const script of ['python.mjs','qa-cast-source.mjs'])fs.copyFileSync(path.join(ROOT,'scripts',script),path.join(temporary,'scripts',script));
+  assert(!fs.existsSync(path.join(temporary,'typography')) && !fs.existsSync(path.join(temporary,'node_modules')),
+   'Source-only regeneration must not need font or native dependencies');
   assert.equal(verifyCastSource(temporary),11);
   for(const file of ['svg/human_A.svg','proposals.json','cast.json']){
    const target=path.join(temporary,relative,file),original=fs.readFileSync(target);

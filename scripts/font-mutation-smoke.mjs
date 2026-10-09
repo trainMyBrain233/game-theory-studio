@@ -15,7 +15,8 @@ withSourceFixture(root=>{
   ['forced Sans','return `${weight} ${px}px "${FONT_FAMILY}"`;',/Applied canvas font family must be GameTheory Noto Serif SC/],
  ]){
   fs.writeFileSync(file,source.replace(original,replacement));
-  const run=spawnSync(process.execPath,['--import',path.join(root,'scripts/isolated-fonts.mjs'),path.join(root,'typography/qa-fonts.mjs')],{cwd:root,encoding:'utf8'});
+  // Disposable source fixtures have no .venv; retain the parent's interpreter.
+  const run=spawnSync(process.execPath,['--import',path.join(root,'scripts/isolated-fonts.mjs'),path.join(root,'typography/qa-fonts.mjs')],{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()}});
   assert.notEqual(run.status,0,`${name} incorrectly passed font QA`);assert.match(run.stderr,reason);
   console.log(`Font negative mutation rejected: ${name}.`);
   if(name==='forced regular'&&process.argv.includes('--full-pipeline')){

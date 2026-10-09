@@ -19,7 +19,7 @@ test('real two- and four-character narration rebuilds drive pickup samples and f
    const samples=Array.from({length:clip.frames},(_,i)=>tabletopState('flat-rest',clip.start+i/clip.fps,{scene,timeline}));
    assert.ok(samples.some(s=>s.phase==='reach'));assert.ok(samples.some(s=>s.cards.some(c=>!c.chosen&&c.alpha>.1&&c.alpha<.9)&&s.cards.some(c=>c.chosen&&c.flat<1)));
    assert.ok(samples.every(s=>s.cards.filter(c=>!c.chosen).every(c=>c.flat===1&&c.bottom===846)));
-   const result=spawnSync(process.execPath,['--test','tests/tabletop-prototype.test.mjs'],{cwd:root,encoding:'utf8'});assert.equal(result.status,0,result.stdout+result.stderr);
+   const result=spawnSync(process.execPath,['--test','tests/tabletop-prototype.test.mjs'],{cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()}});assert.equal(result.status,0,result.stdout+result.stderr);
   }
   assert.notEqual(schedules[0].reachEnd,schedules[1].reachEnd,'The variant must actually rebuild a different pickup anchor.');
   const timeline=JSON.parse(fs.readFileSync(path.join(root,'chapters/01-four-elements/narration/timeline.json'),'utf8'));

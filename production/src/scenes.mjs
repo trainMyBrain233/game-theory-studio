@@ -2,6 +2,7 @@ export {timeline,content} from './model.mjs';
 import {timeline,content,sceneData} from './model.mjs';
 import {informationChoreography} from './choreography.mjs';
 import {textTransitionState} from './motion.mjs';
+import {proposalScale} from '../../design/canvas-geometry.mjs';
 import {createSubtitleElement} from './elements/subtitle.mjs';
 import {createPayoffMatrixElement} from './elements/payoff-matrix.mjs';
 import {TOKENS,C,clamp,ease,mix,ramp,span,tx,line,round,circle,arrow,group,reveal,person,badge,card,cardFlip,tag,desk,eye,resetRecords,setSceneTime,finishActorLayers} from './primitives.mjs';
@@ -172,6 +173,7 @@ function recap(c,t){
 }
 export function drawFrame(canvas,t,{noSubtitles=false}={}){
  if(!Number.isFinite(t))throw Error('Frame time must be a finite number.');
- t=Math.max(0,Math.min(DURATION-1/30,t));resetRecords();setSceneTime(t,canvas);const c=canvas.getContext('2d');c.save();c.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);c.fillStyle=C.paper;c.fillRect(0,0,W,H);c.lineJoin='round';c.lineCap='round';
+ const scale=proposalScale(canvas.width,canvas.height);
+ t=Math.max(0,Math.min(DURATION-1/30,t));resetRecords();setSceneTime(t,canvas);const c=canvas.getContext('2d');c.save();c.setTransform(scale,0,0,scale,0,0);c.fillStyle=C.paper;c.fillRect(0,0,W,H);c.lineJoin='round';c.lineCap='round';
  const sec=secAt(t);const scenes={intro,players,information,strategy,payoffs,recap};scenes[sec.id](c,t);finishActorLayers(canvas);chapter(c,t);if(!noSubtitles)subtitle(c,t);c.restore();return c;
 }

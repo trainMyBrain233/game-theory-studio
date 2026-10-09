@@ -11,12 +11,11 @@ export function verifyCastSource(root=ROOT){
  const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'studio-cast-qa-'));
  try{
   const built=path.join(temporary,relative),authored=path.join(root,relative);
-  fs.mkdirSync(built,{recursive:true});fs.mkdirSync(path.join(temporary,'typography'));
+  fs.mkdirSync(built,{recursive:true});
   for(const script of ['draw_cast.mjs','build_manifest.mjs'])fs.copyFileSync(path.join(authored,script),path.join(built,script));
-  fs.copyFileSync(path.join(root,'typography/fonts.mjs'),path.join(temporary,'typography/fonts.mjs'));
-  fs.symlinkSync(path.join(ROOT,'node_modules'),path.join(temporary,'node_modules'),'dir');
+  // Source-only regeneration must work without fonts, native Canvas or .venv.
   for(const [script,args] of [['draw_cast.mjs',['--source-only']],['build_manifest.mjs',[]]]){
-   const result=spawnSync(process.execPath,['--import',path.join(ROOT,'scripts/isolated-fonts.mjs'),path.join(built,script),...args],{encoding:'utf8'});
+   const result=spawnSync(process.execPath,[path.join(built,script),...args],{encoding:'utf8'});
    assert.equal(result.status,0,result.stderr+result.stdout);
   }
   const generated=fs.readdirSync(path.join(built,'svg')).sort();

@@ -56,6 +56,40 @@ different drives/case/separators, and an unquoted form are still rejected.
 Negative tests construct synthetic paths at runtime so they do not publish real
 machine-specific paths or require broader exclusions for test files.
 
+## ZIP creation and portable member names
+
+`production/pack_source.py --public` validates the complete Git candidate-name
+list before selecting files, reading payloads, building a manifest, or opening a
+ZIP. Rejection leaves any previous archive unchanged and creates no temporary
+ZIP. The checks remain enabled under Python optimization.
+
+Writer and verifier enforce the same dependency-free canonical filename rules:
+relative POSIX paths only; no backslashes, absolute/drive/UNC forms, colon streams,
+empty/dot/parent segments, ASCII control characters, trailing dots/spaces, or
+Windows-forbidden filename characters (`<`, `>`, `"`, `|`, `?`, `*`). Windows device
+basenames are rejected in any component, case-insensitively and with extensions:
+`CON`, `NUL`, `AUX`, `PRN`, `CONIN$`, `CONOUT$`, `COM1`–`COM9`, `LPT1`–`LPT9`, and
+Windows' superscript ¹/²/³ port aliases. Spaces before an extension do not evade
+that rule. The top-level `SOURCE_MANIFEST.json` name and its case variants are
+reserved, including attempts to use that name as a directory.
+
+Every complete member name and directory prefix must remain unambiguous under
+per-component NFC Unicode normalization and case folding (normalized again after
+folding). Canonically equivalent Unicode names, file aliases, directory aliases,
+and file/directory collisions are rejected. Original filenames are not rewritten;
+Chinese names remain supported. This is deliberately stricter than some
+case-sensitive filesystems.
+
+These bounded checks do not model every filesystem or extractor transformation,
+such as legacy short-name aliases or tool-specific filename decoding. They do
+not establish universal extraction safety for every platform or utility.
+
+Contract parity tests keep the writer and verifier aligned without importing
+archive-provided code before verification. Unsafe fixtures are inspected as ZIP
+metadata or normalized in memory; only valid archives are extracted, inside
+contained temporary test directories. Filename errors do not echo the unsafe
+name or its contents.
+
 ## Extracted archive verification
 
 `python3 production/verify_source_archive.py [directory]` verifies a manifest and
@@ -81,6 +115,7 @@ cannot establish its own trustworthiness.
 Run the dependency-free regression suite with:
 
 ```sh
+python3 -m unittest discover -s tests -p test_source_archive_paths.py
 python3 -m unittest discover -s tests -p test_public_source_boundaries.py
 python3 -m unittest discover -s tests -p test_source_svg_safety.py
 python3 scripts/qa_source.py

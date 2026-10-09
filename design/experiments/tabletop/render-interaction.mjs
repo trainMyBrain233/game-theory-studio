@@ -7,6 +7,7 @@ import {prepareAssets,card,C,tx,line,round} from '../../../production/src/primit
 import {CAMERA,TABLE} from './layout.mjs';
 import {DEMO,demoState} from './interaction.mjs';
 import {presentationModel} from './presentation.mjs';
+import {DISPLAY_TEXT,candidateHeader,interactionStatus} from './display-text.mjs';
 if(process.argv.slice(2).join(' ')!=='--placeholder-cast')throw Error('Only --placeholder-cast is supported.');
 await prepareAssets(2);
 const root=path.resolve(import.meta.dirname,'../../..'),out=path.join(root,'artifacts/tabletop-interaction'),frames=path.join(out,'frames');fs.mkdirSync(frames,{recursive:true});
@@ -26,9 +27,9 @@ function hand(c,arm,front){
 }
 function draw(c,state){
  c.fillStyle=C.paper;c.fillRect(0,0,1920,1080);
- tx(c,'原创几何取放验证 · 真实手图未接入',84,84,33,700);
- tx(c,view.headerLines[0],1836,54,27,400,C.muted,'right');tx(c,`${view.headerLines[1]}（候选）`,1836,96,31,700,C.ink,'right');line(c,84,116,1836,116,C.light,1.5);
- tx(c,'先夹住，再抬牌；先放稳，再松手',84,213,60,700);tx(c,'同一张牌 / 同一腕点 / 前后手层夹牌 / 明确牌槽承托',84,277,33,400,C.muted);
+ tx(c,DISPLAY_TEXT.interactionHeader,84,84,33,700);
+ tx(c,view.headerLines[0],1836,54,27,400,C.muted,'right');tx(c,candidateHeader(view),1836,96,31,700,C.ink,'right');line(c,84,116,1836,116,C.light,1.5);
+ tx(c,DISPLAY_TEXT.interactionTitle,84,213,60,700);tx(c,DISPLAY_TEXT.interactionNote,84,277,33,400,C.muted);
  for(const [id,p] of Object.entries(CAMERA.actors)){c.drawImage(figures[id.toLowerCase()],p.x,p.y,420*p.scale,500*p.scale);tx(c,view.actors[id].name,p.x+210*p.scale,p.y-2,36,700,C.ink,'center');}
  polygon(c,[[TABLE.backLeft,TABLE.backY],[TABLE.backRight,TABLE.backY],[TABLE.frontRight,TABLE.frontY],[TABLE.frontLeft,TABLE.frontY]],C.faint);
  polygon(c,[[TABLE.frontLeft,TABLE.frontY],[TABLE.frontRight,TABLE.frontY],[TABLE.frontRight,TABLE.frontBottom],[TABLE.frontLeft,TABLE.frontBottom]],C.paper);
@@ -38,8 +39,7 @@ function draw(c,state){
  for(const item of state.cards)card(c,item.kind,item.x,item.y,item.width);
  for(const arm of state.arms){hand(c,arm,true);c.save();c.translate(...arm.wrist);c.rotate(Math.atan2(arm.wrist[1]-arm.elbow[1],arm.wrist[0]-arm.elbow[0]));round(c,-18,-17,13,34,3,C.paper,C.ink,2);c.restore();}
  for(const x of [495,1420])round(c,x-135,906,270,7,2,C.ink,null);
- const phase={idle:'放松停留',approach:'靠近',contact:'接触闭合',hold:'夹持抬起',place:'落放并停稳',release:'牌交桌面后松指',retreat:'手退回桌面'}[state.phase];
- line(c,84,969,1836,969,C.light,1.5);tx(c,`${state.time.toFixed(1)}s · ${phase}`,84,1019,34,700);tx(c,'几何动作示意；真实握姿、腕缝与自然度未验',1836,1019,31,400,C.muted,'right');
+ line(c,84,969,1836,969,C.light,1.5);tx(c,interactionStatus(state),84,1019,34,700);tx(c,DISPLAY_TEXT.interactionReviewNote,1836,1019,31,400,C.muted,'right');
 }
 const checkpoints=new Set([0,29,30,65,66,79,80,143,144,185,186,199,200,218,219,263,264,299]),states=[];
 for(let frame=0;frame<DEMO.duration*DEMO.fps;frame++){
