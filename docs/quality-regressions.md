@@ -338,6 +338,19 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** 四项候选与上述有界专项/定向集成证据已冻结；原卡面 fixture 及本轮定向通过不等于新全链通过，最终新 head 完整双平台 CI/复审待验，PR 未记为合并。
 
+## PR #4 `0e0e836`：四路完整 CI 通过后新增 2 项
+
+`0e0e836f9b5d7b7df34d941665e32eedabea7e87` 的 [PR Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37919011540) 与 [push Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37919006838) 四个 Ubuntu/macOS job 全部成功。每个默认 JS 为 863 项中 860 通过/3 skip；Python 各 152 项，Ubuntu 146 通过/6 skip，macOS 145 通过/7 skip。四路 changed-case 69 项设计与相关布局/角色检查、默认 1163 样本（22067 次文字/10177 路径、0 issues）、model-smoke 26 个重排帧、素材路由、原创 RGBA 的 1 nonempty/1 expected/10 clearance 及最终源码 QA 346 文件通过。两路 Ubuntu 的三张联系图实际解码通过，尺寸为 3840×1712、3840×3264、3840×2218；macOS 按条件跳过联系图阶段。真实 FFmpeg 媒体专项仍 skip，其中包括新增 faststart 实测；macOS 另有大小写 alias 文件系统 fixture skip，不能计作对应 CI 测试已执行。这些干净 CI 证据不改写此前本机被终止的尝试，也不代表真实私有图稿或完整影片接受。
+
+[自动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5469037050)于 2026-10-09 10:48:59 UTC 完成，新增以下两项 P2；安全复审于 10:47:15 完成，无新增项。当前 head 的全绿 CI 不关闭新发现，PR 未记为合并。
+
+- **本轮-1：解包后的独立 verifier 也必须先限制源文件读取。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4229294981)中 `production/verify_source_archive.py` 在共享 guard 之前先 read_bytes 核对源文件摘要，巨大文件会先整体分配，后面的 1 MiB 限制已太晚。`verify_source_bytes` 先要求 stat 与 manifest 声明大小一致且均≤1 MiB，再按每块≤64 KiB 增量 SHA，总读取最多声明大小+1 字节；增长、短读或错误摘要明确拒绝。同入口主动检查另发现 manifest 自身无界 read_text，已补未压缩 metadata≤15 MiB 的独立上限，先 stat 再单次最多 15 MiB+1 读取，保持 UTF-8/JSON 格式；这与 ZIP 大小预算数值相同但属于另一层上限，不是第三项自动发现。新九项共 100 次真实 CLI 用例通过，覆盖实际 ZIP 提取后构造的 8 GiB 稀疏 source/manifest、stat 后增长/缩短、空文件/跨块/恰好 1 MiB source、合法 15 MiB manifest、同长错 hash 及旧无界读取变异的安全拦截。保持路径、非普通文件、重复项、摘要、计数、inventory 与只读边界，不承诺并发路径替换下的原子快照或 OS sandbox；最终代码后的 43 项既有 source 回归干净重跑通过（93.757 秒），新九项/100 CLI 用例也在最终版本通过（14.571 秒，Linux、Python 3.12.14、Node 24.19.0）。教训：每个验证层自己的首次读取都要受限，后续共享 guard 不能回溯防止前置资源分配。
+- **本轮-2：角色槽的素材声明必须与固定 rig 身份一致。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4229294988)中 A/B 的私有 head 或 fallback 素材可交换，造成角色身份与 provenance 声明不一致。`production/schema/cast.schema.json` 现分别将 A/B 的主素材固定到各自 a_head/b_head 私有路径、fallback 固定到 person_a/person_b SVG；主 asset 即使指向自己的公开 SVG 也拒绝，因为固定 adapter 实际使用私有 rig，不能用该声明伪装来源。显示名仍由 scene actor label 驱动，策略名/收益/默认选择仍可配置。新 `tests/actor-asset-identity.test.mjs` 五项覆盖 15 种交换/交叉/卡面/公开 primary 错误映射，schema 与未 mock 的真实 model 在当前和 exact case-reuse 两组都于绘图前以 cast-schema 错误拒绝；去掉绑定的反向变异重新漏拒交换。真实公开占位 Canvas 在两组分别检查 A 蓝衣/圆形、B 米色上衣/方形，合法明月/青禾、收益与 BR 保留；专属 5/5、相邻 card 3/3 通过（Linux、Node 24.19.0）。未读取或发布真实私图，该固定文件槽合同不认证图像内容或私有制作接受。
+
+**根级定向集成：** Node 14/14、0 skip，archive 新九项另独立复跑 9/9、0 skip（13.323 秒），qa:data 两章 39 blocks 与 editorial 只读比较通过；worker 源码 QA 扫描当时 348 文件通过。各项互有覆盖，不累加为完整测试数。
+
+**当前状态：** 两项候选、manifest 同型补查及上述最终定向证据已冻结；最终新 head 完整 CI/复审待验，不沿用 `0e0e836` 的绿 CI 宣称新修补已接受，PR 未记为合并。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

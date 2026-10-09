@@ -33,6 +33,12 @@
               "properties": {
                 "identity_shape": {
                   "const": "circle"
+                },
+                "asset": {
+                  "const": "private_characters/pvz/assets/a_head.png"
+                },
+                "fallback_asset": {
+                  "const": "assets/person_a.svg"
                 }
               }
             }
@@ -48,6 +54,12 @@
               "properties": {
                 "identity_shape": {
                   "const": "square"
+                },
+                "asset": {
+                  "const": "private_characters/pvz/assets/b_head.png"
+                },
+                "fallback_asset": {
+                  "const": "assets/person_b.svg"
                 }
               }
             }

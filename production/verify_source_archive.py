@@ -26,6 +26,12 @@ def require(condition, message):
 WINDOWS_RESERVED_NAMES = {'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} | {
     prefix + suffix for prefix in ('COM', 'LPT') for suffix in '123456789¹²³'
 }
+# Match the public-source guard without importing source code before verification.
+MAX_SOURCE_BYTES = 1024 * 1024
+HASH_CHUNK_BYTES = 64 * 1024
+# Metadata has its own explicit uncompressed ceiling; never trust its file list
+# to supply a read bound. This matches the producer's public ZIP size budget.
+MAX_MANIFEST_BYTES = 15 * 1024 * 1024
 
 
 def portable_path_collision(name, seen):
@@ -89,10 +95,36 @@ def archive_inventory(root):
     return actual
 
 
+def verify_source_bytes(target, expected_size, expected_sha256):
+    """Reject oversized sources before opening; bound reads even if a file grows."""
+    size = target.stat().st_size
+    require(size <= MAX_SOURCE_BYTES and expected_size <= MAX_SOURCE_BYTES,
+            'Archive source exceeds 1 MiB')
+    require(size == expected_size, 'Archive source differs')
+    digest = hashlib.sha256()
+    consumed = 0
+    with target.open('rb') as stream:
+        while True:
+            # One extra byte distinguishes exact length from growth after stat.
+            data = stream.read(min(HASH_CHUNK_BYTES, expected_size - consumed + 1))
+            if not data:
+                break
+            consumed += len(data)
+            require(consumed <= expected_size, 'Archive source differs')
+            digest.update(data)
+    require(consumed == expected_size and digest.hexdigest() == expected_sha256,
+            'Archive source differs')
+
+
 def verify_archive(root):
     root = Path(root).resolve()
     manifest_file = regular_source(root, Path('SOURCE_MANIFEST.json'))
-    manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
+    require(manifest_file.stat().st_size <= MAX_MANIFEST_BYTES,
+            'Archive manifest exceeds 15 MiB')
+    with manifest_file.open('rb') as stream:
+        manifest_data = stream.read(MAX_MANIFEST_BYTES + 1)
+    require(len(manifest_data) <= MAX_MANIFEST_BYTES, 'Archive manifest exceeds 15 MiB')
+    manifest = json.loads(manifest_data.decode('utf-8'))
     require(isinstance(manifest, dict), 'Invalid archive manifest')
     require(manifest.get('manifest_schema_version') == '1.0', 'Unsupported manifest schema')
     require(manifest.get('distribution') == 'public_source_original_svg_only', 'Invalid archive distribution')
@@ -122,9 +154,7 @@ def verify_archive(root):
                 'Invalid manifest file checksum')
         expected.add(name)
         target = regular_source(root, relative)
-        data = target.read_bytes()
-        require(len(data) == entry['bytes'] and hashlib.sha256(data).hexdigest() == entry['sha256'],
-                'Archive source differs')
+        verify_source_bytes(target, entry['bytes'], entry['sha256'])
     require(archive_inventory(root) == expected | {'SOURCE_MANIFEST.json'},
             'Archive contains missing or unlisted files')
     # Use this verifier's own guard, never execute code from a caller-supplied directory.
