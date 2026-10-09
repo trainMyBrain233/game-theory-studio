@@ -10,6 +10,7 @@ import {assertAppliedFont} from '../typography/font-contract.mjs';
 import {validateScenes,validateSchema} from '../scripts/validate-data.mjs';
 import {checkTextLayout} from '../scripts/layout.mjs';
 import {proposalScale} from './canvas-geometry.mjs';
+import {assertTextContrast,proposalTextPairs,EDITORIAL_SELECTED_SCORE} from './text-contrast.mjs';
 import {COMPARISON_BOARD,comparisonBoardTextPlan} from './comparison-board-text.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 export const TOKENS=JSON.parse(fs.readFileSync(path.join(HERE,'tokens.json')));
@@ -99,7 +100,7 @@ function editorialPayoff(scene){const f=focus();
  smallChoice('red',849,514,34);smallChoice('blue',849,697,34);
  rect(x,y,cw*2,rh*2,null,S.ink,3);line(x+cw,y,x+cw,y+rh*2,S.ink,3);line(x,y+rh,x+2*cw,y+rh,S.ink,3);
  rect(x+cw*f.k+3,y+rh*f.r+3,cw-6,rh-6,S.wash);rect(x+cw*f.k,y+rh*f.r,cw,rh,null,S.accent,6);
- STATE.payoffs.forEach((row,r)=>row.forEach((p,k)=>scorePair(...p,x+cw*(k+.5),y+rh*(r+.5),66,(r===f.r&&k===f.k)?S.accent:S.ink)));
+ STATE.payoffs.forEach((row,r)=>row.forEach((p,k)=>scorePair(...p,x+cw*(k+.5),y+rh*(r+.5),EDITORIAL_SELECTED_SCORE.size,(r===f.r&&k===f.k)?S.accent:S.ink)));
  txt(`每格顺序：（${actorLabel('A')}，${actorLabel('B')}）`,1329,856,32,400,S.muted,'center');
 }
 function textbookPlayers(scene){
@@ -161,6 +162,7 @@ function brightPayoff(scene){const f=focus();
 export function drawScene(canvas,styleId,sceneId,override={}){
  const scale=proposalScale(canvas.width,canvas.height);
  c=canvas.getContext('2d');S=TOKENS.styles[styleId];if(!S)throw Error('Unknown style');
+ assertTextContrast(proposalTextPairs(TOKENS,styleId));
  STATE={...DATA,...override.data};
  STATE.selected={...STATE.selected,...override.selected};
  STATE.selected.actorA=STATE.strategies[STATE.selected.row]?.id;STATE.selected.actorB=STATE.strategies[STATE.selected.column]?.id;
@@ -178,6 +180,7 @@ export function drawScene(canvas,styleId,sceneId,override={}){
 // Shared by the CLI board compositor and focused typography regressions.
 export function drawComparisonHeader(canvas,styleId){
  c=canvas.getContext('2d');S=TOKENS.styles[styleId];if(!S)throw Error('Unknown style');
+ assertTextContrast(proposalTextPairs(TOKENS,styleId));
  bounds.length=0;
  rect(0,0,canvas.width,canvas.height,S.paper);
  for(const run of comparisonBoardTextPlan(S))txt(run.text,run.x,run.y,run.size,run.weight,run.color,run.align,run.family);

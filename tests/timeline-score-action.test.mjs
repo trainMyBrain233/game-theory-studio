@@ -237,7 +237,7 @@ test('fixed sections, anchor ownership and walkthrough order reject silent chang
 test('production model and qa:data apply the first-episode contract before rendering or rebuilding', () => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'episode-model-contract-'));
   try {
-    for (const relative of ['production/src/model.mjs', 'production/cast.json', 'production/content.json', 'production/tokens.json',
+    for (const relative of ['production/src/model.mjs', 'production/src/palette.mjs', 'production/assets/asset-hotspots.json', 'design/text-contrast.mjs', 'production/cast.json', 'production/content.json', 'production/tokens.json',
       'production/schema/cast.schema.json', 'production/schema/content.schema.json', 'production/schema/tokens.schema.json',
       'design/scenes.json', 'design/tokens.json', 'schemas/scenes.schema.json', 'schemas/timeline.schema.json', 'schemas/tokens.schema.json', 'schemas/chapter.schema.json',
       'scripts/qa-data.mjs', 'scripts/chapters.mjs', 'scripts/validate-data.mjs', 'scripts/python.mjs', 'scripts/text-contract.mjs', 'scripts/unicode-text-15.0.0.json',

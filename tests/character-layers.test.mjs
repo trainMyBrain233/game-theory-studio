@@ -6,7 +6,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createCanvas} from '@napi-rs/canvas';
 import {layerContract,CHARACTER_CAPABILITIES,RIG} from '../production/src/character-layers.mjs';
-import {prepareCharacterAssets,assets,drawCharacter} from '../production/src/rgba_character_rig.mjs';
+import {prepareCharacterAssets,assets,assetManifest,drawCharacter} from '../production/src/rgba_character_rig.mjs';
 
 test('layer contract uses prepared pivots and declares only actual four-part capabilities',()=>{
  assert.equal(CHARACTER_CAPABILITIES.partsPerActor,4);
@@ -75,4 +75,63 @@ test('real loader reports eight original RGBA fixtures and applies preparation m
   const rendered=createCanvas(1920,1080),pose=drawCharacter(rendered.getContext('2d'),'b',{x:1000,y:500,scale:.6,side:-1,t:13,handOverride:[250,296]});
   assert.equal(pose.handClamped,false);assert.ok(rendered.data().some(value=>value!==0));
  }finally{fs.rmSync(directory,{recursive:true,force:true})}
+});
+
+// All fixtures below are original synthetic pixels; private artwork is never
+// copied into this repository or used to manufacture acceptance evidence.
+function writeSyntheticCast(directory,{width=16,height=320,alpha=255}={}){
+ fs.mkdirSync(path.join(directory,'assets'),{recursive:true});
+ const c=createCanvas(width,height),ctx=c.getContext('2d');
+ const pixel=ctx.createImageData(1,1);pixel.data.set([188,61,49,alpha]);ctx.putImageData(pixel,1,1);
+ const bytes=c.toBuffer('image/png');
+ for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm'])fs.writeFileSync(path.join(directory,'assets',`${id}_${part}.png`),bytes);
+ return bytes;
+}
+
+test('every required layer rejects empty alpha and upper arms reject pixels outside the actual crop',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'studio-original-alpha-'));
+ try{
+  const valid=writeSyntheticCast(directory);
+  const empty=createCanvas(16,320).toBuffer('image/png');
+  for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm']){
+   const file=path.join(directory,'assets',`${id}_${part}.png`);
+   fs.writeFileSync(file,empty);
+   await assert.rejects(()=>prepareCharacterAssets({directory}),error=>error.code==='PRIVATE_ASSET_EMPTY_ALPHA'&&error.message.includes(`${id}_${part}`));
+   fs.writeFileSync(file,valid);
+  }
+  const cropped=createCanvas(16,320),ctx=cropped.getContext('2d');ctx.fillStyle='#243E66';ctx.fillRect(0,270,16,50);
+  for(const id of ['a','b']){
+   const file=path.join(directory,'assets',`${id}_upper.png`);fs.writeFileSync(file,cropped.toBuffer('image/png'));
+   await assert.rejects(()=>prepareCharacterAssets({directory}),{code:'PRIVATE_ASSET_EMPTY_ALPHA'});
+   // Row 269 is used; row 270 is not. Exercise both preparation directions.
+   ctx.fillRect(1,269,1,1);fs.writeFileSync(file,cropped.toBuffer('image/png'));
+   await prepareCharacterAssets({directory});fs.writeFileSync(file,valid);ctx.clearRect(0,269,16,1);
+  }
+  writeSyntheticCast(directory,{width:8,height:8,alpha:1});
+  assert.equal((await prepareCharacterAssets({directory})).layers.length,8,'Any genuinely nonzero alpha in the used range is valid, including small original fixtures.');
+  for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm'])fs.writeFileSync(path.join(directory,'assets',`${id}_${part}.png`),empty);
+  await assert.rejects(()=>prepareCharacterAssets({directory}),{code:'PRIVATE_ASSET_EMPTY_ALPHA'});
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('late missing, malformed or transparent layers leave the whole accepted cast and manifest unchanged',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'studio-original-atomic-cast-'));
+ try{
+  writeSyntheticCast(directory);
+  await prepareCharacterAssets({directory});
+  const accepted={...assets},manifest=assetManifest;
+  const last=path.join(directory,'assets','b_forearm.png');
+  for(const failure of ['missing','malformed','transparent']){
+   writeSyntheticCast(directory,{width:24,height:64});
+   if(failure==='missing')fs.unlinkSync(last);
+   else fs.writeFileSync(last,failure==='malformed'?Buffer.from('not an image'):createCanvas(24,64).toBuffer('image/png'));
+   await assert.rejects(()=>prepareCharacterAssets({directory}),error=>failure==='malformed'?error.code==='InvalidArg':error.code===(failure==='missing'?'PRIVATE_ASSET_MISSING':'PRIVATE_ASSET_EMPTY_ALPHA'));
+   assert.equal(assetManifest,manifest,`${failure}: manifest must remain the accepted one`);
+   assert.deepEqual(Object.keys(assets),Object.keys(accepted));
+   for(const [id,image] of Object.entries(accepted))assert.equal(assets[id],image,`${failure}: ${id} must remain the accepted bitmap`);
+  }
+  writeSyntheticCast(directory,{width:24,height:64});
+  const replacement=await prepareCharacterAssets({directory});assert.notEqual(replacement,manifest);
+  for(const [id,image] of Object.entries(accepted))assert.notEqual(assets[id],image);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });

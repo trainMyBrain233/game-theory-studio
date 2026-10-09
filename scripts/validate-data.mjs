@@ -12,6 +12,11 @@ export function validateSchema(kind, data) {
   if (!validators.has(kind)) validators.set(kind, ajv.compile(readJSON(path.join(ROOT, `schemas/${kind}.schema.json`))));
   const validate = validators.get(kind);
   assert(validate(data), `${kind}: ${JSON.stringify(validate.errors)}`);
+  if (kind === 'tokens') {
+    for (const [id, style] of Object.entries(data.styles)) {
+      for (const field of ['name', 'subtitle']) normalizedLabel(style[field], `Tokens styles.${id}.${field}`);
+    }
+  }
 }
 export const close = (a, b) => assert(Math.abs(a - b) < 1e-6, `${a} != ${b}`);
 export function validateScenes(scenes) {
@@ -23,6 +28,16 @@ export function validateScenes(scenes) {
   assert.equal(scenes.selected.actorB, scenes.strategies[scenes.selected.column].id);
   assert.equal(new Set(scenes.actors.map(x => normalizedLabel(x.label, 'Player'))).size, 2, 'Player visible labels must differ');
   assert.equal(new Set(scenes.strategies.map(x => normalizedLabel(x.label, 'Strategy'))).size, 2, 'Strategy visible labels must differ');
+  // Each field below reaches a single fillText call in at least one supported
+  // proposal style. Automatic wrapping in other styles is not newline support.
+  // Reuse the Unicode contract without normalizing the authored display text or
+  // imposing the timeline subtitle line's separate 22-readable-character cap.
+  normalizedLabel(scenes.caseName, 'Scene caseName');
+  for (const frame of scenes.frames) {
+    for (const field of ['chapter', 'section', 'title', 'lead', 'subtitle']) {
+      normalizedLabel(frame[field], `Scene ${frame.id}.${field}`);
+    }
+  }
 }
 export function validateTimeline(timeline, scenes) {
   validateScenes(scenes);
@@ -69,6 +84,11 @@ export function validateTimeline(timeline, scenes) {
       for (const reveal of cue.score_reveals ?? []) {
         assert(['A', 'B'].includes(reveal.player), `${s.id}: invalid score owner`);
         assert(reveal.offset >= 0 && reveal.offset <= s.spoken_duration);
+        // Consumers use this absolute Float64 time in the half-open display
+        // window. A relative offset below the duration can still round to end.
+        const revealTime = s.start + reveal.offset;
+        assert(revealTime >= s.start && revealTime < s.end,
+          `${s.id}: score reveal must occur within the segment display window [start, end)`);
         assert.equal(reveal.value, cue.scores[reveal.player === 'A' ? 0 : 1]);
       }
     }

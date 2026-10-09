@@ -2,8 +2,11 @@
  * Captions remain 30px when the 3840px board is viewed at 1920px width.
  * Their middle baseline leaves room below the header divider without moving scenes.
  */
+import {normalizedLabel} from '../scripts/text-contract.mjs';
 export const COMPARISON_BOARD=Object.freeze({width:3840,height:1320,headerHeight:200});
 export function comparisonBoardTextPlan(style){
+ // Recheck live style overrides as well as the file's initial token validation.
+ for(const field of ['name','subtitle'])normalizedLabel(style[field],`Comparison board ${field}`);
  return [
   {id:'heading',text:style.name,x:84,y:83,size:62,weight:700,color:style.ink,align:'left',family:style.titleFamily},
   {id:'subtitle',text:style.subtitle,x:3756,y:83,size:38,weight:400,color:style.muted,align:'right',family:'sans'},

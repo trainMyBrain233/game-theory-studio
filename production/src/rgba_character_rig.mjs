@@ -11,16 +11,32 @@ export let assetManifest=characterManifest();
 const ROOT=path.resolve(import.meta.dirname,'../private_characters/pvz');
 function flipped(img){const c=createCanvas(img.width,img.height),x=c.getContext('2d');x.translate(img.width,0);x.scale(-1,1);x.drawImage(img,0,0);return c;}
 export async function prepareCharacterAssets({directory=ROOT}={}){
- const layers=[];
+ const layers=[],preparedAssets={};
  for(const id of ['a','b'])for(const part of CHARACTER_LAYERS){
   const file=path.join(directory,'assets',`${id}_${part}.png`);
   if(!fs.existsSync(file)){const e=new Error(`Missing private character layer: ${path.relative(path.resolve(import.meta.dirname,'..'),file)}. Supply the private production assets, or run with --placeholder-cast for the original SVG CI cast.`);e.code='PRIVATE_ASSET_MISSING';throw e;}
   const bytes=fs.readFileSync(file),img=await loadImage(bytes),contract=layerContract(id,part);
   // Only geometric atlas cropping/flipping: the generated alpha is untouched.
-  assets[`${id}_${part}`]=contract.prepare_flip_x?flipped(img):img;
+  const prepared=contract.prepare_flip_x?flipped(img):img;
+  // Match drawCharacter's source rectangle. Pixels below an upper-arm crop
+  // cannot make an otherwise invisible required layer pass acceptance.
+  const usedHeight=Math.min(prepared.height,contract.cropHeight??prepared.height);
+  const mask=createCanvas(prepared.width,usedHeight),ctx=mask.getContext('2d');
+  ctx.drawImage(prepared,0,0);
+  const rgba=ctx.getImageData(0,0,mask.width,mask.height).data;
+  let visible=false;
+  for(let alpha=3;alpha<rgba.length;alpha+=4)if(rgba[alpha]>0){visible=true;break;}
+  if(!visible){
+   const e=new Error(`Private character layer ${contract.id} has no visible alpha in its rig source rectangle (0,0,${prepared.width},${usedHeight}).`);
+   e.code='PRIVATE_ASSET_EMPTY_ALPHA';throw e;
+  }
+  preparedAssets[contract.id]=prepared;
   layers.push({...contract,file:`assets/${id}_${part}.png`,stored:{width:img.width,height:img.height,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')},prepared:{width:img.width,height:img.height}});
  }
- assetManifest=characterManifest(layers);return assetManifest;
+ // A missing, malformed or invisible late layer must not replace part of a
+ // previously accepted cast. Publish only after the complete set validates.
+ const manifest=characterManifest(layers);
+ Object.assign(assets,preparedAssets);assetManifest=manifest;return assetManifest;
 }
 export function handAt(id,t){
  const rest=[293,135],selected=[380,143],lift=[423,84],place=[490,143];

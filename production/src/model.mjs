@@ -1,3 +1,4 @@
+import {productionPalette} from './palette.mjs';
 import {readJSON,validateScenes,validateFirstEpisodeTimeline,validateSchema} from '../../scripts/validate-data.mjs';
 import Ajv2020 from 'ajv/dist/2020.js';
 
@@ -29,6 +30,6 @@ export const TOKENS=read('../tokens.json');
 const validateTokens=ajv.compile(read('../schema/tokens.schema.json'));
 if(!validateTokens(TOKENS))throw Error(`Production token schema: ${JSON.stringify(validateTokens.errors)}`);
 const palette=design.styles.textbook;
-TOKENS.colors={paper:palette.paper,ink:palette.ink,secondary:palette.muted,line:palette.line,focus_fill:palette.wash,red_strategy:design.semantic.strategyRed.fill,blue_strategy:design.semantic.strategyBlue.fill};
+TOKENS.colors=productionPalette(design,read('../assets/asset-hotspots.json').cards.labelStyle.fill);
 TOKENS.type.subtitle=design.canvas.subtitleFont;
 TOKENS.titleFamily=palette.titleFamily;

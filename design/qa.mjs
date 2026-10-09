@@ -4,14 +4,13 @@ import {fileURLToPath} from 'node:url';
 import {createCanvas,loadImage} from '@napi-rs/canvas';
 import {TOKENS,DATA,drawScene} from './render-proposals.mjs';
 import {verifySelection} from '../scripts/render-contract.mjs';
+import {inspectTextContrast,proposalTextPairs} from './text-contrast.mjs';
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 const results=[];function check(name,ok,details){results.push({name,ok,details});if(!ok)console.error('FAIL',name,details)}
 const matrixGeometry={editorial:[976,421,353,184],textbook:[382,496,332,159],bright:[316,444,310,181]};
 const ownershipIssues=[],selectionIssues=[];
-const lum=h=>{const ch=h.match(/\w\w/g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return ch[0]*.2126+ch[1]*.7152+ch[2]*.0722};
-const contrast=(a,b)=>{const l=[lum(a),lum(b)].sort((a,b)=>a-b);return (l[1]+.05)/(l[0]+.05)};
 for(const [id,s] of Object.entries(TOKENS.styles)){
- for(const role of ['ink','muted']){let r=contrast(s[role],s.paper);check(`${id}: ${role} contrast ≥ 4.5`,r>=4.5,+r.toFixed(2))}
+ for(const p of inspectTextContrast(proposalTextPairs(TOKENS,id)))check(`${id}: ${p.role} contrast ≥ ${p.minimum}`,p.ratio>=p.minimum,+p.ratio.toFixed(3));
  const board=await loadImage(path.join(HERE,`boards/${id}_comparison_3840x1320.png`));check(`${id}: board native dimensions`,board.width===3840&&board.height===1320,[board.width,board.height]);
  for(const [index,scene] of DATA.frames.entries()){
   const file=path.join(HERE,`frames/${id}_${scene.id}_1920x1080.png`);let frame=await loadImage(file);check(`${id}/${scene.id}: native 1080p`,frame.width===1920&&frame.height===1080,[frame.width,frame.height]);
