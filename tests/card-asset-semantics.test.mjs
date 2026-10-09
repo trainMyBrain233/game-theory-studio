@@ -82,7 +82,15 @@ test('real card rendering retains distinct colors and symbols with default and c
  const baseline=run(root,source,true);assert.equal(baseline.status,0,baseline.stdout+baseline.stderr);
  const original=JSON.parse(baseline.stdout);
  const scenes=read('design/scenes.json');
- const replacements=scenes.strategies.map((strategy,index)=>[strategy.label,['合作','退出'][index]]);
+ // case-reuse may already use one of these pairs. Select new, nonoverlapping
+ // labels so every variation changes visible ink and sequential replacement
+ // cannot consume a label it just introduced.
+ const labels=scenes.strategies.map(strategy=>strategy.label);
+ const alternatives=[['合作','退出'],['同行','停留'],['加入','离开']];
+ const changedLabels=alternatives.find(pair=>pair.every(label=>labels.every(current=>!label.includes(current))));
+ assert(changedLabels,'Fixture needs an alternate pair distinct from the current case');
+ const replacements=labels.map((label,index)=>[label,changedLabels[index]]);
+ for(const [before,after] of replacements)assert.notEqual(after,before,'Each strategy label must actually change before rendering');
  for(const relative of ['design/scenes.json','chapters/01-four-elements/narration/timeline.json']){
   const file=path.join(root,relative);
   let document=fs.readFileSync(file,'utf8');

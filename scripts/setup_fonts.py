@@ -25,28 +25,30 @@ def names(font, name_id):
     return {n.toUnicode() for n in font['name'].names if n.nameID == name_id}
 
 def verify(file, kind, weight):
-    f = TTFont(str(file), lazy=True)
-    wanted = f'Noto {kind} CJK SC'
-    families = names(f, 1) | names(f, 16)
-    if wanted not in families:
-        raise ValueError(f'{file}: expected {wanted}, got {sorted(families)}')
-    expected_weight = 400 if weight == 'Regular' else 700
-    if f['OS/2'].usWeightClass != expected_weight:
-        raise ValueError(f'{file}: wrong weight')
-    versions = sorted(names(f, 5))
-    if not any(v.startswith(f'Version {EXPECTED_VERSIONS[kind]};') for v in versions):
-        raise ValueError(f'{file}: expected Noto {kind} version {EXPECTED_VERSIONS[kind]}, got {versions}')
-    cmap = f.getBestCmap()
-    missing = [c for c in '博弈论入门参与者信息策略收益每种组合各得什么选择规则红蓝' if ord(c) not in cmap]
-    if missing:
-        raise ValueError(f'{file}: missing Chinese glyphs: {missing}')
-    # Full Noto CJK sources contain far more glyphs; reject tiny specimen subsets.
-    if len(f.getGlyphOrder()) < 20000:
-        raise ValueError(f'{file}: appears to be a small subset, not a complete CJK font')
-    result = {'family':wanted,'weight':expected_weight,'version':sorted(names(f, 5)),
-              'glyph_count':len(f.getGlyphOrder()),'sha256':hashlib.sha256(file.read_bytes()).hexdigest()}
-    f.close()
-    return result
+    with TTFont(str(file), lazy=True) as f:
+        wanted = f'Noto {kind} CJK SC'
+        families = names(f, 1) | names(f, 16)
+        if wanted not in families:
+            raise ValueError(f'{file}: expected {wanted}, got {sorted(families)}')
+        expected_weight = 400 if weight == 'Regular' else 700
+        if f['OS/2'].usWeightClass != expected_weight:
+            raise ValueError(f'{file}: wrong weight')
+        versions = sorted(names(f, 5))
+        if not any(v.startswith(f'Version {EXPECTED_VERSIONS[kind]};') for v in versions):
+            raise ValueError(f'{file}: expected Noto {kind} version {EXPECTED_VERSIONS[kind]}, got {versions}')
+        # Cmap membership alone can point at the missing-glyph slot. Apply the
+        # same real-glyph contract before preparation/registration as later QA.
+        cmap = {code for code, name in (f.getBestCmap() or {}).items()
+                if name != '.notdef' and f.getGlyphID(name) != 0}
+        missing = [c for c in '博弈论入门参与者信息策略收益每种组合各得什么选择规则红蓝' if ord(c) not in cmap]
+        if missing:
+            raise ValueError(f'{file}: missing Chinese glyphs: {missing}')
+        # Full Noto CJK sources contain far more glyphs; reject tiny specimen subsets.
+        if len(f.getGlyphOrder()) < 20000:
+            raise ValueError(f'{file}: appears to be a small subset, not a complete CJK font')
+        result = {'family':wanted,'weight':expected_weight,'version':sorted(names(f, 5)),
+                  'glyph_count':len(f.getGlyphOrder()),'sha256':hashlib.sha256(file.read_bytes()).hexdigest()}
+        return result
 
 def prepare(source, target, kind, weight):
     temp = target.with_suffix('.tmp.otf')

@@ -80,6 +80,22 @@ class NarrationValidationTests(unittest.TestCase):
         self.assertIn(message, result.stderr)
         self.assertFalse(missing.exists(), 'Invalid input must fail before creating any output directory')
 
+    def test_all_builders_reject_punctuation_only_captions_before_output(self):
+        for source in [EPISODE, ORIGINAL, 'templates/chapter/build_narration.py']:
+            with tempfile.TemporaryDirectory() as directory:
+                builder = self.fixture(Path(directory), source)
+                text = builder.read_text(encoding='utf-8')
+                rows, case = ('rows', 'CASE') if source == EPISODE else ('segments', 'case')
+                marker = f'validate_narration({rows}, {case})'
+                self.assertEqual(text.count(marker), 1)
+                injection = (f"row = {rows}[0]\n"
+                             "row['text'] = row['voiceover'] = '。'\n"
+                             "row['lines'] = ['。']\nrow['breath_points'] = []\n")
+                builder.write_text(text.replace(marker, injection + marker), encoding='utf-8')
+                for mode in MODES:
+                    with self.subTest(source=source, mode=mode):
+                        self.check_rejected_without_writes(builder, mode, 'at least one readable')
+
     def test_all_input_gates_survive_optimization_before_output(self):
         mutations = [
             ("cue['matrix_cell'] = 'XX'", 'unknown matrix cell'),

@@ -49,6 +49,36 @@ print(json.dumps(results, ensure_ascii=False))`, [atLimit, overLimit, atLimit + 
   }
 });
 
+test('spoken captions need readable content in both languages while retaining valid punctuation', () => {
+  const emptyReadable = ['。', '，；。！？：', '...?!', '🙂', '\u0301'];
+  const visible = ['中。', 'é，', '١！', 'Ⅻ？', '²：', '\u{31350}。', 'e\u0301。', 'A B。'];
+  const invalidLayout = ['', ' ', '　', ' 中。', '中。 ', '中\n文', '中\u200B', '中\u034F', '\u3164'];
+  const samples = [...emptyReadable, ...visible, ...invalidLayout];
+  const expected = samples.map(text => {
+    try {validateSubtitleLine(text); return 'accepted';}
+    catch (error) {return error.message;}
+  });
+  const actual = python(`import json,sys
+sys.path.insert(0, 'scripts')
+from text_contract import validate_subtitle_line
+out=[]
+for text in json.load(sys.stdin):
+    try: validate_subtitle_line(text); out.append('accepted')
+    except ValueError as error: out.append(str(error))
+print(json.dumps(out))`, samples);
+  assert.deepEqual(actual, expected);
+  for (const text of emptyReadable) {
+    assert.equal(readableCount(text), 0);
+    assert.throws(() => validateSubtitleLine(text), /at least one readable/);
+    const timeline = structuredClone(original), segment = timeline.segments[0];
+    segment.text = segment.voiceover = text; segment.lines = [text]; segment.breath_points = [];
+    assert.throws(() => validateTimeline(timeline, scenes), /at least one readable/);
+  }
+  visible.forEach(text => validateSubtitleLine(text));
+  invalidLayout.forEach(text => assert.throws(() => validateSubtitleLine(text), /trimmed|single-line/));
+  assert.throws(() => validateSubtitleLines(['中，', '。'], '中，。', [], []), /at least one readable/);
+});
+
 test('pinned Unicode support is independent of a newer Node UCD and fails closed', () => {
   assert.equal(TEXT_UNICODE_VERSION, '15.0.0');
   for (const value of ['\u{1C89}', '\u{2EBF0}', '\u{10FFFF}', '\uE000', '\uD800']) {

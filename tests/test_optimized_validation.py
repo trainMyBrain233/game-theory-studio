@@ -253,6 +253,8 @@ class ValidationFixtures(unittest.TestCase):
             timeline = root / 'chapters/01-four-elements/narration/timeline.json'
             timeline.parent.mkdir(parents=True)
             timeline.write_text(json.dumps({'duration': 2}), encoding='utf-8')
+            (production / 'tokens.json').write_text(
+                '{"encoding": {"faststart": false}}', encoding='utf-8')
             source = root / 'fixture.mp4'
             source.write_bytes(b'controlled media fixture')
             report = production / 'qa/media_fixture.mp4.json'

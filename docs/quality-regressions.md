@@ -315,6 +315,29 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** 四项候选及上述专项/有界转场证据已冻结；此前 QA fixture 修补和本轮定向通过不等于新全链通过，最终新 head 完整双平台 CI/复审待验，PR 未记为合并。
 
+### `9e0a7b7` CI：卡面变体必须真正改变当前标签
+
+`9e0a7b7329c3d4e4cbcf9b2220c206c4391cbc13` 的 [PR Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37916757517) 与 [push Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37916748710) 已全部终态：push/PR × Ubuntu/macOS 四个 job 均为 changed-case 内层 `test:core` 的同一卡面像素 fixture 失败，未发现第二种 CI 错误。默认 core 均为 JS 854 项中 851 通过/3 skip；Python 各 140 项，Ubuntu 135 通过/5 skip、macOS 134 通过/6 skip。后续 episode 尚未到达，这些默认阶段结果不能代替 changed-case 或整条 CI 成功。
+
+`tests/card-asset-semantics.test.mjs` 将策略标签固定替换为“合作/退出”，但 case-reuse 的当前标签已经相同，所谓变体实际是 no-op；要求像素必须不同的断言因此失败，未证明卡面绑定或标签绘制存在生产错误。修补仅在该测试中从三对有效短标签选择与当前标签不重叠的一对，避免 no-op，也避免顺序 replacement 再吃掉刚引入的新标签；逐个断言 after!=before，原标签墨迹变化、颜色/圆形/横条与无标签背面稳定等像素断言保持不变，生产代码不改。教训：变体不是“看起来与原始默认不同”即可，每个正负例必须证明它相对于本次输入确实发生了预期变化。
+
+**冻结专项证据：** 原测试在真实重建 narration 的 exact case-reuse 输入下复现 2 pass/1 fail，精确命中 red label ink 应变化的断言。修后完整专属文件在默认、明月/青禾+合作/退出+11/12…41/42 不对称收益+默认 BR，以及独立“同行/停留”与另一不对称矩阵+默认 RB 三种输入中各 3/3 通过。后两者均隔离源码副本并真实 build:narration，子进程继承项目 Python；每组仍保留十种错误素材映射的 schema/真实 model 拒绝及六张真实卡面的颜色、符号、标签墨迹和背面检查（Linux、Node 24.19.0）。九个顶层测试运行不能当作完整 npm test 或 CI 通过。
+
+**当前状态：** 最小 fixture 修补与上述定向证据已冻结，原 head 四个 job 已确认同因失败；旧失败及各变体日志已保留。根级另独立集成该 fixture 的九个测试运行通过，源码 QA 扫描当时 343 文件通过。安全复审于 2026-10-09 10:26:01 UTC 完成，无新增项；代码复审于 10:30:15 完成并新增下节四项 P2，不能称双审查已通过。修补后新 head 的完整验证待验，PR 未记为合并。
+
+## PR #4 `9e0a7b7` 新增 4 项：首次字体覆盖、聚焦顺序、faststart 与空字幕
+
+[自动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5468861174)于 2026-10-09 10:30:15 UTC 完成，对 `9e0a7b7329c3d4e4cbcf9b2220c206c4391cbc13` 新增以下四项 P2。上节卡面 no-op fixture 修补与四路 CI 同因失败保持独立记录；安全审查无新增项不代表这些新代码问题已经接受。
+
+- **本轮-1：首次注册依赖的必需字形检查同样不能只看 cmap membership。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4229150203)指向 `scripts/setup_fonts.py`，区别于已修的后续完整 inventory QA：本地 TTC 的既有必需字符指向 `.notdef`/ID0 时，`verify_cached` 可重现相同错误字节并让首次注册放行。`scripts/setup_fonts.py` 的 verify 现要求既有必需中文字符的映射名称不是 `.notdef` 且真实 glyph ID 非 0，prepare、verify_cached 与首次注册适配器都先经过该检查；TTFont 使用 context manager，失败后先关闭字体再清临时文件。新 `tests/test_setup_font_glyphs.py` 用真实合成 20,000 glyph TTC 证明磁盘非零 `.notdef` 映射旧代码可准备/缓存、新代码拒绝；ID0 别名另用真实内存 TTFont，因为磁盘解码会丢弃该映射。旧缓存 manifest 经实际 `typography/verify-fonts.py` 也拒绝、无成功 stdout 且字体/来源/manifest 字节不变；失败 prepare 保留旧 target 并清临时，合法 TTC 保留 source SHA/face index 与独立重提取 SHA，官方 OTF pin 不改。专属 5/5（10.442 秒，内部四核心回归在普通/`-O`/`-OO` 共 12 次），既有 glyph 四项、registration verifier 三项及相邻 JS 注册/缓存 15/15 通过，现有四字体 verify-only 通过（Linux、Node 24.19.0、Python 3.12.14）。这些是既有必需字符集和来源证据，不替代后续当前文案完整 inventory QA。教训：后续 QA 已拒绝的输入，不应仍能从更早的公开渲染入口首次使用。
+- **本轮-2：每个收益揭示不得早于所属 scope 的聚焦。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4229150209)中新的 animatic case scope 把 focus_cell 放到两条 reveal_score 后，事件各自匹配 phase/cell 却仍能通过，较早帧显示收益时 activeCell 为 null，缺少选中填色/边框与解释。`production/src/animatic/semantic-state.mjs` 先为每个声明 scope 找到唯一 activation，再要求每个 reveal_score.frame 不早于自己 phase.focus.scope 的 activation.frame；同 cell 的旧 scope focus 不能满足新 scope。focus/reveal 同帧仍合法，不依赖事件数组或 ID 排序；此前合法揭示的值可跨后续 scope 保留，不强制重复揭示。新 `tests/animatic-score-focus.test.mjs` 复现 focus=110、scores=90/100 时旧状态在 frame100 为 activeCell=null/RR=[2,7]，覆盖多个迟 focus、提前/同帧与逆序正例、共享 choice scope、后续值复用、更名与 3 倍手动时间。新八项、与 state/reveal-cycle 合并 105/105 通过；仅移除顺序断言的反向变异出现五个所需异常缺失，三个正例保持。完整 `test:animatic` 尝试被终止、退出 137，原因不推断，未获得该原生整组完成证据，不借纯状态测试声称完整渲染通过（Linux、Node 24.19.0）。教训：事件各自合法不证明语义先后关系成立，同一 scope 的激活与显示应形成明确偏序。
+- **本轮-3：MP4 编码声明中的 faststart 需要实际文件布局证据。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4229150213)中未启用 faststart 的合法 H.264 MP4 仍有同样 probe 元数据且完整解码，却将 moov 放在 mdat 后，不满足现有 tokens 的 faststart=true。`production/qa/media_contract.py` 新增实际顶层 ISO BMFF box 检查，`verify_media.py` 在 tokens 声明 faststart=true 时要求恰好一个 moov 且位于首个 mdat 前，并把结果写入报告。每次 header read 最多八字节、payload 用 seek 跳过、最多 100,000 个 box；支持 32 位/64 位 largesize、size=0 到 EOF 与 uuid 最小 header，拒绝截断、过小/越界 box、缺失/重复 moov、缺 mdat、payload 中假 marker 及 late moov。八 GiB 稀疏 fixture 仅用三次八字节读取；畸形受控文件只替代 metadata，要求在 decode/hash/报告前拒绝。新 `tests/test_media_faststart.py` 五项含普通/`-O`/`-OO`，真实 FFmpeg 六帧 H.264 MP4 分别启用/关闭 faststart，并交叉 required=true/false 共 12 次 CLI 验证，核对摘要/完整解码和拒绝时旧报告不变；既有 hash/优化 fixture 显式关闭 faststart 以隔离原合同。最终 `test_media_*.py` 19/19（11.097 秒）、优化专项 5/5（1.961 秒）通过（Linux、Python 3.12.14、Node 24.19.0、FFmpeg 7.1.5），仅极短媒体及结构边界，不是整片接受。教训：容器/流/解码通过不能证明索引在媒体数据前，不能仅凭编码参数或文件名报告满足交付布局。
+- **本轮-4：字幕的可读字符数还需要正下界。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4229150222)中 voiceover/text/唯一 subtitle line 同为纯标点，旧规则只检查 readableCount≤22，零可读字符也能生成口播/SRT。`scripts/text-contract.mjs` 与 `text_contract.py` 现要求每一字幕行有 1–22 个 Unicode 15 L/N 可读字符，不能靠另一行有内容抵消纯标点行；既有 voiceover/text/lines 等价检查把下界传到生成产品。真实文本中的标点保持合法，纯 emoji/组合标记不能代替可读字符；CJK（含扩展 H）、字母、Arabic-Indic 数字及 Letter/Other Number 正例通过，已有边界空白/控制/default-ignorable 拒绝不变。JS text-contract 36/36、Python text-contract 6/6、narration-validation 6/6 通过；三个真实 builder 在普通/`-O`/`-OO`/`PYTHONOPTIMIZE=1/2` 下运行合计 30 次纯标点负例，拒绝前不建新输出目录，旧产品字节不变。源码 QA 扫描当时 345 文件通过（Linux、Node 24.19.0、Python 3.12.14），不是渲染/音频验收，也不凭正字符数自动断言一句话语义完整。教训：非空字符串与可读内容不是同一条件，长度上限不能替代语义内容的最低要求。
+
+**根级定向集成：** Node 94/94、0 skip，Python media 19/19 与 setup-font 五项均无 skip 通过；qa:data 两章 39 blocks、editorial 只读重建及源码 QA 346 文件通过。这些与各专项有重叠，不相加为完整工程通过数，也不把未完成的 `test:animatic` 改记成功。
+
+**当前状态：** 四项候选与上述有界专项/定向集成证据已冻结；原卡面 fixture 及本轮定向通过不等于新全链通过，最终新 head 完整双平台 CI/复审待验，PR 未记为合并。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

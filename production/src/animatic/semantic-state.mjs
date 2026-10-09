@@ -164,7 +164,18 @@ export function compilePlan(input) {
     for(const phase of narrated)assert(reveals.every(event=>event.frame<phase.endFrame),`${phase.id}: narrated scores must be revealed by the end of their current window`);
   }
   const scopes=new Set(phases.map(phase=>phase.focus.scope).filter(scope=>scope!==null));
-  for(const scope of scopes)assert.equal(events.filter(event=>event.phaseId===scope && event.type==='focus_cell').length,1,`Focused scope ${scope} requires exactly one activation`);
+  const activations=new Map();
+  for(const scope of scopes) {
+    const focused=events.filter(event=>event.phaseId===scope && event.type==='focus_cell');
+    assert.equal(focused.length,1,`Focused scope ${scope} requires exactly one activation`);
+    activations.set(scope,focused[0]);
+  }
+  // An earlier activation of the same cell belongs to its own scope. Compare
+  // frames, not sorted event positions: simultaneous focus/reveal is valid.
+  for(const event of events.filter(event=>event.type==='reveal_score')) {
+    const scope=byPhase.get(event.phaseId).focus.scope;
+    assert(event.frame>=activations.get(scope).frame,`${event.id}: score reveal must not precede focus activation in scope ${scope}`);
+  }
   validateCardCycles(phases,events);
   const compiled=deepFreeze({plan,phases,events});compiledPlans.add(compiled);return compiled;
 }

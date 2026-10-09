@@ -106,6 +106,8 @@ class MediaHashBounds(unittest.TestCase):
         self.qa.mkdir(parents=True)
         for name in ['verify_media.py', 'media_contract.py']:
             shutil.copyfile(ROOT / 'production/qa' / name, self.qa / name)
+        (self.root / 'production/tokens.json').write_text(
+            '{"encoding": {"faststart": false}}', encoding='utf-8')
         timeline = self.root / 'chapters/01-four-elements/narration/timeline.json'
         timeline.parent.mkdir(parents=True)
         timeline.write_text('{"duration": 1}', encoding='utf-8')

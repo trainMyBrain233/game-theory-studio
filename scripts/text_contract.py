@@ -69,7 +69,10 @@ def normalized_label(label, role='Label'):
 
 def validate_subtitle_line(line, role='Subtitle'):
     single_line(line, role)
-    if readable_count(line) > 22:
+    count = readable_count(line)
+    if count < 1:
+        raise ValueError(f'{role}: subtitle line must contain at least one readable letter or number')
+    if count > 22:
         raise ValueError(f'{role}: subtitle line exceeds 22 readable characters')
 
 

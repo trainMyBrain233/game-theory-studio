@@ -48,7 +48,9 @@ export function normalizedLabel(label, role = 'Label') {
 }
 export function validateSubtitleLine(line, role = 'Subtitle') {
   singleLine(line, role, false);
-  requireText(readableCount(line) <= 22, `${role}: subtitle line exceeds 22 readable characters`);
+  const count = readableCount(line);
+  requireText(count >= 1, `${role}: subtitle line must contain at least one readable letter or number`);
+  requireText(count <= 22, `${role}: subtitle line exceeds 22 readable characters`);
 }
 export function spokenNumber(value) {
   requireText(Number.isInteger(value) && value >= 0 && value <= 99, 'Narrated score must be integer 0..99');

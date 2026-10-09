@@ -1,6 +1,7 @@
-"""Pure stream contract; metadata checks complement, never replace full decode."""
+"""Media contracts; metadata and box checks complement, never replace full decode."""
 from fractions import Fraction
 import math
+import os
 
 
 def video_frame_count(seconds, fps=30):
@@ -87,3 +88,53 @@ def validate_streams(info, duration, fps=30):
         if int(stream['channels']) not in [1, 2]:
             raise ValueError('Expected mono or stereo audio')
     return video, audio, count
+
+
+def validate_faststart(path):
+    """Check top-level ISO BMFF box order with constant memory and bounded work.
+
+    Only headers are read; seek over media payloads instead of loading a film.
+    This structural check complements ffprobe and full decode, not their contents.
+    """
+    moov = None
+    first_mdat = None
+    with path.open('rb') as stream:
+        length = os.fstat(stream.fileno()).st_size
+        offset = 0
+        boxes = 0
+        while offset < length:
+            boxes += 1
+            if boxes > 100000:
+                raise ValueError('MP4 box count exceeds validation limit')
+            stream.seek(offset)
+            header = stream.read(8)
+            if len(header) != 8:
+                raise ValueError('Truncated MP4 box header')
+            size = int.from_bytes(header[:4], 'big')
+            kind = header[4:]
+            header_size = 8
+            if size == 1:
+                extended = stream.read(8)
+                if len(extended) != 8:
+                    raise ValueError('Truncated MP4 largesize header')
+                size = int.from_bytes(extended, 'big')
+                header_size = 16
+            elif size == 0:
+                # A zero-sized box extends to EOF, never to the next marker.
+                size = length - offset
+            if kind == b'uuid':
+                header_size += 16
+            if size < header_size or size > length - offset:
+                raise ValueError('Invalid or truncated MP4 box size')
+            if kind == b'moov':
+                if moov is not None:
+                    raise ValueError('Expected exactly one top-level MP4 moov box')
+                moov = offset
+            elif kind == b'mdat' and first_mdat is None:
+                first_mdat = offset
+            offset += size
+        if moov is None or first_mdat is None:
+            raise ValueError('Expected top-level MP4 moov and mdat boxes')
+        if moov > first_mdat:
+            raise ValueError('Expected MP4 faststart: moov must precede mdat')
+    return {'moov_offset': moov, 'first_mdat_offset': first_mdat}

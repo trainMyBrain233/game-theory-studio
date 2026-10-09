@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from case_data import Case
 from text_contract import (normalized_label, readable_count, validate_subtitle_lines,
-                           TEXT_UNICODE_VERSION)
+                           TEXT_UNICODE_VERSION, validate_subtitle_line)
 
 
 class TextContractTests(unittest.TestCase):
@@ -33,6 +33,25 @@ class TextContractTests(unittest.TestCase):
                     case.lines(char * 23)
                 self.assertEqual(case.lines(char * 22 + '，' + char), [char * 22 + '，', char])
         self.assertEqual(readable_count('e\u0301，。 𝟜🙂'), 2)
+
+    def test_spoken_captions_require_readable_content_without_banning_punctuation(self):
+        case = Case(ROOT)
+        for text in ['。', '，；。！？：', '...?!', '🙂', '\u0301']:
+            with self.subTest(text=text):
+                self.assertEqual(readable_count(text), 0)
+                with self.assertRaisesRegex(ValueError, 'at least one readable'):
+                    validate_subtitle_line(text)
+                with self.assertRaisesRegex(ValueError, 'at least one readable'):
+                    case.lines(text)
+        for text in ['中。', 'é，', '١！', 'Ⅻ？', '²：', '\U00031350。', 'e\u0301。', 'A B。']:
+            with self.subTest(text=text):
+                validate_subtitle_line(text)
+                self.assertEqual(case.lines(text), [text])
+        for text in ['', ' ', '　', ' 中。', '中。 ', '中\n文', '中\u200B', '中\u034F', '\u3164']:
+            with self.subTest(text=ascii(text)), self.assertRaisesRegex(ValueError, 'trimmed|single-line'):
+                validate_subtitle_line(text)
+        with self.assertRaisesRegex(ValueError, 'at least one readable'):
+            validate_subtitle_lines(['中，', '。'], '中，。', [], [])
 
     def test_case_generator_rejects_semantic_breaks_inside_changed_labels(self):
         with tempfile.TemporaryDirectory() as temporary:
