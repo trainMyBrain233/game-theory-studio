@@ -9,6 +9,7 @@ import {presentationModel} from './presentation.mjs';
 import {drawAvatar} from './avatar.mjs';
 import {loadPublicCast} from './public-cast.mjs';
 import {drawIdentityMatrix} from './identity-matrix.mjs';
+import {renderFrameRun} from './frame-run.mjs';
 import {DISPLAY_TEXT,candidateHeader,comparisonHeading,tabletopStatus} from './display-text.mjs';
 const args=process.argv.slice(2);
 if(args[0]!=='--placeholder-cast'||args.length>2||(args.length===2&&args[1]!=='--flat-regression'))throw Error('This prototype accepts only explicit --placeholder-cast; no external character layers are loaded.');
@@ -89,11 +90,11 @@ fs.writeFileSync(path.join(output,'prototype-manifest.json'),JSON.stringify({sta
 console.log(`Wrote 3 comparison boards, 12 native 1080p original-placeholder frames and 1 identity/matrix proof to ${path.relative(root,output)}. Prototype only; no production render changed.`);
 
 if(args.includes('--flat-regression')){
- const flatOut=path.join(root,'artifacts/tabletop-flat-regression'),frames=path.join(flatOut,'frames');fs.mkdirSync(frames,{recursive:true});
- const clip=flatRegressionWindow(timeline);
- for(let frame=0;frame<clip.frames;frame++){const canvas=createCanvas(1920,1080);draw(canvas.getContext('2d'),tabletopState('flat-rest',clip.start+frame/clip.fps,{scene:presentation.scene,timeline}));fs.writeFileSync(path.join(frames,`${String(frame).padStart(4,'0')}.png`),canvas.toBuffer('image/png'));}
- fs.writeFileSync(path.join(flatOut,'clip-manifest.json'),JSON.stringify({...clip,sourceReachEnd:schedule.reachEnd,status:'prototype',playback:'pending'},null,2)+'\n');
- const movie=path.join(flatOut,'flat-unselected-pose.mp4'),encoded=spawnSync('ffmpeg',['-v','error','-y','-framerate',String(clip.fps),'-i',path.join(frames,'%04d.png'),'-c:v','libx264','-crf','18','-pix_fmt','yuv420p','-movflags','+faststart',movie],{encoding:'utf8'});if(encoded.status!==0)throw Error(encoded.stderr);
- const decoded=spawnSync('ffmpeg',['-v','error','-i',movie,'-f','null','-'],{encoding:'utf8'});if(decoded.status!==0)throw Error(decoded.stderr);
- console.log('Wrote 2s / 60-frame flat pickup regression excerpt; only the chosen card rotates, non-selected fading remains a prototype.');
+ const flatOut=path.join(root,'artifacts/tabletop-flat-regression');
+ const clip=flatRegressionWindow(timeline),movie=path.join(flatOut,'flat-unselected-pose.mp4');
+ renderFrameRun({movie,fps:clip.fps,frameCount:clip.frames,frame:frame=>{
+  const canvas=createCanvas(1920,1080);draw(canvas.getContext('2d'),tabletopState('flat-rest',clip.start+frame/clip.fps,{scene:presentation.scene,timeline}));return canvas.toBuffer('image/png');
+ }});
+ fs.writeFileSync(path.join(flatOut,'clip-manifest.json'),JSON.stringify({...clip,duration:clip.frames/clip.fps,sourceReachEnd:schedule.reachEnd,status:'prototype',playback:'pending'},null,2)+'\n');
+ console.log(`Wrote ${clip.frames/clip.fps}s / ${clip.frames}-frame flat pickup regression excerpt; only the chosen card rotates, non-selected fading remains a prototype.`);
 }

@@ -97,7 +97,7 @@ timeline Schema 2.1 的 `reveal_scores` 是完整四格揭示合同：必须有�
 
 [工程目录/Schema/版本流程](docs/project-structure.md) · [贡献指南](CONTRIBUTING.md) · [AGENTS 审查规则](AGENTS.md) · [交付检查单](docs/delivery-checklist.md) · [视觉系统](docs/visual-system.md) · [口播契约](chapters/01-four-elements/narration/README.md)
 
-[Quality 工作流](.github/workflows/quality.yml) 在 PR/普通分支 push 上执行 Ubuntu/macOS 检查：只读 contents、官方 Actions 固定 SHA、不保留 checkout 凭证、不引用 secrets、不发布内容，也不使用 pull_request_target。实际 CI 结果必须对应最终 commit。GitHub/Codex Auto review 的账号连接与设置由独立任务管理。
+[Quality 工作流](.github/workflows/quality.yml) 在 PR、无分支/标签过滤的普通 push 及手动触发时执行 Ubuntu/macOS 检查，普通 feature 分支也包含在内。同仓库分支已有 PR 时，一次 push 可同时产生 push 与 PR synchronize 两次质量运行；两者按各自的 `github.ref` 跟踪，这是正常行为。权限仍为只读 contents、官方 Actions 固定 SHA、不保留 checkout 凭证、不引用 secrets、不发布内容，也不使用 pull_request_target。实际 CI 结果必须对应最终 commit。GitHub/Codex Auto review 的账号连接与设置由独立任务管理。
 
 保留已工作的 `design/`、`typography/` 相对导入。production 统一使用根案例、字体和第一章时间轴，保留生产渲染函数。后续生产资产/完整影片验收时，单独核对角色来源、音轨、中间帧、编码和播放端，不能把本基础工程通过扩写成正片完成。
 

@@ -18,7 +18,7 @@ test('actual drawing primitives record the applied nested alpha, including faint
  import assert from 'node:assert/strict';
  import {tx,line,group,records,routes,resetRecords} from './production/src/primitives.mjs';
  const stack=[];const c={canvas:{width:1920},globalAlpha:1,save(){stack.push({alpha:this.globalAlpha});},restore(){this.globalAlpha=stack.pop().alpha;},
- translate(){},getTransform(){return {a:1,b:0,c:0,d:1,e:0,f:0};},measureText(){return {width:60,actualBoundingBoxAscent:28,actualBoundingBoxDescent:8};},fillText(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}};
+ translate(){},getTransform(){return {a:1,b:0,c:0,d:1,e:0,f:0};},measureText(){return {width:60,actualBoundingBoxLeft:0,actualBoundingBoxRight:60,actualBoundingBoxAscent:28,actualBoundingBoxDescent:8};},fillText(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}};
  for(const alpha of [.12,.02,.001,Number.EPSILON,0]){
   resetRecords();c.globalAlpha=.5;
   group(c,.5,0,0,()=>group(c,alpha,0,0,()=>{tx(c,'fixture',100,100);line(c,0,0,100,100);}));

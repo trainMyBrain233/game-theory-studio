@@ -33,10 +33,11 @@ export function validateScenes(scenes) {
   // Reuse the Unicode contract without normalizing the authored display text or
   // imposing the timeline subtitle line's separate 22-readable-character cap.
   normalizedLabel(scenes.caseName, 'Scene caseName');
-  for (const frame of scenes.frames) {
-    for (const field of ['chapter', 'section', 'title', 'lead', 'subtitle']) {
-      normalizedLabel(frame[field], `Scene ${frame.id}.${field}`);
-    }
+  for (const frame of scenes.frames) validateSceneText(frame);
+}
+export function validateSceneText(frame) {
+  for (const field of ['chapter', 'section', 'title', 'lead', 'subtitle']) {
+    normalizedLabel(frame[field], `Scene ${frame.id}.${field}`);
   }
 }
 export function validateTimeline(timeline, scenes) {

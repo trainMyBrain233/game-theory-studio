@@ -77,7 +77,24 @@ export function tx(c,str,x,y,size=36,weight=400,color=C.ink,align='left',opts={}
  const applied=assertAppliedFont(c,{size,weight,family:opts.serif?SERIF_FAMILY:FONT_FAMILY});
  c.fillStyle=color;c.textAlign=align;c.textBaseline=opts.baseline??'alphabetic';
  const m=c.measureText(str);c.fillText(str,x,y);
- if(opts.record!==false && c.globalAlpha>0){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,role,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size:applied.size,weight:applied.weight,family:applied.family,appliedFont:c.font,alpha:c.globalAlpha});}
+ if(opts.record!==false && c.globalAlpha>0){
+  // Canvas actual bounds are relative to the active textAlign/textBaseline
+  // anchor, not the advance-width origin. Signed bearings include overhangs.
+  if(![m.actualBoundingBoxLeft,m.actualBoundingBoxRight,m.actualBoundingBoxAscent,m.actualBoundingBoxDescent].every(Number.isFinite))throw Error('Text ink QA requires finite actual Canvas bounding-box metrics.');
+  const left=x-m.actualBoundingBoxLeft,right=x+m.actualBoundingBoxRight;
+  const top=y-m.actualBoundingBoxAscent,bottom=y+m.actualBoundingBoxDescent;
+  if(![left,right,top,bottom].every(Number.isFinite)||right<left||bottom<top)throw Error('Text ink QA received invalid ink bounds.');
+  // Empty strings/whitespace have no ink; zero ascent is valid (e.g. '_').
+  if(right>left&&bottom>top){
+   const tr=c.getTransform(),scale=c.canvas.width/1920;
+   const corners=[[left,top],[right,top],[left,bottom],[right,bottom]].map(([px,py])=>[(tr.a*px+tr.c*py+tr.e)/scale,(tr.b*px+tr.d*py+tr.f)/scale]);
+   if(!Number.isFinite(scale)||!(scale>0)||!corners.flat().every(Number.isFinite))throw Error('Text ink QA requires finite transformed bounds and a positive canvas scale.');
+   const xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]);
+   const x0=Math.min(...xs),y0=Math.min(...ys),width=Math.max(...xs)-x0,height=Math.max(...ys)-y0;
+   if(![width,height].every(Number.isFinite))throw Error('Text ink QA received nonfinite transformed extents.');
+   if(width>0&&height>0)records.push({text:str,role,x:x0,y:y0,width,height,size:applied.size,weight:applied.weight,family:applied.family,appliedFont:c.font,alpha:c.globalAlpha});
+  }
+ }
  c.restore();
 }
 export function line(c,x1,y1,x2,y2,color=C.ink,w=3,p=1,dashed=false){if(p<=0)return;c.save();c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';if(dashed)c.setLineDash([10,10]);c.beginPath();c.moveTo(x1,y1);c.lineTo(mix(x1,x2,p),mix(y1,y2,p));c.stroke();if(c.globalAlpha>0){const tr=c.getTransform(),s=c.canvas.width/1920;const point=(x,y)=>[(tr.a*x+tr.c*y+tr.e)/s,(tr.b*x+tr.d*y+tr.f)/s];routes.push({from:point(x1,y1),to:point(mix(x1,x2,p),mix(y1,y2,p)),width:w,alpha:c.globalAlpha});}c.restore()}

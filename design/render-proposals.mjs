@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createCanvas, loadImage} from '@napi-rs/canvas';
 import {registerFonts,canvasFont,FONT_FAMILY,SERIF_FAMILY} from '../typography/fonts.mjs';
 import {assertAppliedFont} from '../typography/font-contract.mjs';
-import {validateScenes,validateSchema} from '../scripts/validate-data.mjs';
+import {validateScenes,validateSceneText,validateSchema} from '../scripts/validate-data.mjs';
 import {checkTextLayout} from '../scripts/layout.mjs';
 import {proposalScale} from './canvas-geometry.mjs';
 import {assertTextContrast,proposalTextPairs,EDITORIAL_SELECTED_SCORE} from './text-contrast.mjs';
@@ -25,7 +25,33 @@ function line(x1,y1,x2,y2,color=S.ink,lw=3){c.beginPath();c.moveTo(x1,y1);c.line
 function shape(points,fill,stroke=null,lw=3){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke()}}
 function oval(x,y,rx,ry,fill,stroke=null,lw=3){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke()}}
 function curve(pts,color=S.ink,lw=3){c.beginPath();c.moveTo(pts[0],pts[1]);c.bezierCurveTo(...pts.slice(2));c.strokeStyle=color;c.lineWidth=lw;c.stroke()}
-function txt(t,x,y,size=36,weight=400,color=S.ink,align='left',family='sans',track=false){c.save();c.fillStyle=color;c.font=canvasFont(size,weight,{serif:family==='serif'});const applied=assertAppliedFont(c,{size,weight,family:family==='serif'?SERIF_FAMILY:FONT_FAMILY});const appliedSize=applied.size;c.textBaseline='middle';c.textAlign=align;c.fillText(t,x,y);const metrics=c.measureText(t);let w=metrics.width;const bx=align==='center'?x-w/2:align==='right'?x-w:x;const by=y-metrics.actualBoundingBoxAscent;const m=c.getTransform();const pts=[[bx,by],[bx+w,by],[bx,by+metrics.actualBoundingBoxAscent+metrics.actualBoundingBoxDescent],[bx+w,by+metrics.actualBoundingBoxAscent+metrics.actualBoundingBoxDescent]].map(([px,py])=>[m.a*px+m.c*py+m.e,m.b*px+m.d*py+m.f]);const xx=pts.map(p=>p[0]),yy=pts.map(p=>p[1]);bounds.push({text:t,x:Math.min(...xx),y:Math.min(...yy),width:Math.max(...xx)-Math.min(...xx),height:Math.max(...yy)-Math.min(...yy),size:appliedSize*Math.hypot(m.a,m.b),weight:applied.weight,family:applied.family,appliedFont:c.font,glyphHeight:c.measureText(t).actualBoundingBoxAscent+c.measureText(t).actualBoundingBoxDescent});c.restore()}
+function txt(t,x,y,size=36,weight=400,color=S.ink,align='left',family='sans',track=false){
+ c.save();
+ try{
+  c.fillStyle=color;c.font=canvasFont(size,weight,{serif:family==='serif'});
+  const applied=assertAppliedFont(c,{size,weight,family:family==='serif'?SERIF_FAMILY:FONT_FAMILY});
+  c.textBaseline='middle';c.textAlign=align;c.fillText(t,x,y);
+  const metrics=c.measureText(t);
+  // Actual bearings already account for textAlign and the middle baseline.
+  // Advance width cannot describe overhangs or the visible glyph origin.
+  if(![metrics.actualBoundingBoxLeft,metrics.actualBoundingBoxRight,metrics.actualBoundingBoxAscent,metrics.actualBoundingBoxDescent].every(Number.isFinite))throw Error('Text ink QA requires finite actual Canvas bounding-box metrics.');
+  const left=x-metrics.actualBoundingBoxLeft,right=x+metrics.actualBoundingBoxRight;
+  const top=y-metrics.actualBoundingBoxAscent,bottom=y+metrics.actualBoundingBoxDescent;
+  if(![left,right,top,bottom].every(Number.isFinite)||right<left||bottom<top)throw Error('Text ink QA received invalid ink bounds.');
+  // Whitespace has no ink. Zero or negative ascent alone is still valid.
+  if(right>left&&bottom>top){
+   const m=c.getTransform();
+   // Proposal consumers use physical canvas pixels, including reduced previews.
+   const pts=[[left,top],[right,top],[left,bottom],[right,bottom]].map(([px,py])=>[m.a*px+m.c*py+m.e,m.b*px+m.d*py+m.f]);
+   if(!pts.flat().every(Number.isFinite))throw Error('Text ink QA requires finite transformed bounds.');
+   const xx=pts.map(p=>p[0]),yy=pts.map(p=>p[1]);
+   const x0=Math.min(...xx),y0=Math.min(...yy),width=Math.max(...xx)-x0,height=Math.max(...yy)-y0;
+   const appliedSize=applied.size*Math.hypot(m.a,m.b);
+   if(![width,height,appliedSize].every(Number.isFinite))throw Error('Text ink QA received nonfinite transformed extents.');
+   if(width>0&&height>0)bounds.push({text:t,x:x0,y:y0,width,height,size:appliedSize,weight:applied.weight,family:applied.family,appliedFont:c.font,glyphHeight:metrics.actualBoundingBoxAscent+metrics.actualBoundingBoxDescent});
+  }
+ }finally{c.restore();}
+}
 function wrapped(text,x,y,size,lineHeight,maxWidth,weight=400,family='sans'){
  c.font=canvasFont(size,weight,{serif:family==='serif'});
  assertAppliedFont(c,{size,weight,family:family==='serif'?SERIF_FAMILY:FONT_FAMILY});
@@ -161,16 +187,20 @@ function brightPayoff(scene){const f=focus();
 }
 export function drawScene(canvas,styleId,sceneId,override={}){
  const scale=proposalScale(canvas.width,canvas.height);
- c=canvas.getContext('2d');S=TOKENS.styles[styleId];if(!S)throw Error('Unknown style');
+ S=TOKENS.styles[styleId];if(!S)throw Error('Unknown style');
  assertTextContrast(proposalTextPairs(TOKENS,styleId));
  STATE={...DATA,...override.data};
  STATE.selected={...STATE.selected,...override.selected};
  STATE.selected.actorA=STATE.strategies[STATE.selected.row]?.id;STATE.selected.actorB=STATE.strategies[STATE.selected.column]?.id;
  validateScenes(STATE);
- const scene={...STATE.frames.find(x=>x.id===sceneId),...override};if(!scene.title)throw Error('Unknown scene');
+ const baseScene=STATE.frames.find(x=>x.id===sceneId);if(!baseScene)throw Error('Unknown scene');
+ const scene={...baseScene,...override};
+ // Direct text overrides must meet the same contract as authored frame data.
+ validateSceneText(scene);
  const f=focus();
  const variables={actorA:actorLabel('A'),actorB:actorLabel('B'),strategyA:strategyLabel(f.kindA),strategyB:strategyLabel(f.kindB),scoreA:f.a,scoreB:f.b};
  for(const key of ['title','lead','subtitle'])scene[key]=scene[key].replace(/\{([^}]+)\}/g,(_,name)=>{if(!Object.hasOwn(variables,name))throw Error(`Unknown scene text variable: ${name}`);return variables[name]});
+ c=canvas.getContext('2d');
  bounds.length=0;
  c.save();c.fillStyle=S.paper;c.fillRect(0,0,canvas.width,canvas.height);c.scale(scale,scale);c.lineJoin='round';
  header(scene,styleId);

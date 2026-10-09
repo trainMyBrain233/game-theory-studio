@@ -7,6 +7,7 @@ import json
 import os
 import struct
 import subprocess
+import sys
 import zlib
 from pathlib import Path
 
@@ -15,6 +16,46 @@ OUT = ROOT / 'output'
 TIMELINE = ROOT.parent / 'chapters/01-four-elements/narration/timeline.json'
 FONT = ROOT.parent / 'typography/fonts/NotoSansCJKSC-Regular.otf'
 MANIFEST = 'stills-manifest.json'
+# Sheets are 3840px wide and reviewed at 1920px: effective type is 30/38px.
+LABEL_SIZE, TITLE_SIZE = 60, 76
+TITLES = {'keyframes': '关键帧', 'transitions': '转场中间帧', 'custom': '自选时间帧'}
+
+
+def verified_font_bytes(path, text):
+    """Read-only shared provenance proof plus this board's exact glyph inventory.
+
+    Render the verified snapshot, never reopen a potentially replaced font path.
+    No preparation, download, or manifest rewrite is permitted at this entrypoint.
+    """
+    sys.path.insert(0, str(ROOT.parent / 'scripts'))
+    from setup_fonts import verify_cached
+    from fontTools.ttLib import TTFont
+    path = Path(path)
+    manifest_path = path.parent / 'prepared_font_manifest.json'
+    manifest_bytes = manifest_path.read_bytes()
+    previous = json.loads(manifest_bytes)[path.name]
+    data = path.read_bytes()
+    checksum = hashlib.sha256(data).hexdigest()
+    verified = verify_cached(path, 'Sans', 'Regular', previous)
+    if checksum != verified['sha256'] or checksum != previous.get('sha256'):
+        raise ValueError('Contact sheet font checksum differs from verified provenance/manifest')
+    if path.read_bytes() != data or manifest_path.read_bytes() != manifest_bytes:
+        raise ValueError('Contact sheet font or manifest changed during verification')
+    with TTFont(io.BytesIO(data)) as font:
+        covered = {point for point, name in (font.getBestCmap() or {}).items()
+                   if name != '.notdef' and font.getGlyphID(name) != 0}
+        missing = sorted({c for c in text if not c.isspace() and ord(c) not in covered})
+        if missing:
+            raise ValueError(f'Contact sheet font missing characters: {missing!r}')
+    return data
+
+
+def board_title(manifest, group):
+    return f"{TITLES[group]} · 原生{manifest['width']}×{manifest['height']}画面缩览"
+
+
+def board_label(point):
+    return f"{point['time_label']}  {point['label']}"
 
 
 def load_checkpoints(output=OUT, timeline_path=TIMELINE):
@@ -98,41 +139,80 @@ def read_frame_bytes(output, point, expected_size, expected_metadata=None):
 def wrap_label(draw, text, font, max_width):
     lines, line = [], ''
     for char in text:
+        if draw.textlength(char, font=font) > max_width:
+            raise ValueError('Contact sheet label glyph exceeds column width')
         candidate = line + char
         if line and draw.textlength(candidate, font=font) > max_width:
-            lines.append(line)
-            line = char
+            # Keep closing punctuation with its preceding glyph, rather than
+            # stranding a full stop on a new caption line.
+            if char in '，。！？；：、）】》”’' and len(line) > 1:
+                lines.append(line[:-1])
+                line = line[-1] + char
+            else:
+                lines.append(line)
+                line = char
         else:
             line = candidate
     return lines + ([line] if line else [])
 
 
-def main():
-    manifest, groups = load_checkpoints()
-    # Validate source/image provenance before loading fonts or drawing anything.
+def board_layout(manifest, group, items, font, titlefont):
+    """Measure every label before writing any board; never shrink requested type."""
+    from PIL import Image, ImageDraw
+    cols, tw, th = 4, 960, 540
+    margin, gap, header = 44, 32, 160
+    measure = ImageDraw.Draw(Image.new('RGB', (1, 1)))
+    labels = [wrap_label(measure, board_label(point), font, tw - 2 * margin) for point in items]
+    line_height = max(font.getbbox(text, anchor='lt')[3] for lines in labels for text in lines) + 24
+    rh = th + 2 * gap + line_height * max(map(len, labels))
+    rows = (len(items) + cols - 1) // cols
+    title = board_title(manifest, group)
+    title_box = measure.textbbox((margin, gap), title, font=titlefont, anchor='lt')
+    if title_box[2] > cols * tw - margin or title_box[3] > header - gap:
+        raise ValueError('Contact sheet title does not fit at the required font size')
+    placements = []
+    for i, lines in enumerate(labels):
+        x, y = (i % cols) * tw, header + (i // cols) * rh
+        for row, text in enumerate(lines):
+            position = (x + margin, y + th + gap + row * line_height)
+            bounds = measure.textbbox(position, text, font=font, anchor='lt')
+            if bounds[0] < x + margin or bounds[2] > x + tw - margin or bounds[3] > y + rh - gap:
+                raise ValueError('Contact sheet label exceeds measured column bounds')
+            placements.append((position, text, bounds))
+    return {'size': (tw * cols, rows * rh + header), 'rh': rh,
+            'header': header, 'tile': (tw, th), 'cols': cols,
+            'title': title, 'title_position': (margin, gap), 'title_bounds': title_box,
+            'placements': placements}
+
+
+def main(output=OUT, timeline_path=TIMELINE, font_path=FONT):
+    output = Path(output)
+    manifest, groups = load_checkpoints(output, timeline_path)
+    # Validate all provenance and actual text coverage before Pillow can load a
+    # font or overwrite any existing board, including a later group's failure.
+    inventory = ''.join(board_title(manifest, group) + ''.join(board_label(point) for point in items)
+                        for group, items in groups.items())
+    font_bytes = verified_font_bytes(font_path, inventory)
     from PIL import Image, ImageDraw, ImageFont
-    font = ImageFont.truetype(str(FONT), 30)
-    titlefont = ImageFont.truetype(str(FONT), 38)
-    titles = {'keyframes': '关键帧', 'transitions': '转场中间帧', 'custom': '自选时间帧'}
+    font = ImageFont.truetype(io.BytesIO(font_bytes), LABEL_SIZE)
+    titlefont = ImageFont.truetype(io.BytesIO(font_bytes), TITLE_SIZE)
+    layouts = {group: board_layout(manifest, group, items, font, titlefont) for group, items in groups.items()}
     for group, items in groups.items():
-        cols, tw, th = 4, 960, 540
-        measure = ImageDraw.Draw(Image.new('RGB', (1, 1)))
-        labels = [wrap_label(measure, f"{point['time_label']}  {point['label']}", font, tw - 44) for point in items]
-        rh = th + 16 + 40 * max(map(len, labels))
-        rows = (len(items) + cols - 1) // cols
-        sheet = Image.new('RGB', (tw * cols, rows * rh + 90), '#FFFEF8')
+        layout = layouts[group]
+        tw, th = layout['tile']
+        sheet = Image.new('RGB', layout['size'], '#FFFEF8')
         draw = ImageDraw.Draw(sheet)
-        draw.text((32, 18), f"{titles[group]} · 原生{manifest['width']}×{manifest['height']}画面缩览", (36, 62, 102), font=titlefont)
+        draw.text(layout['title_position'], layout['title'], (36, 62, 102), font=titlefont, anchor='lt')
         for i, point in enumerate(items):
-            with Image.open(io.BytesIO(read_frame_bytes(OUT, point, (manifest['width'], manifest['height']), checkpoint_metadata(manifest, point)))) as source:
+            with Image.open(io.BytesIO(read_frame_bytes(output, point, (manifest['width'], manifest['height']), checkpoint_metadata(manifest, point)))) as source:
                 if source.size != (manifest['width'], manifest['height']):
                     raise ValueError(f"Still frame dimensions differ from manifest: {point['file']}")
                 image = source.convert('RGB').resize((tw, th), Image.Resampling.LANCZOS)
-            x, y = (i % cols) * tw, 90 + (i // cols) * rh
+            x, y = (i % layout['cols']) * tw, layout['header'] + (i // layout['cols']) * layout['rh']
             sheet.paste(image, (x, y))
-            for row, text in enumerate(labels[i]):
-                draw.text((x + 22, y + th + 4 + row * 40), text, (36, 62, 102), font=font)
-        file = OUT / f'{group}_contact_sheet.png'
+        for position, text, _ in layout['placements']:
+            draw.text(position, text, (36, 62, 102), font=font, anchor='lt')
+        file = output / f'{group}_contact_sheet.png'
         sheet.save(file, optimize=True)
         print(file)
 

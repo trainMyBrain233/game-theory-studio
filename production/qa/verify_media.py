@@ -13,6 +13,15 @@ from media_contract import validate_streams
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def sha256_file(path):
+    """Hash encoded media with bounded memory, regardless of episode size."""
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def main(argv=None, root=ROOT):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('paths', nargs='*', type=Path)
@@ -34,7 +43,7 @@ def main(argv=None, root=ROOT):
         frames = [int(x.split('=')[1]) for x in run.stdout.splitlines() if x.startswith('frame=')]
         if not frames or frames[-1] != count:
             raise RuntimeError(f'Decoded frame count mismatch: expected {count}, got {frames[-1] if frames else None}')
-        report = {'file':path.name,'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
+        report = {'file':path.name,'bytes':path.stat().st_size,'sha256':sha256_file(path),
                   'expected_duration':duration, 'video':{k:video.get(k) for k in ['codec_name','profile','level','width','height','sample_aspect_ratio','pix_fmt','r_frame_rate','avg_frame_rate','start_time','duration','nb_frames','color_range','color_space','color_transfer','color_primaries']},
                   'audio_tracks':len(audio), 'audio_codecs':[x['codec_name'] for x in audio],
                   'audio':[{k:stream.get(k) for k in ['codec_name','sample_rate','channels','start_time','duration']} for stream in audio],

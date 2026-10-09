@@ -7,10 +7,11 @@ import {prepareAssets,card,C,tx,line,round} from '../../../production/src/primit
 import {CAMERA,TABLE} from './layout.mjs';
 import {DEMO,demoState} from './interaction.mjs';
 import {presentationModel} from './presentation.mjs';
+import {renderFrameRun} from './frame-run.mjs';
 import {DISPLAY_TEXT,candidateHeader,interactionStatus} from './display-text.mjs';
 if(process.argv.slice(2).join(' ')!=='--placeholder-cast')throw Error('Only --placeholder-cast is supported.');
 await prepareAssets(2);
-const root=path.resolve(import.meta.dirname,'../../..'),out=path.join(root,'artifacts/tabletop-interaction'),frames=path.join(out,'frames');fs.mkdirSync(frames,{recursive:true});
+const root=path.resolve(import.meta.dirname,'../../..'),out=path.join(root,'artifacts/tabletop-interaction');fs.mkdirSync(out,{recursive:true});
 const view=presentationModel(JSON.parse(fs.readFileSync(new URL('./presentation.json',import.meta.url),'utf8')),sceneData),figures={};
 for(const id of ['a','b']){
  let svg=fs.readFileSync(path.join(root,`production/assets/person_${id}.svg`),'utf8');
@@ -42,12 +43,10 @@ function draw(c,state){
  line(c,84,969,1836,969,C.light,1.5);tx(c,interactionStatus(state),84,1019,34,700);tx(c,DISPLAY_TEXT.interactionReviewNote,1836,1019,31,400,C.muted,'right');
 }
 const checkpoints=new Set([0,29,30,65,66,79,80,143,144,185,186,199,200,218,219,263,264,299]),states=[];
-for(let frame=0;frame<DEMO.duration*DEMO.fps;frame++){
- const canvas=createCanvas(1920,1080),state=demoState(frame/DEMO.fps,{scene:view.scene,camera:CAMERA});draw(canvas.getContext('2d'),state);fs.writeFileSync(path.join(frames,`${String(frame).padStart(4,'0')}.png`),canvas.toBuffer('image/png'));if(checkpoints.has(frame))states.push({frame,...state});
-}
-const movie=path.join(out,'original-tabletop-cycle.mp4');
-const encode=spawnSync('ffmpeg',['-v','error','-y','-framerate',String(DEMO.fps),'-i',path.join(frames,'%04d.png'),'-c:v','libx264','-crf','18','-pix_fmt','yuv420p','-movflags','+faststart',movie],{encoding:'utf8'});if(encode.status!==0)throw Error(`FFmpeg failed: ${encode.stderr}`);
-const decode=spawnSync('ffmpeg',['-v','error','-i',movie,'-f','null','-'],{encoding:'utf8'});if(decode.status!==0)throw Error(`Full decode failed: ${decode.stderr}`);
-fs.writeFileSync(path.join(out,'review.json'),JSON.stringify({sourceCommit:spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),workingTreeDirty:Boolean(spawnSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}).stdout.trim()),status:'original_geometry_only',privateArtLinked:false,playbackReview:'pending',fps:DEMO.fps,duration:DEMO.duration,encodedAndFullyDecoded:true,checkpoints:states},null,2)+'\n');
+const frameCount=Math.ceil(DEMO.duration*DEMO.fps),movie=path.join(out,'original-tabletop-cycle.mp4');
+renderFrameRun({movie,fps:DEMO.fps,frameCount,frame:frame=>{
+ const canvas=createCanvas(1920,1080),state=demoState(frame/DEMO.fps,{scene:view.scene,camera:CAMERA});draw(canvas.getContext('2d'),state);if(checkpoints.has(frame))states.push({frame,...state});return canvas.toBuffer('image/png');
+}});
+fs.writeFileSync(path.join(out,'review.json'),JSON.stringify({sourceCommit:spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),workingTreeDirty:Boolean(spawnSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}).stdout.trim()),status:'original_geometry_only',privateArtLinked:false,playbackReview:'pending',fps:DEMO.fps,frameCount,duration:frameCount/DEMO.fps,encodedAndFullyDecoded:true,checkpoints:states},null,2)+'\n');
 fs.writeFileSync(path.join(out,'review.html'),'<!doctype html><meta charset="utf-8"><title>桌牌动作原型</title><style>body{margin:24px;background:#FFFEF8;color:#243E66;font:20px sans-serif}video{width:100%;max-width:1280px}button{padding:12px;font-size:20px}</style><h1>原创几何取放：真实手图与自然度未验</h1><video id="movie" controls preload="auto" src="original-tabletop-cycle.mp4"></video><p id="reviewStatus">待播放</p><button onclick="movie.currentTime=0;movie.playbackRate=1;movie.play()">从头原速播放</button><script>const movie=document.getElementById("movie"),reviewStatus=document.getElementById("reviewStatus");movie.addEventListener("timeupdate",()=>reviewStatus.textContent=`${movie.currentTime.toFixed(2)} / ${movie.duration.toFixed(2)}s，速度 ${movie.playbackRate}，结束 ${movie.ended}`);movie.addEventListener("ended",()=>reviewStatus.textContent="完整播放结束，1×；真实手姿未验")</script>');
-console.log('Wrote 300 native frames and 10s original geometric cycle; FFmpeg encode/full decode passed. Playback review remains pending.');
+console.log(`Wrote ${frameCount} native frames and ${frameCount/DEMO.fps}s original geometric cycle; FFmpeg encode/full decode passed. Playback review remains pending.`);
