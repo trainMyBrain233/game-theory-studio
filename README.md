@@ -73,6 +73,8 @@ npm run qa:fonts
 
 `qa:cast` 先在临时目录重建并比较9 SVG/2 JSON，再做净空检查；`npm test` 不写回这些跟踪文件。需要更新产物时显式 `build:cast`（`render:cast` 为兼容别名）。
 
+私有角色净距用 `npm run qa:episode:layout -- --actor-alpha`；默认 `npm run qa:episode:layout`（包括 CI）只用公开占位角色。显式同时传 `--actor-alpha --placeholder-cast` 会报错。私有检查必须读取每个采样帧的真实 RGBA mask，且实际对非空 mask 执行文字净距检查；报告 `actor_alpha` 列出模式、非空 mask 帧、预期人物帧与检查次数。intro 开始 1.5 秒后，以及 players/information/strategy 开始 0.5 秒后至各节结束前 0.5 秒，所有采样帧都必须含可见人物像素；strategy 的 A 留场、B 离场不要求两人都出现。矩阵/复盘与过渡空帧不强制人物出现。公共模式不证明私有图稿净距，私有素材只留在本地。
+
 单独渲染可用 `render:proposals` / `qa:design` / `qa:layout` / `render:cast` / `qa:cast`。输出位于 `design/frames/`、`design/boards/`、`typography/qa/`、原创归档提案本地产物目录及 `artifacts/smoke/`。
 
 ## 配置与教学合同

@@ -48,6 +48,8 @@ export async function prepareAssets(scale=2){
   }
  }
 }
+// Record the applied context alpha after all parent groups. Never use a visual
+// cutoff: even the faintest nonzero transition participates in clearance QA.
 export let records=[];
 export let routes=[];
 export function resetRecords(){records=[];routes=[]}
@@ -56,10 +58,10 @@ export function tx(c,str,x,y,size=36,weight=400,color=C.ink,align='left',opts={}
  const applied=assertAppliedFont(c,{size,weight,family:opts.serif?SERIF_FAMILY:FONT_FAMILY});
  c.fillStyle=color;c.textAlign=align;c.textBaseline=opts.baseline??'alphabetic';
  const m=c.measureText(str);c.fillText(str,x,y);
- if(opts.record!==false && c.globalAlpha>.02){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,role,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size:applied.size,weight:applied.weight,family:applied.family,appliedFont:c.font,alpha:c.globalAlpha});}
+ if(opts.record!==false && c.globalAlpha>0){let l=align==='center'?x-m.width/2:align==='right'?x-m.width:x;const tr=c.getTransform(),scale=c.canvas.width/1920;const a=m.actualBoundingBoxAscent||size,b=m.actualBoundingBoxDescent||0;records.push({text:str,role,x:(tr.a*l+tr.c*(y-a)+tr.e)/scale,y:(tr.b*l+tr.d*(y-a)+tr.f)/scale,width:m.width*Math.abs(tr.a)/scale,height:(a+b)*Math.abs(tr.d)/scale,size:applied.size,weight:applied.weight,family:applied.family,appliedFont:c.font,alpha:c.globalAlpha});}
  c.restore();
 }
-export function line(c,x1,y1,x2,y2,color=C.ink,w=3,p=1,dashed=false){if(p<=0)return;c.save();c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';if(dashed)c.setLineDash([10,10]);c.beginPath();c.moveTo(x1,y1);c.lineTo(mix(x1,x2,p),mix(y1,y2,p));c.stroke();if(c.globalAlpha>.02){const tr=c.getTransform(),s=c.canvas.width/1920;const point=(x,y)=>[(tr.a*x+tr.c*y+tr.e)/s,(tr.b*x+tr.d*y+tr.f)/s];routes.push({from:point(x1,y1),to:point(mix(x1,x2,p),mix(y1,y2,p)),width:w,alpha:c.globalAlpha});}c.restore()}
+export function line(c,x1,y1,x2,y2,color=C.ink,w=3,p=1,dashed=false){if(p<=0)return;c.save();c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';if(dashed)c.setLineDash([10,10]);c.beginPath();c.moveTo(x1,y1);c.lineTo(mix(x1,x2,p),mix(y1,y2,p));c.stroke();if(c.globalAlpha>0){const tr=c.getTransform(),s=c.canvas.width/1920;const point=(x,y)=>[(tr.a*x+tr.c*y+tr.e)/s,(tr.b*x+tr.d*y+tr.f)/s];routes.push({from:point(x1,y1),to:point(mix(x1,x2,p),mix(y1,y2,p)),width:w,alpha:c.globalAlpha});}c.restore()}
 export function round(c,x,y,w,h,r=12,fill=null,stroke=C.ink,lw=3){c.save();c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke()}c.restore()}
 export function circle(c,x,y,r,fill=C.paper,stroke=C.ink,w=3){c.save();c.beginPath();c.arc(x,y,r,0,Math.PI*2);if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=w;c.stroke()}c.restore()}
 export function arrow(c,x1,y1,x2,y2,p=1,{color=C.ink,w=3,dashed=false}={}){

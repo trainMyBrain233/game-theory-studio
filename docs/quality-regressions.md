@@ -163,6 +163,30 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** 四项候选代码与上述专项/纯集成证据已冻结；旧绿色 CI 不包含本轮新修补。最终新 head 的完整双平台 CI/复审仍须完成，未关闭新审查项，PR 未记为已合并，也未新增私有影片、真人配音或播放端验收结论。
 
+### `46b6343` CI：旧边界正例必须随正式合同更新
+
+`46b6343f6658d38faef9a350eff556a9246d01ae` 的 [Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37897441304) 双平台完整字体阶段已通过，但各自的 JS core 为 728 项、727 通过、1 失败；Python 组尚未到达，animatic、render、episode、联系图及最终源码 QA 均跳过。失败是 `tests/renderer-boundary-regressions.test.mjs` 的旧 zero-pause 正例仍把 reveal 放在 exclusive end 并期待合法，与前节已收紧的显示窗口合同冲突，不能因此恢复错误生产行为。
+
+此次只修该测试：把 endpoint reveal 分为显式拒绝负例；另用 end 的 Float64 前驱构造合法 one-ULP onset，确认加法后仍在当前段、checkpoint 等于 onset 且不跨入下一段。onset 到采样点的经过时间为零，因此只证明时间/段落归属，不声称淡入动画已经完成。生产实现未改，相关专项 177/177 已通过。教训：加强合同后应同步盘点已有“合法样本”的前提，不能靠漏跑旧文件获得虚假的专项全绿，也不能为保留过时正例放宽验证。
+
+**本地全 JS 串行结果：** 240.527 秒后退出 1，报告 694 项，其中 692 通过、2 失败；失败按整个 `tests/animatic-avatar.test.mjs` 与 `tests/animatic-components.test.mjs` 子套件报通用 `test failed`，没有可定位的断言或终止信号细节。原因未明，不推断 OOM，也不把它们记为已通过；没有盲目重跑这两个 native 套件。其余已报告项目中，修正后的 zero-pause 回归与真实字体注册/缓存 mutation 通过，但这不等于完整本机 JS 通过，更不替代新的干净 CI。
+
+**复审进展：** `46b6343` 的自动安全复审于 2026-10-09 07:17:58 UTC 完成，无新增安全项；自动代码复审于 07:26:04 完成并提出下节四项 P2。上述旧测试修正仍保留，最终新 head 的完整 CI 与复审待完成，PR 未记为已合并。
+
+## PR #4 `46b6343` 新增 4 项：私有 QA、淡字、字体复用与选择节奏
+
+[本轮代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5467102507)针对 `46b6343f6658d38faef9a350eff556a9246d01ae`。以下记录复现、冻结候选及实际验证边界；安全复审无新增项不代表这些代码问题已关闭，也不覆盖上节 CI/本机执行中的未通过部分。
+
+- **复审-1：private actor-alpha 路径不能静默运行成 placeholder。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4227715502)中 `npm run qa:episode:layout -- --actor-alpha` 同时被附上 `--placeholder-cast`，私有 mask 检查全被跳过。冻结候选从 package script 移除固定 placeholder，由 `scripts/production.mjs`/`production/qa/layout-mode.mjs` 明确路由：默认公开占位，`--actor-alpha` 使用私有素材，同时指定两 flag 明确拒绝。每个采样的 mask 必须是画布尺寸 RGBA；私有报告必须有非空 mask 和实际 clearance check，不能只跑空循环。intro 的 start+1.5、players/information/strategy 的 start+.5 起至各自 end-.5 的稳定采样必须有人物像素并实际检查文字；其他段落/淡入淡出不强制角色始终可见。报告增加 mode、nonempty_mask_samples、expected_actor_samples、clearance_checks。`tests/episode-alpha-routing.test.mjs` 经真实 npm/CLI 受控入口覆盖缺 mask、透明、无文字、素材错误、冲突、alpha=1 碰撞及仅一帧非空后整段空白；`scripts/episode-alpha-native-smoke.mjs` 用八个原创 RGBA 方块在真实 player 场景的一个有界采样验证 npm 私有入口，加入 `qa:episode:assets`，坏 public SVG 在私有路由被跳过、默认公开路由精确解码失败。教训：必须报告检查确实执行且有有效输入，不能让配置回退把安全网变成空操作；单帧原创 fixture 不是全段真实私图验收。
+- **复审-2：淡入/淡出文字及引线的非零 alpha 仍属于布局检查。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4227715510)中 `opacity ≤ 0.12` 文字被排除；更早的 primitives 记录本身还丢弃 ≤0.02，leader route 又用 0.15 门槛。冻结候选在 `production/src/primitives.mjs` 的 tx/line 按嵌套 group 后实际 `c.globalAlpha > 0` 记录，在 `production/qa/validate.mjs` 对所有非零文字/引线执行原有画布边界、文本重叠、line clearance 和 actor-mask 检查；零透明排除，不放宽距离。`tests/fading-text-clearance.test.mjs` 以真实 QA 入口检查 .12/.02/.001/Number.EPSILON 的四类违规和零透明正例，真实 primitives 配受控 Canvas 核对父子 alpha 乘积。移除门槛后实际抓到默认 `s14_simple_case.start + .05`（64.35 秒）提示“本例：只有一次决策”：native alpha=1/255，文字框下沿 750.921689 对桌线 y760/pad9.75 侵入 0.671689px。仅把该行入场 dy12 改为 dy8，稳定 baseline735、32px/700 和第二行不变，修后下沿 746.947793；不通过降透明度或宽松几何隐藏碰撞。`tests/fading-text-canvas.test.mjs` 覆盖语义锚点派生的 start、25/50/75%、end 及相邻帧，恢复 dy12 在同一时刻明确失败；原/后局部及八格转场图已实际查看。教训：淡到几乎看不清仍可能是有效碰撞证据，文字和路径记录入口也必须与后端检查一致，角色 alpha 修复不能代替它。
+- **复审-3：animatic 字体复用也需证明原生字节身份。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4227715516)中同名外来 face 可在文件未变时通过仅看 400/700 的检查，并逃过 raster-cache hit。`production/src/animatic/font-resources.mjs` 的冻结候选要求 alias 恰有 normal-width/style 的 400/700 两个 face，使用已证明 buffers 触发固定 Canvas 1.0.10 的完整字节去重，校验保留的 content IDs，前后都检查精确 style 集合；不能把 FontKey ID 误称为原生实例存活证明。相同验证字节被重建可以接受，外来字节不可接受；检测漂移后该 pair 持续失败，不因外部清理自动恢复信任，检查发生在绘制及热/冷 cache 访问前。`tests/animatic-font-ownership.test.mjs` 用真实 GlobalFonts 检查 remove、同名 Serif replace、append、setAlias、single-face 替换及同字节重建。旧实现对后四种变异的热 cache 访问均漏拒，remove 原来已会拒绝，只是错误语义不同，不把它计作全新漏检。曾尝试每次 remove/re-register 自有 keys，但有限试跑出现明显 RSS 增长及 shell 137/Killed，原因未进一步证实，不称 OOM；该未发布方案已弃用，最终使用不 remove/purge 的字节去重路径。教训：缓存有效性必须覆盖原生状态，证明方法也要与真实 API 的 ID/去重语义一致，不能用 family 声明代替字节身份。
+- **复审-4：选择高亮节奏必须落在当前 cue 内。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4227715522)中短 `highlight_choices` 仍等固定 start+1.65/1.7 秒，收益口播可能先于选择聚焦。`production/src/elements/payoff-matrix.mjs` 的冻结 `choiceState` 共用行、列、选中 fill、border、A/B 标签六个阶段，`scenes.mjs` 标签也消费它；可用结束点为 `min(cue.end, matching_score.start)`，兼容 validator 允许的亚微秒接续误差。窗口≥2.25 秒保留原绝对时间 ramp，短窗则使用 `(t-start)/window`，将旧 offset/duration 同除 2.25；达到结束点六阶段均为 1。默认时间轴不改，默认及 1.3 倍时长四格各 501 点与旧状态严格相等；0.3 倍、极短/one-ULP 窗口、微小重叠、乱序重复、标签和几何另有回归。`tests/choice-cue-canvas.test.mjs` 在 4.1s/1s/1e-6s × 四格检查实际选中/非选中填色和边框及行列，用 240×135 全画面 hash 覆盖 start、25/50/75%、end 相邻点及乱序重复。初版逐帧取全分辨率缓冲时无栈退出，改为有界像素取样/低内存 hash 后通过，不将初版记为成功或推断退出原因。教训：正时长不是动画在句内完成的证明，行列、边框与解释文字须共享当前窗口；极短窗口保持语义边界不等于自然节奏或足够阅读时间。
+
+
+**已冻结专项证据：** private 路由专属 2/2，通过 alpha/淡字相关组合 7/7；真实 npm 单帧 fixture 报 nonempty=1、expected=1、clearance_checks=10。Animatic native 所有权 6/6、原 TTC/resources 13/13 通过（后者 22.85 秒）；有限性能观察为 40 次 warm hit 每次显式 GC，RSS 177→178 MiB、2.55 秒，五次同帧直绘字节相同（0.66 秒，RSS 180→189 MiB），不推断无限次数或整片资源上界。选择节奏四文件轻量组合 166/166，实际 Canvas 3/3 通过；其全分辨率局部像素和缩小全画面 hash 不是完整影片/音频验收。淡字纯专项 2/2、真实 Canvas 2/2 通过。原默认布局的全部 1163 个采样精确拆成 16 个独立 native process，修后每段退出 0，时间集合 union 与原样本完全一致，共 22067 次文字绘制、10177 条路径、0 issues；修前同样本有上述 1 issue，正式采样和距离均未放宽。根级最新 fading/alpha-routing/choice-state/episode-elements/reveal/旧边界纯集成 46/46 通过。运行环境 Linux、Node 24.19.0，结果仅绑定本轮未提交候选，组间有覆盖不累加为完整测试数。
+
+**当前状态：** 四项候选代码及上述专项已冻结；默认布局分段已覆盖完整原样本，但此前单进程入口的 `status=null`/`SIGKILL` 仍原因未明，不称 OOM，也不把该次单进程运行改记为通过。旧 endpoint 测试修正仍保留，未回退生产显示窗口合同。最终新 head 完整双平台 CI/复审仍待完成，PR 未记为合并；不新增真实私有角色全片、编码/解码、音频或平台播放接受结论。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

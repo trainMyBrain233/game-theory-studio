@@ -117,8 +117,32 @@ export function prepareVerifiedAnimaticFonts(texts,{fontDir=DEFAULT_FONT_DIR}={}
 }
 
 function assertRegisteredPair(family) {
- const weights=GlobalFonts.families.find(entry=>entry.family===family)?.styles.map(style=>style.weight) || [];
- assert([400,700].every(weight=>weights.includes(weight)),'Verified animatic font registration is missing real 400/700 faces');
+ const styles=GlobalFonts.families.find(entry=>entry.family===family)?.styles || [];
+ assert.deepEqual(styles.map(({weight,width,style})=>({weight,width,style})).sort((a,b)=>a.weight-b.weight),
+  [400,700].map(weight=>({weight,width:'normal',style:'normal'})),
+  'Animatic font registration ownership was lost: expected exactly the verified 400/700 faces');
+}
+
+function assertRegisteredBytes(record,family) {
+ if(record.failure)throw record.failure;
+ try {
+  assertRegisteredPair(family);
+  // Canvas 1.0.10 buffer registration deduplicates by complete byte comparison
+  // after a content-hash lookup. Its FontKey IDs are reusable content IDs, NOT
+  // native-instance liveness tokens. Require the exact two-style alias both
+  // before and after probing the proven buffers: adding a missing proven face
+  // beside an alien replacement must fail, never silently repair trust.
+  // Do not remove/re-register on each frame: native rebuildAssets retains old
+  // providers (up to 1000), retaining CJK-sized buffers on every renewal.
+  // Reconstructing identical bytes is safe; IDs do not distinguish that from
+  // continuous registration, and no such instance-ownership claim is made.
+  for(const [index,bytes] of record.buffers.entries()) {
+   const key=GlobalFonts.register(bytes,family);
+   assert(key && key.typefaceId===record.ids[index],
+    'Animatic font registration ownership was lost: verified byte identity changed');
+  }
+  assertRegisteredPair(family);
+ } catch(error) {record.failure=error;throw error;}
 }
 
 /**
@@ -145,10 +169,11 @@ export function registerVerifiedAnimaticFonts(proof) {
     assert(key,'Verified animatic font registration failed');keys.push(key);
    }
    assertRegisteredPair(family);proof.assertUnchanged();
-   registeredPairs.set(identity,keys);
+   registeredPairs.set(identity,{keys,buffers,ids:keys.map(key=>key.typefaceId),failure:null});
   } catch(error) {if(keys.length)GlobalFonts.removeBatch(keys);throw error;}
  }
- const assertUnchanged=()=>{proof.assertUnchanged();assertRegisteredPair(family);};
+ const record=registeredPairs.get(identity);
+ const assertUnchanged=()=>{proof.assertUnchanged();assertRegisteredBytes(record,family);};
  assertUnchanged();
  return Object.freeze({...proof,family,assertUnchanged});
 }

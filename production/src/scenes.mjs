@@ -16,7 +16,7 @@ const S=id=>timeline.segments.find(s=>s.id===id);
 const T=id=>S(id).start;
 const SEC=id=>timeline.sections.find(s=>s.id===id);
 const {draw:subtitle}=createSubtitleElement({timeline,tokens:TOKENS,drawing:{C,ramp,group,tx}});
-const {draw:matrix,currentCell}=createPayoffMatrixElement({timeline,summaryStart:T('s32_joint_choices'),drawing:{C,ramp,group,round,line,tx,reveal}});
+const {draw:matrix,currentCell,choiceLabels}=createPayoffMatrixElement({timeline,summaryStart:T('s32_joint_choices'),drawing:{C,ramp,group,round,line,tx,reveal}});
 export const designTokens=TOKENS;
 const sections={intro:{no:'00',name:'四个问题',title:'为什么要琢磨对方怎么选？',lead:'两个人，都想让自己的得分更高。'},players:{no:'01',name:'参与者',title:'谁在做决定？',lead:'先认识做决定的人，和他们各自的目标。'},information:{no:'02',name:'信息',title:'做决定时，知道什么？',lead:'公开的规则，和看不到的当前选择。'},strategy:{no:'03',name:'策略',title:'能怎样选择？',lead:'先看这一轮，再理解一整套应对计划。'},payoffs:{no:'04',name:'收益',title:'不同选择，各得什么？',lead:'先找选择组合，再读两个人的得分。'},recap:{no:'05',name:'四问复盘',title:'四个问题，先把博弈说清楚',lead:'参与者、信息、策略、收益。'}};
 const secAt=t=>timeline.sections.find(s=>t>=s.start&&t<s.end)||timeline.sections.at(-1);
@@ -110,7 +110,10 @@ function strategy(c,t){
  const baseText=1-ramp(t,T('s16_comparison_intro')-.45,.3);
  group(c,baseText,0,0,()=>{
   group(c,1-ramp(t,T('s15_definition')-.35,.3),0,0,()=>reveal(c,t,T('s13_options'),()=>tx(c,'每个人都可以选择',960,411,35,400,C.muted,'center')));
-  reveal(c,t,T('s14_simple_case'),()=>{tx(c,'本例：只有一次决策',960,735,32,700,C.ink,'center');tx(c,'两个纯策略',960,839,39,700,C.ink,'center')});
+  // Keep the 735px settled baseline; the shorter entrance clears the desk
+  // even on the first nonzero-alpha frame, before the caption is easy to see.
+  reveal(c,t,T('s14_simple_case'),()=>tx(c,'本例：只有一次决策',960,735,32,700,C.ink,'center'),{dy:8});
+  reveal(c,t,T('s14_simple_case'),()=>tx(c,'两个纯策略',960,839,39,700,C.ink,'center'));
   reveal(c,t,T('s15_definition'),()=>tx(c,'策略：一整套应对计划',960,400,39,700,C.ink,'center'));
  });
  group(c,compAlpha,0,0,()=>{
@@ -147,7 +150,7 @@ function payoffs(c,t){
   group(c,1-ramp(t,T('s23_score_order')-.3,.25),0,0,()=>{tx(c,t<T('s22_columns')?'先找{{A}}的行':'再找{{B}}的列',100,465,40,700);tx(c,t<T('s22_columns')?'{{red}}与{{blue}}，两种选择':'{{red}}与{{blue}}，两种选择',100,533,31,400,C.muted)});
   group(c,order*(1-ramp(t,T('s33_beyond_money')-.3,.25)),0,0,()=>{
    tx(c,'每格的读法',100,400,31,400,C.muted);tx(c,'先{{A}}，再{{B}}',100,465,39,700);
-   if(key&&!summary){const s=timeline.segments.find(s=>s.visual_cue.action==='highlight_choices'&&s.visual_cue.matrix_cell===key);reveal(c,t,s.start,()=>tx(c,'{{A}}选'+(key[0]==='R'?'{{red}}':'{{blue}}'),100,580,36,700));reveal(c,t,s.start+1.6,()=>tx(c,'{{B}}选'+(key[1]==='R'?'{{red}}':'{{blue}}'),100,642,36,700));
+   if(key&&!summary){choiceLabels(c,t);
    const rs=timeline.segments.find(s=>s.visual_cue.action==='reveal_scores'&&s.visual_cue.matrix_cell===key),lastReveal=rs.start+Math.max(...rs.visual_cue.score_reveals.map(event=>event.offset));if(t>=lastReveal)reveal(c,t,lastReveal,()=>{tx(c,'得分',100,739,30,400,C.muted);tx(c,`(${rs.visual_cue.scores[0]}, ${rs.visual_cue.scores[1]})`,208,744,52,700)});
    } else if(summary){tx(c,'两个人的选择',100,583,35,700);tx(c,'共同决定收益',100,646,35,700);}
   });

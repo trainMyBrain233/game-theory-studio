@@ -34,7 +34,7 @@ test('actual proposal selected-score ink/accent is readable on painted wash, inc
 test('real production matrix paints mapped focus_fill beneath actual ink score glyphs',()=>{
  const palette=productionPalette(TOKENS),canvas=createCanvas(1920,1080),ctx=canvas.getContext('2d'),runs=[];
  ctx.fillStyle=palette.paper;ctx.fillRect(0,0,1920,1080);
- const timeline={segments:[{start:0,visual_cue:{action:'highlight_choices',matrix_cell:'BR'}},
+ const timeline={segments:[{start:0,end:3,visual_cue:{action:'highlight_choices',matrix_cell:'BR'}},
   {start:3,visual_cue:{action:'reveal_scores',matrix_cell:'BR',score_reveals:[{player:'A',value:5,offset:0},{player:'B',value:0,offset:0}]}}]};
  const drawing={C:{ink:palette.ink,faint:palette.focus_fill},ramp:()=>1,group:(c,a,x,y,fn)=>fn(),reveal:(c,t,start,fn)=>fn(),line:()=>{},
   round(c,x,y,w,h,r,fill){if(fill){c.fillStyle=fill;c.fillRect(x,y,w,h);}},

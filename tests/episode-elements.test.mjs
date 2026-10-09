@@ -46,10 +46,10 @@ test('subtitle uses injected type and both alphabetic baselines at the start of 
 
 function matrixTimeline() {
  return {segments:[
-  {start:10,visual_cue:{action:'highlight_choices',matrix_cell:'BR'}},
+  {start:10,end:12,visual_cue:{action:'highlight_choices',matrix_cell:'BR'}},
   {start:12,visual_cue:{action:'reveal_scores',matrix_cell:'BR',scores:[17,4],
    score_reveals:[{player:'B',value:4,offset:1},{player:'A',value:17,offset:.5}]}},
-  {start:18,visual_cue:{action:'highlight_choices',matrix_cell:'RB'}},
+  {start:18,end:20,visual_cue:{action:'highlight_choices',matrix_cell:'RB'}},
   {start:20,visual_cue:{action:'reveal_scores',matrix_cell:'RB',scores:[2,91],
    score_reveals:[{player:'A',value:2,offset:.5},{player:'B',value:91,offset:1}]}},
  ]};

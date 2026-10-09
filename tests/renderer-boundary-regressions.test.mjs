@@ -37,14 +37,33 @@ test('schema-valid zero-pause keyframes sample the final representable time insi
  assert.deepEqual(verifyStillsManifest(JSON.parse(JSON.stringify(manifest)),bytes),manifest,'Serialized checkpoint identities must reverify without rounding changes.');
 });
 
-test('zero-pause sampling does not enter the next segment or claim endpoint reveals have completed',()=>{
+test('zero-pause endpoint reveals are rejected by the display-window contract',()=>{
  const current=zeroPauses(),segment=current.segments.find(segment=>segment.id==='s25_rr_score');
  segment.visual_cue.score_reveals[1].offset=segment.spoken_duration;
+ assert.equal(segment.start+segment.visual_cue.score_reveals[1].offset,segment.end);
+ assert.throws(()=>validateTimeline(current,scenes),{
+  name:'AssertionError',
+  message:/s25_rr_score: score reveal must occur within the segment display window/,
+ });
+});
+
+test('valid zero-pause sampling stays in its segment without claiming a last-instant reveal has completed',()=>{
+ const current=zeroPauses(),segment=current.segments.find(segment=>segment.id==='s25_rr_score');
+ const bits=new DataView(new ArrayBuffer(8));bits.setFloat64(0,segment.end);
+ bits.setBigUint64(0,bits.getBigUint64(0)-1n);const revealTime=bits.getFloat64(0);
+ segment.visual_cue.score_reveals[1].offset=revealTime-segment.start;
+ assert.equal(segment.start+segment.visual_cue.score_reveals[1].offset,revealTime);
+ assert(revealTime>=segment.start&&revealTime<segment.end);
  validateTimeline(current,scenes);
  const point=checkpointPlan(current).find(point=>point.id===segment.id);
- assert(point.time<segment.start+segment.visual_cue.score_reveals[1].offset);
+ // A sample at the reveal onset proves segment ownership, not animation completion.
+ assert.equal(point.time,revealTime);
+ assert.equal(point.time-revealTime,0);
  assert.equal(point.anchor.phase,'segment_end_interior');
  assert.equal(current.segments.find(item=>point.time>=item.start&&point.time<item.end),segment);
+ const next=current.segments[current.segments.indexOf(segment)+1];
+ assert.equal(segment.end,next.start);
+ assert(point.time<next.start);
 });
 
 test('tiny schema-valid final segments retain an in-window sample with zero or positive pause',()=>{
