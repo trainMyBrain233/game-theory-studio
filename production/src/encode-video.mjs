@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process';
 
 // The encoder never owns the published path. Keep the extension for ffmpeg's
 // format inference and stay in the destination directory for atomic rename.
-export async function encodeVideo({file,args,frameCount,frame,command='ffmpeg'}) {
+export async function encodeVideo({file,args,frameCount,frame,command='ffmpeg',beforePublish=()=>{}}) {
  const temporary=path.join(path.dirname(file),`.${path.basename(file)}.${randomUUID()}.tmp${path.extname(file)}`);
  fs.closeSync(fs.openSync(temporary,'wx'));
  let child,closed,killTimer,logs='',failure;
@@ -39,6 +39,10 @@ export async function encodeVideo({file,args,frameCount,frame,command='ffmpeg'})
   await guard(closed);
   check();
   if(fs.statSync(temporary).size===0)throw Error('ffmpeg produced an empty video');
+  // Validation and rename are synchronous: no event-loop gap may publish an
+  // encoded generation after its source identity has been rejected. A thrown
+  // guard follows the same child-close/stage-cleanup rollback as encode errors.
+  beforePublish();
   fs.renameSync(temporary,file);
  }catch(error){
   if(child){

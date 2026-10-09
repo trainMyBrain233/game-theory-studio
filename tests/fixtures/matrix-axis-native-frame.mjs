@@ -12,7 +12,8 @@ const primitives=await import('../../production/src/primitives.mjs');
 await primitives.prepareAssets(1);
 const {drawFrame}=await import('../../production/src/scenes.mjs');
 const segment=timeline.segments.find(s=>s.id===(process.env.AXIS_SEGMENT??'s23_score_order'));
-const time=segment.start+(process.env.AXIS_OFFSET===undefined?(segment.end-segment.start)*Number(process.env.AXIS_FRACTION??.6):Number(process.env.AXIS_OFFSET));
+function auditFrame(offset){
+const time=segment.start+(offset===null?(segment.end-segment.start)*Number(process.env.AXIS_FRACTION??.6):offset);
 const canvas=createCanvas(1920,1080),context=canvas.getContext('2d'),badges=[],cards=[],actorMask=createCanvas(1920,1080),actorContext=actorMask.getContext('2d');
 const nativeArc=context.arc.bind(context),nativeRound=context.roundRect.bind(context);
 context.arc=(x,y,r,...args)=>{if((r===24||r===25)&&context.globalAlpha>.01)badges.push({x:x-r,y:y-r,width:r*2,height:r*2});return nativeArc(x,y,r,...args)};
@@ -31,6 +32,20 @@ context.drawImage=(asset,x,y,w,h,...rest)=>{
 drawFrame(canvas,time);
 const axes=primitives.records.filter(r=>r.role==='matrix-axis');
 assert.equal(axes.length,4,'all four row/column axis labels have recorded ink');
+// Match episode QA's 8px graphic clearance using native ink and actual
+// transformed routes, including the lowest nonzero Canvas alpha.
+const hits=(a,b,r,pad)=>{
+ const low=[r.x-pad,r.y-pad],high=[r.x+r.width+pad,r.y+r.height+pad];let enter=0,exit=1;
+ for(let axis=0;axis<2;axis++){
+  const delta=b[axis]-a[axis];
+  if(delta===0){if(a[axis]<low[axis]||a[axis]>high[axis])return false;continue;}
+  const near=(low[axis]-a[axis])/delta,far=(high[axis]-a[axis])/delta;
+  enter=Math.max(enter,Math.min(near,far));exit=Math.min(exit,Math.max(near,far));if(enter>exit)return false;
+ }
+ return true;
+};
+if(process.env.AXIS_EXPECT_FAINT_DESK)assert(primitives.routes.some(r=>r.from[0]===230&&r.to[0]===1688&&r.alpha>0&&r.alpha<=1/255),'Expected actual desk route at lowest nonzero alpha');
+for(const route of primitives.routes.filter(r=>r.alpha>0))for(const r of primitives.records.filter(r=>r.alpha>0))assert(!hits(route.from,route.to,r,8+route.width/2),`text ink overlaps a ${route.from[1]===route.to[1]?'horizontal':'vertical'} leader (line_text_clearance): ${JSON.stringify({t:time,text:r.text,line:route})}`);
 for(const [i,r] of axes.entries()){
  assert(r.size>=30,'meaningful axis font below 30px');
  assert.equal(r.weight,700);assert.equal(r.family,FONT_FAMILY);
@@ -39,11 +54,6 @@ for(const [i,r] of axes.entries()){
  const ink=canvas.getContext('2d').getImageData(Math.floor(r.x),Math.floor(r.y),Math.ceil(r.width),Math.ceil(r.height)).data;
  const actorInk=actorContext.getImageData(Math.floor(r.x),Math.floor(r.y),Math.ceil(r.width),Math.ceil(r.height)).data;assert(![...actorInk].some((v,j)=>j%4===3&&v>0),'axis glyph bounds overlap visible actor alpha');
  assert([...ink].some((v,j)=>j%4!==3&&v<100),'native glyph ink was drawn');
- for(const route of primitives.routes){
-  const [a,b]=[route.from,route.to],pad=route.width/2;
-  if(a[0]===b[0])assert(!(a[0]+pad>r.x&&a[0]-pad<r.x+r.width&&Math.max(a[1],b[1])+pad>r.y&&Math.min(a[1],b[1])-pad<r.y+r.height),'axis glyph ink overlaps a vertical leader');
-  if(a[1]===b[1])assert(!(a[1]+pad>r.y&&a[1]-pad<r.y+r.height&&Math.max(a[0],b[0])+pad>r.x&&Math.min(a[0],b[0])-pad<r.x+r.width),'axis glyph ink overlaps a horizontal leader');
- }
  for(const card of cards)assert(!(r.x<card.right&&r.x+r.width>card.x&&r.y<card.bottom&&r.y+r.height>card.y),'axis glyph ink overlaps a card cue');
  for(const other of primitives.records){
   if(other===r)continue;
@@ -52,5 +62,9 @@ for(const [i,r] of axes.entries()){
  }
 }
 for(const name of primitives.records.filter(r=>r.role==='actor-name'))for(const badge of badges)assert(!(name.x<badge.x+badge.width&&name.x+name.width>badge.x&&name.y<badge.y+badge.height&&name.y+name.height>badge.y),'actor name ink overlaps owner badge');
-if(process.env.AXIS_PROOF){fs.mkdirSync(process.env.AXIS_PROOF,{recursive:true});const name=`${process.env.AXIS_LONG_NAMES?'long-names':process.env.AXIS_LONG?'long':'default'}-${segment.id}-${process.env.AXIS_OFFSET??process.env.AXIS_FRACTION??.6}`;fs.writeFileSync(`${process.env.AXIS_PROOF}/${name}.png`,canvas.toBuffer('image/png'));const half=createCanvas(960,540);half.getContext('2d').drawImage(canvas,0,0,960,540);fs.writeFileSync(`${process.env.AXIS_PROOF}/${name}-960.png`,half.toBuffer('image/png'));}
+if(process.env.AXIS_PROOF){fs.mkdirSync(process.env.AXIS_PROOF,{recursive:true});const name=`${process.env.AXIS_LONG_NAMES?'long-names':process.env.AXIS_LONG?'long':'default'}-${segment.id}-${offset??process.env.AXIS_FRACTION??.6}`;fs.writeFileSync(`${process.env.AXIS_PROOF}/${name}.png`,canvas.toBuffer('image/png'));const half=createCanvas(960,540);half.getContext('2d').drawImage(canvas,0,0,960,540);fs.writeFileSync(`${process.env.AXIS_PROOF}/${name}-960.png`,half.toBuffer('image/png'));}
 console.log(JSON.stringify({time,axes}));
+}
+const offsets=process.env.AXIS_BATCH_OFFSETS?JSON.parse(process.env.AXIS_BATCH_OFFSETS):[process.env.AXIS_OFFSET===undefined?null:Number(process.env.AXIS_OFFSET)];
+assert(Array.isArray(offsets)&&offsets.length>0&&offsets.length<=8,'Bound native batches to eight frames');
+for(const offset of offsets){assert(offset===null||Number.isFinite(offset));auditFrame(offset);}

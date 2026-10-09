@@ -66,3 +66,18 @@ test('publication rename failure cleans temporary output without changing destin
   assert.deepEqual(fs.readdirSync(f.dir).sort(),['bin','film.mp4']);
  }finally{fs.rmSync(f.dir,{recursive:true,force:true});}
 });
+
+test('synchronous publication validation runs after encoder close and preserves old output on rejection',async()=>{
+ const f=fixture();try{
+  fs.writeFileSync(f.file,'old sentinel');let checked=false;
+  await assert.rejects(encodeVideo({file:f.file,command:process.execPath,args:['-e',"const fs=require('node:fs');process.stdin.resume();process.stdin.on('end',()=>fs.writeFileSync(process.argv[1],'complete video'));"],frameCount:1,frame:()=>Buffer.alloc(4),beforePublish:()=>{
+   checked=true;
+   const stage=fs.readdirSync(f.dir).find(name=>name.startsWith('.film'));
+   assert.equal(fs.readFileSync(path.join(f.dir,stage),'utf8'),'complete video');
+   assert.equal(fs.readFileSync(f.file,'utf8'),'old sentinel');
+   throw Error('source bytes changed');
+  }}),/Video encoding stopped: source bytes changed/);
+  assert(checked);assert.equal(fs.readFileSync(f.file,'utf8'),'old sentinel');
+  assert.deepEqual(fs.readdirSync(f.dir).sort(),['bin','film.mp4']);
+ }finally{fs.rmSync(f.dir,{recursive:true,force:true});}
+});

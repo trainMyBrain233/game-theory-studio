@@ -7,6 +7,9 @@ export async function resolve(specifier, context, nextResolve) {
   return nextResolve(specifier, context);
 }
 export async function load(url, context, nextLoad) {
+ // These fixtures isolate options/encoder lifecycle without private art.
+ // Real source binding is exercised separately by video-source-identity.
+ if(url.endsWith('/production/src/render-fingerprint.mjs'))return source(`export const renderFingerprint=()=>({sha256:'isolated-publication-fixture'});`);
   if (url === 'test-stub:canvas') return source(`export const createCanvas=()=>{throw Error('Native Canvas boundary reached');};export const loadImage=createCanvas;`);
   if (url === 'node:child_process') return source(`export const spawn=()=>{throw Error('Encoder boundary reached');};export const spawnSync=spawn;`);
   if (url.endsWith('/production/src/primitives.mjs')) return source(`export const prepareAssets=()=>{throw Error('Asset preparation boundary reached');};`);

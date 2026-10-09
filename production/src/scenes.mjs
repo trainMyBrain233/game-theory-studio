@@ -138,7 +138,7 @@ function strategy(c,t){
 }
 function payoffs(c,t){
  const entry=payoffEntryState(t,timeline),{move,rows,cols,oldExit}=entry;
- group(c,oldExit,0,(1-oldExit)*120,()=>{duo(c,t,{cards:false,names:false});
+ group(c,oldExit,0,(1-oldExit)*60,()=>{duo(c,t,{cards:false,names:false});
   reveal(c,t,T('s19_question'),()=>tx(c,'不同选择的结果',960,505,41,700,C.ink,'center'));
   reveal(c,t,T('s20_definition'),()=>tx(c,'收益（支付）',960,603,48,700,C.ink,'center'));
  });
@@ -188,8 +188,8 @@ function recap(c,t){
  // The same complete matrix changes geometry, without old/new text crossfades.
  const x=mix(780,1190,p),y=mix(503,522,p),cw=mix(480,267,p),ch=mix(170,137,p);
  matrix(c,SEC('recap').start-.001,{geometry:{x,y,cw,ch},fontSize:mix(64,48,p)});
- badge(c,'A',mix(565,1000,p),mix(630,661,p),24);badge(c,'B',mix(1211,1409,p),mix(350,430,p),24);
- tx(c,'{{A}}',mix(565,1100,clamp(p*1.3)),699+7*ramp(p,0,.15)-30*ramp(p,.5,.5),30,700,C.ink,'center');tx(c,'{{B}}',mix(1263,1461,p),mix(361,441,p),30,700);
+ badge(c,'A',mix(565,1000,p)-40*Math.sin(Math.PI*p),mix(630,661,p),24);badge(c,'B',mix(1211,1409,p),mix(350,430,p),24);
+ tx(c,'{{A}}',mix(565,1100,p),699+7*ramp(p,0,.15)-30*ramp(p,.5,.5),30,700,C.ink,'center');tx(c,'{{B}}',mix(1263,1461,p),mix(361,441,p),30,700);
  const cardAlpha=1-ramp(p,0,.12);
  ['red','blue'].forEach((k,i)=>{
   card(c,k,mix(685,1136,p),mix(574+170*i,576.5+137*i,p),mix(82,70,p),{alpha:cardAlpha,label:false});

@@ -508,6 +508,24 @@ PR #3 新增实际 Canvas 回归后，`test:core` 已需要SC字体；旧工作�
 
 **当前状态：** title fixture 与三项修补已冻结到上述定向证据，更广 media 集合及根级完整布局仍待终态；原远端四路失败，完整新 head CI/复审和最终集成尚待，不记为已合并或私有角色/全片/音轨接受。
 
+### `e2cb5af` CI：完整布局捕获 22 条真实转场净距问题
+
+`e2cb5afedf8d797edaff742071f9131446d2d524` 的 [PR Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37952277190) 与 [push Quality run](https://github.com/trainMyBrain233/game-theory-studio/actions/runs/37952261865) 四个 job 均约 19 分钟后失败，终态原因是同一组 22 条真实 layout clearance 问题，未触发 30 分钟 timeout。默认 JS 各 1021 项中 1018 pass/3 skip，Python 229 项报告 OK（Ubuntu 21 skip/macOS 25 条 skip 记录）；相较上轮新增八条条件 skip：六项联系图发布因 Pillow 缺失、两项媒体 snapshot 因 FFmpeg/ffprobe 缺失。实际 changed-case 重建/data/editorial/core 及 69 项 design、layout/cast 已通过，tabletop 八张实际 matrix raster、motion/content QA 也已通过；后续 episode fonts/smoke/assets、文本导出、stills、联系图与源码终检未到，不把跳过项当作 CI 实媒体证明。
+
+本次 public-placeholder 完整布局实际检查 4332 samples、165 transition intervals、88249 text draws、37905 paths。16 条来自退出桌线在 98.065/98.098333/98.1/98.136667 秒穿过红/蓝四个轴标签，最低实际 alpha 为 1/255；另六条来自 157.316667/157.35/157.383333 秒移动矩阵横/竖线穿过“小A”。这是生产几何回归，不是旧 fixture 或执行器超时；先前定向稳定/中间帧通过不能覆盖完整采样计划中的遗漏。修补将退出 actor/desk 组下移从 120 改为 60px，轴标签 baseline=900 不变；recap A 名字改用共同平滑进度而非提前加速，保持在移动 grid 左侧，A badge 以最大 40px 向左正弦弧绕行、终点不变，避免名字再撞徽章。新原生检查把全部 actual text 与全部 alpha>0 routes 按原 QA 8px+半线宽及斜线相交合同对照，没有提高透明阈值或放宽净距。最终八个 positive batch 通过，共 56 次绘制、108 张独立 native/960 PNG；新桌线/grid 两个反向变异 2/2（47.989 秒）、既有 owner badge/column 两个负例 2/2（55.711 秒）通过且无 skip。初次总运行 9/10：desk 变异先被实际 actor-alpha 检查截获，未到期望 line 诊断；仅把独立 line 检查移到前面、保留所有断言后取得上述目标负例终态，未隐藏初次失败。实际查看 entry 微弱桌线及 recap 多个中间点，含 +.75 秒 native/960；证明连同失败记录/源码快照已耐久备份（Linux、Node 24.19.0）。这批包含运行时四字姓名 stress，不等于 changed-case build 验证；修后完整默认采样仍待根级终态。原 CI 报告没有 private actor-alpha mask，不能据此接受私图净空。
+
+**相邻证据边界：** 上轮真实媒体 snapshot 两项与 hash-bound 五项已获通过；此前更广 27 项 media 运行含旧 fixture 不兼容而失败，不能用专项绿替代该集合终态，也不能记录为全 media 已过。本机完整布局及本轮集成仍以各自冻结版本的终态为准。
+
+## PR #4 `e2cb5af` 新增 3 项：视频输入身份、模板产品集与 CI 时间预算
+
+[自动代码复审](https://github.com/trainMyBrain233/game-theory-studio/pull/4#pullrequestreview-5472268568)于 2026-10-09 15:45:17 UTC 完成，新增以下三项 P2；安全于 15:38:33 完成无新增。这三项与上节实际 layout 失败分别记录。
+
+- **本轮-1：视频发布前也必须重验渲染输入身份。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4231917802)中长编码继续使用已加载的旧 timeline/renderer/font/assets，却在源修改后把结果 rename 到 canonical 成片名；媒体字节 QA 只证明成片本身，不能证明它对应最终源码。现于动态导入 model/renderer/font/Canvas 前捕获既有 byte-based renderFingerprint，另保存 canonical timeline bytes；asset 准备后重验，并将同步 beforePublish guard 放在 encoder 成功 close、暂存文件非空之后、最终 rename 紧前。拒绝时保留旧 MP4、清理 stage，不修改已发生变化的输入；复用 still 的 source/config/选定素材/字体/runtime 指纹，不新增视频 provenance sidecar。真实指纹测试在编码期修改 timeline/module/scenes/tokens/person/card/font/font manifest，对已有/首次 MP4 均拒绝；model 导入后改源也在 encoder 启动前拒绝。这组使用实际 CLI/model/fingerprint/事务但模拟绘制；另实际生产 renderer+字体/素材/Canvas+FFmpeg 单帧负例通过（34.391 秒），编码成功后才改 card SVG，精确在 rename 前拒绝并保全旧片。分次 video-publication 20、partial-output 4、lazy-checkpoints 3、render-window/checkpoints 12、video-source-identity 2 项均有通过结果；其中一次 still 检查实际捕获并行改源的 stale identity，冻结源码后单项复跑通过，最初另一次 timeout 原因未验证，不解释为宿主争用。以上不是一次完整 npm 或全片/私有美术/音频接受（Linux、Node 24.19.0，基于 e2cb5af 工作树）。教训：编码成功只证明编码器完成，发布前还必须确认实际渲染输入没有被新版本替代。
+- **本轮-2：全部 proposal 图与 manifest 需要一起发布。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4231917812)中后置 payoff title 合法但过长不能排下，前面的 participants PNG 已被覆盖，留下新旧六帧/三板/manifest 混代或首次生成的残集。现先渲染/验证/编码六帧与三张 comparison board，加 manifest 组成完整 products，再由既有 writeProducts 暂存、备份与发布；board 仍实际解码对应 PNG，只把来源从已发布文件改为尚未发布的 Buffer，不放宽墨迹/排版限制。真实旧版反例将 payoff title 改为 100 个汉字，CLI 先覆盖并打印 editorial participants 路径，再以 Text requires more than two lines 退出1。新 native publication 五项全部通过：迟溢出在新旧输出下均无改动；最后 manifest rename 注入失败对 existing/mixed 输出整组回滚，校验二进制 PNG/board/metadata 及用户文件/目录快照；成功的六帧三板 PNG bytes 与原 file-decode compositor 相同，manifest textBounds 相同。相邻 publisher/editorial 16/16 通过；首次组合 21/22，唯一既有 board-boundary 子进程在 30 秒预算超时、status null，未获得预期语义结论。仅经批准调其单子进程预算至 60 秒后，原四个边界子进程总约 105 秒、测试 1/1 通过；所有墨迹/碰撞/错误匹配断言保留，不把初次超时记作成功或推断原因（Linux、Node 24.19.0，e2cb5af 工作树）。只承诺普通异常回滚，不保证并发 writer 或崩溃/断电整组原子性。教训：场景迟失败需要覆盖整个生成集，文件式 compositor 的行为也应以实际 PNG 字节证明保留。
+- **本轮-3：CI 预算必须容纳默认和 changed-case 全流程。** [发现](https://github.com/trainMyBrain233/game-theory-studio/pull/4#discussion_r4231917824)指出重复 core 加后置原生 QA 在较慢环境下可能超出 30 分钟。候选仅将 quality job timeout 从 30 提至 60 分钟，保留有限上限；普通 push/PR 触发、contents:read、固定 Actions SHA、无 secrets/deploy/pull_request_target 边界不变。根级 workflow/字体入口七项、0 skip（116.243 秒）通过，包括实际空字体拒绝/准备后绘制正例及 trigger/权限/固定 action/credential/secret/publication 反向控制；未据此推算完整 CI 必在 60 分钟内完成。此调整提供前瞻运行余量，不是上节四个约 19 分钟 layout 失败的根因或修复，不删阶段、不把超时预算等同验证通过。
+
+**当前状态：** 三项审查修补及实际净距修补已获得上述定向终态，分次结果不相加为完整 npm；修后完整默认布局仍待根级验证。原远端四路失败，精确新 head 的完整 CI/复审与最终集成仍待，不记为已合并、全套接受或私有影片验收。
+
 ## 桌牌与手势仍 OPEN
 
 | 项目 | 当前证据 | 关闭条件 |

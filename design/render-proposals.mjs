@@ -9,6 +9,7 @@ import {registerFonts,canvasFont,FONT_FAMILY,SERIF_FAMILY} from '../typography/f
 import {assertAppliedFont} from '../typography/font-contract.mjs';
 import {validateScenes,validateSceneText,validateSchema} from '../scripts/validate-data.mjs';
 import {checkTextLayout} from '../scripts/layout.mjs';
+import {writeProducts} from '../scripts/publish-products.mjs';
 import {proposalScale} from './canvas-geometry.mjs';
 import {assertTextContrast,proposalTextPairs,EDITORIAL_SELECTED_SCORE} from './text-contrast.mjs';
 import {COMPARISON_BOARD,comparisonBoardTextPlan} from './comparison-board-text.mjs';
@@ -243,15 +244,20 @@ export function drawComparisonHeader(canvas,styleId){
 async function main(){
  // Reject every style before creating directories or writing any scene/board.
  for(const id of Object.keys(TOKENS.styles))drawComparisonHeader(createCanvas(COMPARISON_BOARD.width,COMPARISON_BOARD.headerHeight),id);
- fs.mkdirSync(path.join(HERE,'qa'),{recursive:true});fs.mkdirSync(path.join(HERE,'frames'),{recursive:true});fs.mkdirSync(path.join(HERE,'boards'),{recursive:true});
+ // Validate and encode the complete output set before touching published files.
+ const products={};
  const manifest={generatedAt:new Date().toISOString(),width:1920,height:1080,renderer:'@napi-rs/canvas',images:[]};
  for(const id of Object.keys(TOKENS.styles)){
-  for(const scene of DATA.frames){const canvas=createCanvas(1920,1080);const textBounds=drawScene(canvas,id,scene.id);let file=`frames/${id}_${scene.id}_1920x1080.png`;fs.writeFileSync(path.join(HERE,file),canvas.toBuffer('image/png'));manifest.images.push({style:id,scene:scene.id,file,textBounds});console.log(file)}
+  for(const scene of DATA.frames){const canvas=createCanvas(1920,1080);const textBounds=drawScene(canvas,id,scene.id);let file=`frames/${id}_${scene.id}_1920x1080.png`;products[file]=canvas.toBuffer('image/png');manifest.images.push({style:id,scene:scene.id,file,textBounds})}
   // Comparison board uses two native 1080p frames without raster upscaling.
   const board=createCanvas(COMPARISON_BOARD.width,COMPARISON_BOARD.height);drawComparisonHeader(board,id);
-  for(const [i,scene] of DATA.frames.entries()){let im=await loadImage(path.join(HERE,`frames/${id}_${scene.id}_1920x1080.png`));c.drawImage(im,i*1920,COMPARISON_BOARD.headerHeight);}
-  fs.writeFileSync(path.join(HERE,`boards/${id}_comparison_3840x1320.png`),board.toBuffer('image/png'));
+  for(const [i,scene] of DATA.frames.entries()){let im=await loadImage(products[`frames/${id}_${scene.id}_1920x1080.png`]);c.drawImage(im,i*1920,COMPARISON_BOARD.headerHeight);}
+  products[`boards/${id}_comparison_3840x1320.png`]=board.toBuffer('image/png');
  }
- fs.writeFileSync(path.join(HERE,'qa/render-manifest.json'),JSON.stringify(manifest,null,2));
+ products['qa/render-manifest.json']=JSON.stringify(manifest,null,2);
+ // Exclude concurrent writers. Roll back ordinary publication errors across all
+ // frames, boards and metadata; this does not claim crash-atomic durability.
+ writeProducts(HERE,products);
+ for(const image of manifest.images)console.log(image.file);
 }
 if(process.argv[1]===fileURLToPath(import.meta.url))await main();

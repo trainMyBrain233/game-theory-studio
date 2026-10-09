@@ -20,7 +20,9 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-14]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # Core runs for both the default and changed case, followed by native QA.
+    # Keep a finite ceiling with room for slower runners; this is not a test skip.
+    timeout-minutes: 60
     steps:
       - name: Check out source without persisted credentials
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

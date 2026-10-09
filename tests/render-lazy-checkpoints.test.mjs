@@ -19,7 +19,7 @@ function retime(timeline,factor){
 }
 function run(root,args){
  const callsFile=path.join(root,'cli-calls.jsonl');fs.rmSync(callsFile,{force:true});
- const result=spawnSync(process.execPath,['--loader',path.join(root,'tests/fixtures/render-lazy-checkpoints-loader.mjs'),path.join(root,'production/render.mjs'),...args],{cwd:root,encoding:'utf8',env:{...process.env,CLI_CALLS:callsFile}});
+ const result=spawnSync(process.execPath,['--loader',path.join(root,'tests/fixtures/render-lazy-checkpoints-loader.mjs'),path.join(root,'production/render.mjs'),...(args.includes('--placeholder-cast')?[]:['--placeholder-cast']),...args],{cwd:root,encoding:'utf8',env:{...process.env,CLI_CALLS:callsFile}});
  return {...result,calls:fs.existsSync(callsFile)?fs.readFileSync(callsFile,'utf8').trim().split('\n').map(JSON.parse):[]};
 }
 

@@ -10,7 +10,7 @@ test('CLI preflights all comparison text before creating or overwriting any rend
  const tokenFile=path.join(root,'design/tokens.json'),original=JSON.parse(fs.readFileSync(tokenFile));
  const outputs=['design/qa','design/frames','design/boards'].map(relative=>path.join(root,relative));
  for(const output of outputs)assert(!fs.existsSync(output));
- const options={cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()},timeout:30000,maxBuffer:2*1024*1024};
+ const options={cwd:root,encoding:'utf8',env:{...process.env,PYTHON:pythonCommand()},timeout:60000,maxBuffer:2*1024*1024};
  for(const [id,change,pattern] of [
   ['editorial',{name:'甲'.repeat(100)},/Text outside canvas/],
   ['bright',{subtitle:'乙'.repeat(110)},/Text outside canvas/],

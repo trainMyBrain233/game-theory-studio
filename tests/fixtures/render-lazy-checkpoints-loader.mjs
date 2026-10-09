@@ -18,7 +18,7 @@ export async function load(url,context,nextLoad){
  // This fixture tests CLI time/checkpoint routing, not encoder publication.
  // Publication and real child/pipe lifecycle are covered by video-publication.
  if(url.endsWith('/production/src/encode-video.mjs'))return source(`${recorder}
-  export async function encodeVideo({file,args,frameCount,frame}){record('encoder','ffmpeg',[...args,file]);for(let i=0;i<frameCount;i++){frame(i);record('encoded-frame');}}
+  export async function encodeVideo({file,args,frameCount,frame,beforePublish}){record('encoder','ffmpeg',[...args,file]);for(let i=0;i<frameCount;i++){frame(i);record('encoded-frame');}beforePublish();}
  `);
  if(url.endsWith('/production/src/primitives.mjs'))return source(`${recorder}export let ready=false;export const prepareAssets=async scale=>{record('assets',scale);await Promise.resolve();ready=true;};`);
  if(url.endsWith('/production/src/scenes.mjs'))return source(`${recorder}
