@@ -1,0 +1,81 @@
+{
+  "caseId": "one_round_red_blue",
+  "caseName": "一轮积分游戏",
+  "actors": [
+    {
+      "id": "A",
+      "label": "小A",
+      "goal": "自己的得分更高"
+    },
+    {
+      "id": "B",
+      "label": "小B",
+      "goal": "自己的得分更高"
+    }
+  ],
+  "strategies": [
+    {
+      "id": "red",
+      "label": "红"
+    },
+    {
+      "id": "blue",
+      "label": "蓝"
+    }
+  ],
+  "payoffs": [
+    [
+      [
+        3,
+        3
+      ],
+      [
+        0,
+        5
+      ]
+    ],
+    [
+      [
+        5,
+        0
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  ],
+  "selected": {
+    "row": 0,
+    "column": 1,
+    "actorA": "red",
+    "actorB": "blue"
+  },
+  "frames": [
+    {
+      "id": "participants",
+      "chapter": "01",
+      "section": "参与者",
+      "title": "谁在做决定？",
+      "lead": "{actorA}与{actorB}，各选一张牌。",
+      "subtitle": "{actorA}和{actorB}各选一张牌，都想让自己的得分更高。"
+    },
+    {
+      "id": "payoff",
+      "chapter": "04",
+      "section": "收益",
+      "title": "每种组合，各得什么？",
+      "lead": "先看选择组合，再读两人的得分。",
+      "subtitle": "{actorA}选{strategyA}、{actorB}选{strategyB}：{actorA}得{scoreA}分，{actorB}得{scoreB}分。"
+    }
+  ],
+  "nextChapterExample": {
+    "id": "information",
+    "chapter": "02",
+    "section": "信息",
+    "title": "做决定时，知道什么？",
+    "primitive": "concealed-choice",
+    "subtitle": "两人都知道规则，但亮牌前看不到对方的选择。"
+  },
+  "schemaVersion": "1.0"
+}

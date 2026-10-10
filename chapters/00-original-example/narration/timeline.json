@@ -1,0 +1,108 @@
+{
+  "schema_version": "2.1",
+  "title": "共同选择测试",
+  "language": "zh-CN",
+  "duration": 9.0,
+  "fps_reference": 30,
+  "timing_status": "manual_voiceover_reference_not_audio_aligned",
+  "timing_notice": "原创几何占位测试内容，没有音轨，尚未音频对齐。",
+  "speech_guidance": {
+    "subtitle_policy": "整句显示，尾停包含在显示窗内。"
+  },
+  "visual_contract": {
+    "participants": [
+      "小A",
+      "小B"
+    ],
+    "game_rounds": 1,
+    "matrix_score_order": [
+      "小A",
+      "小B"
+    ],
+    "matrix_values": {
+      "RR": [
+        3,
+        3
+      ],
+      "RB": [
+        0,
+        5
+      ],
+      "BR": [
+        5,
+        0
+      ],
+      "BB": [
+        1,
+        1
+      ]
+    }
+  },
+  "sections": [
+    {
+      "id": "example",
+      "title": "共同选择测试",
+      "start": 0,
+      "end": 9.0
+    }
+  ],
+  "segments": [
+    {
+      "id": "s01_choices",
+      "section": "example",
+      "text": "两位参与者，各选红牌或蓝牌。",
+      "voiceover": "两位参与者，各选红牌或蓝牌。",
+      "spoken_duration": 3.6,
+      "pause_after": 0.8,
+      "lines": [
+        "两位参与者，各选红牌或蓝牌。"
+      ],
+      "visual_cue": {
+        "action": "show_two_actions"
+      },
+      "breath_points": [],
+      "start": 0.0,
+      "voiceover_end": 3.6,
+      "end": 4.4,
+      "display_duration": 4.4,
+      "speech_plan_note": "人工口播参考，录音后再对齐。"
+    },
+    {
+      "id": "s02_scores",
+      "section": "example",
+      "text": "两个人，各得三分。",
+      "voiceover": "两个人，各得三分。",
+      "spoken_duration": 3.6,
+      "pause_after": 1.0,
+      "lines": [
+        "两个人，各得三分。"
+      ],
+      "visual_cue": {
+        "action": "reveal_scores",
+        "matrix_cell": "RR",
+        "scores": [
+          3,
+          3
+        ],
+        "score_reveals": [
+          {
+            "offset": 2.8,
+            "player": "A",
+            "value": 3
+          },
+          {
+            "offset": 2.8,
+            "player": "B",
+            "value": 3
+          }
+        ]
+      },
+      "breath_points": [],
+      "start": 4.4,
+      "voiceover_end": 8.0,
+      "end": 9.0,
+      "display_duration": 4.6,
+      "speech_plan_note": "人工口播参考，录音后再对齐。"
+    }
+  ]
+}

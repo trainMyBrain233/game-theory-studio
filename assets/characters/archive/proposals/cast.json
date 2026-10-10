@@ -1,0 +1,345 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "archived_not_selected",
+  "selectedProposal": null,
+  "recommendedProposal": null,
+  "activeCast": null,
+  "selectionRule": "Do not activate a proposal until the user chooses it. Select the A/B pair atomically.",
+  "fixedSlotOrder": [
+    "A",
+    "B"
+  ],
+  "payoffOrder": [
+    "A",
+    "B"
+  ],
+  "narrationRole": "The real host explains. The two fictional characters act in scenarios; neither is an omniscient teacher.",
+  "setting": {
+    "name": "合租小院",
+    "description": "一座临街小院里，两位邻居各自经营小铺，共用院门、仓库、装卸区和公共照明。",
+    "continuityRule": "身份和关系连续，制度、信息、资源约束与当集目标可以改变。"
+  },
+  "palette": {
+    "paper": "#FFFEF8",
+    "ink": "#243E66",
+    "warm": "#D5B47D",
+    "cool": "#9DB4CA",
+    "note": "Costume colours indicate identity only, never strategy or moral valence."
+  },
+  "typography": {
+    "family": "GameTheory Noto Sans SC",
+    "weights": [
+      400,
+      700
+    ],
+    "visibleChineseInSVG": false,
+    "overlayInstructions": "Import ../../../../typography/fonts.mjs, call registerFonts(), and use canvasFont()."
+  },
+  "preview": {
+    "comparison": "png/00_cast_comparison.png",
+    "width": 2700,
+    "height": 1740
+  },
+  "proposals": {
+    "human": {
+      "title": "人类邻铺",
+      "pairSvg": "svg/human_pair.svg",
+      "pairPreview": "png/01_human_pair.png",
+      "reason": "口播自然，真实感强；适合生活小剧场。",
+      "caution": "人物的表情与手部动作需要更细致。",
+      "characters": {
+        "A": {
+          "id": "A",
+          "displayName": "阿岑",
+          "pronunciation": "ā cén",
+          "role": "人类 · 印务铺店主",
+          "svg": "svg/human_A.svg",
+          "viewBox": [
+            0,
+            0,
+            500,
+            760
+          ],
+          "costumeAccent": "#D5B47D",
+          "identityShape": "circle",
+          "baselineAnchor": [
+            250,
+            711
+          ],
+          "labelPolicy": "Render identity outside silhouette; retain at least 32 output pixels of clearance at 1800×1280.",
+          "rigStatus": "concept_only_not_production_rig",
+          "personality": {
+            "voice": "利落、说话短，习惯先把样纸摊开。",
+            "personalDetail": "对纸张和颜色敏感，谈起自己的铺子会比平时多说两句。",
+            "tradeoff": "当天交付、材料成本、长期街坊关系之间都可能取舍。"
+          }
+        },
+        "B": {
+          "id": "B",
+          "displayName": "罗响",
+          "pronunciation": "luó xiǎng",
+          "role": "人类 · 自行车修理铺店主",
+          "svg": "svg/human_B.svg",
+          "viewBox": [
+            0,
+            0,
+            500,
+            760
+          ],
+          "costumeAccent": "#9DB4CA",
+          "identityShape": "square",
+          "baselineAnchor": [
+            250,
+            711
+          ],
+          "labelPolicy": "Render identity outside silhouette; retain at least 32 output pixels of clearance at 1800×1280.",
+          "rigStatus": "concept_only_not_production_rig",
+          "personality": {
+            "voice": "语速稍慢，常拿折尺或随手画的草图说明问题。",
+            "personalDetail": "工具放得很有次序，碰到新点子又愿意现场试试。",
+            "tradeoff": "手头工时、维修质量、共同经营机会之间都可能取舍。"
+          }
+        }
+      },
+      "renderer": {
+        "viewBox": [
+          0,
+          0,
+          500,
+          760
+        ],
+        "deskViewBox": [
+          0,
+          0,
+          500,
+          500
+        ],
+        "deskAnchor": [
+          250,
+          500
+        ],
+        "status": "concept_not_final_pose",
+        "actors": {
+          "A": {
+            "display_name": "阿岑",
+            "asset": "svg/human_A.svg",
+            "identity_shape": "circle",
+            "badge_anchor": [
+              278,
+              324
+            ]
+          },
+          "B": {
+            "display_name": "罗响",
+            "asset": "svg/human_B.svg",
+            "identity_shape": "square",
+            "badge_anchor": [
+              307,
+              290
+            ]
+          }
+        }
+      }
+    },
+    "animal": {
+      "title": "动物街坊",
+      "pairSvg": "svg/animal_pair.svg",
+      "pairPreview": "png/02_animal_pair.png",
+      "reason": "宽窄剪影一眼分清，安静但有戏。",
+      "caution": "物种只影响外形，不预设谁更聪明。",
+      "characters": {
+        "A": {
+          "id": "A",
+          "displayName": "阿栗",
+          "pronunciation": "ā lì",
+          "role": "獾 · 修理铺店主",
+          "svg": "svg/animal_A.svg",
+          "viewBox": [
+            0,
+            0,
+            500,
+            760
+          ],
+          "costumeAccent": "#D5B47D",
+          "identityShape": "circle",
+          "baselineAnchor": [
+            250,
+            711
+          ],
+          "labelPolicy": "Render identity outside silhouette; retain at least 32 output pixels of clearance at 1800×1280.",
+          "rigStatus": "concept_only_not_production_rig",
+          "personality": {
+            "voice": "短句、干脆，习惯把东西放到桌上再谈。",
+            "personalDetail": "会记住街坊物件的来历，修好旧东西时有一点不显露的得意。",
+            "tradeoff": "眼前这一单、有限工位、长期信任之间都可能取舍。"
+          }
+        },
+        "B": {
+          "id": "B",
+          "displayName": "高墨",
+          "pronunciation": "gāo mò",
+          "role": "苍鹭 · 印务铺店主",
+          "svg": "svg/animal_B.svg",
+          "viewBox": [
+            0,
+            0,
+            500,
+            760
+          ],
+          "costumeAccent": "#9DB4CA",
+          "identityShape": "square",
+          "baselineAnchor": [
+            250,
+            711
+          ],
+          "labelPolicy": "Render identity outside silhouette; retain at least 32 output pixels of clearance at 1800×1280.",
+          "rigStatus": "concept_only_not_production_rig",
+          "personality": {
+            "voice": "句子稍长但不堆术语，习惯拿样纸比划。",
+            "personalDetail": "喜欢把店里的展示墙换成新作品，偶尔会为一个细节改主意。",
+            "tradeoff": "交付排期、创作质量、共同订单之间都可能取舍。"
+          }
+        }
+      },
+      "renderer": {
+        "viewBox": [
+          0,
+          0,
+          500,
+          760
+        ],
+        "deskViewBox": [
+          0,
+          0,
+          500,
+          500
+        ],
+        "deskAnchor": [
+          250,
+          500
+        ],
+        "status": "concept_not_final_pose",
+        "actors": {
+          "A": {
+            "display_name": "阿栗",
+            "asset": "svg/animal_A.svg",
+            "identity_shape": "circle",
+            "badge_anchor": [
+              300,
+              342
+            ]
+          },
+          "B": {
+            "display_name": "高墨",
+            "asset": "svg/animal_B.svg",
+            "identity_shape": "square",
+            "badge_anchor": [
+              289.5,
+              297.5
+            ]
+          }
+        }
+      }
+    },
+    "robot": {
+      "title": "复古机器人",
+      "pairSvg": "svg/robot_pair.svg",
+      "pairPreview": "png/03_robot_pair.png",
+      "reason": "机械关节利于动画，识别度鲜明。",
+      "caution": "要避免观众把行为误读为程序定死。",
+      "characters": {
+        "A": {
+          "id": "A",
+          "displayName": "零九",
+          "pronunciation": "líng jiǔ",
+          "role": "机器人 · 旧件翻新铺主",
+          "svg": "svg/robot_A.svg",
+          "viewBox": [
+            0,
+            0,
+            500,
+            760
+          ],
+          "costumeAccent": "#D5B47D",
+          "identityShape": "circle",
+          "baselineAnchor": [
+            250,
+            711
+          ],
+          "labelPolicy": "Render identity outside silhouette; retain at least 32 output pixels of clearance at 1800×1280.",
+          "rigStatus": "concept_only_not_production_rig",
+          "personality": {
+            "voice": "平实、有停顿，不使用机器播报腔。",
+            "personalDetail": "会给修好的旧件贴小标签，留下自己认可的手工痕迹。",
+            "tradeoff": "零件成本、充电时间、共同场地之间都可能取舍。"
+          }
+        },
+        "B": {
+          "id": "B",
+          "displayName": "拾一",
+          "pronunciation": "shí yī",
+          "role": "机器人 · 移动打印车主",
+          "svg": "svg/robot_B.svg",
+          "viewBox": [
+            0,
+            0,
+            500,
+            760
+          ],
+          "costumeAccent": "#9DB4CA",
+          "identityShape": "square",
+          "baselineAnchor": [
+            250,
+            711
+          ],
+          "labelPolicy": "Render identity outside silhouette; retain at least 32 output pixels of clearance at 1800×1280.",
+          "rigStatus": "concept_only_not_production_rig",
+          "personality": {
+            "voice": "清楚轻快，不用电子拟声词表示思考。",
+            "personalDetail": "收着客户留下的试印纸，背面偶尔有自己的小画。",
+            "tradeoff": "出车接单、充电排队、院内合作之间都可能取舍。"
+          }
+        }
+      },
+      "renderer": {
+        "viewBox": [
+          0,
+          0,
+          500,
+          760
+        ],
+        "deskViewBox": [
+          0,
+          0,
+          500,
+          500
+        ],
+        "deskAnchor": [
+          250,
+          500
+        ],
+        "status": "concept_not_final_pose",
+        "actors": {
+          "A": {
+            "display_name": "零九",
+            "asset": "svg/robot_A.svg",
+            "identity_shape": "circle",
+            "badge_anchor": [
+              313,
+              418
+            ]
+          },
+          "B": {
+            "display_name": "拾一",
+            "asset": "svg/robot_B.svg",
+            "identity_shape": "square",
+            "badge_anchor": [
+              303,
+              358
+            ]
+          }
+        }
+      }
+    }
+  }
+}

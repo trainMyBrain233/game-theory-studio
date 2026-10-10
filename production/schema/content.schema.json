@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "First episode metadata and canonical source bindings",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "series",
+    "episode",
+    "language",
+    "fictional",
+    "rounds",
+    "chapter_order",
+    "cast_source",
+    "narration_source",
+    "notes",
+    "case_source"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.1"
+    },
+    "series": {
+      "const": "Game Theory Studio"
+    },
+    "episode": {
+      "const": "01_four_questions"
+    },
+    "language": {
+      "const": "zh-CN"
+    },
+    "fictional": {
+      "const": true
+    },
+    "rounds": {
+      "const": 1
+    },
+    "chapter_order": {
+      "const": [
+        "intro",
+        "players",
+        "information",
+        "strategy",
+        "payoffs",
+        "recap"
+      ]
+    },
+    "cast_source": {
+      "const": "cast.json"
+    },
+    "narration_source": {
+      "const": "../chapters/01-four-elements/narration/timeline.json"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "case_source": {
+      "const": "../design/scenes.json"
+    }
+  },
+  "additionalProperties": false
+}

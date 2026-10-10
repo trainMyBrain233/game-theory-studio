@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.1",
+  "status": "public_source_private_layers_required",
+  "actors": {
+    "A": {
+      "asset": "private_characters/pvz/assets/a_head.png",
+      "identity_shape": "circle",
+      "badge_anchor": null,
+      "type_name": "普通僵尸",
+      "asset_type": "layered_raster",
+      "fallback_asset": "assets/person_a.svg"
+    },
+    "B": {
+      "asset": "private_characters/pvz/assets/b_head.png",
+      "identity_shape": "square",
+      "badge_anchor": null,
+      "type_name": "路障僵尸",
+      "asset_type": "layered_raster",
+      "fallback_asset": "assets/person_b.svg"
+    }
+  },
+  "strategies": {
+    "red": {
+      "asset": "assets/card_red.svg"
+    },
+    "blue": {
+      "asset": "assets/card_blue.svg"
+    },
+    "back": {
+      "label": null,
+      "asset": "assets/card_back.svg"
+    }
+  },
+  "note": "A/B display names and strategy labels come from root design/scenes.json. Private RGBA layers are external and excluded; use explicit original placeholder mode for a public checkout.",
+  "character_library": {
+    "source": "Plants vs. Zombies",
+    "rotation_supported": true,
+    "requested_types": [
+      "normal_zombie",
+      "conehead_zombie",
+      "buckethead_zombie",
+      "newspaper_zombie"
+    ],
+    "art_status": "external_private_reference_not_in_repository",
+    "actual_svg_assets_ready": false,
+    "source_format": "RGBA PNG layers; original vector cards and chart"
+  },
+  "renderer_module": "src/character_adapter.mjs"
+}

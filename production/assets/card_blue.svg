@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 190" width="140" height="190" role="img" aria-labelledby="title"><title id="title">Blue strategy card with a horizontal bar symbol</title>
+<rect id="card-paper" x="3.5" y="3.5" width="133" height="183" rx="4" fill="#FFFEF8" stroke="#243E66" stroke-width="3.5"/>
+<rect id="card-color" x="12" y="12" width="116" height="166" rx="1" fill="#345D9E"/>
+<rect id="strategy-symbol" x="46" y="64" width="48" height="18" rx="1" fill="#FFFEF8"/>
+</svg>

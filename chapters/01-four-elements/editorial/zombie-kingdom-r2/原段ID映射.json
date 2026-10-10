@@ -1,0 +1,394 @@
+{
+  "draft_version": "zk01-narration-draft-2026-10-08-r2",
+  "source_timeline_sha256": "7f969307dcd159feaf71431a0683417930fb7ec43ba80cd565e08110a1954b67",
+  "mapping": [
+    {
+      "original_id": "s01_hook",
+      "original_voiceover": "两个人都想多拿分，为什么还得琢磨对方怎么选？",
+      "draft_block_ids": [
+        "zk01_b02"
+      ],
+      "draft_voiceovers": [
+        "两位都想多拿分，为什么还得琢磨对方怎么选？"
+      ]
+    },
+    {
+      "original_id": "s02_four_questions",
+      "original_voiceover": "看懂一场博弈，先问四个问题。",
+      "draft_block_ids": [
+        "zk01_b03"
+      ],
+      "draft_voiceovers": [
+        "看懂这场博弈，我们先问四个问题。"
+      ]
+    },
+    {
+      "original_id": "s03_question",
+      "original_voiceover": "第一，谁在做决定？",
+      "draft_block_ids": [
+        "zk01_b04"
+      ],
+      "draft_voiceovers": [
+        "第一，谁在做决定？"
+      ]
+    },
+    {
+      "original_id": "s04_setup",
+      "original_voiceover": "假设小A和小B，玩一轮积分游戏。",
+      "draft_block_ids": [
+        "zk01_b01",
+        "zk01_b05"
+      ],
+      "draft_voiceovers": [
+        "僵尸王国里，普通僵尸和路障僵尸准备玩一轮红蓝牌局。",
+        "普通僵尸和路障僵尸各自选牌，他们就是这场博弈的参与者。"
+      ]
+    },
+    {
+      "original_id": "s05_goal",
+      "original_voiceover": "他们各自选牌，都希望自己的得分更高。",
+      "draft_block_ids": [
+        "zk01_b06"
+      ],
+      "draft_voiceovers": [
+        "这一局，我们设定双方都希望自己的得分更高。"
+      ]
+    },
+    {
+      "original_id": "s06_definition",
+      "original_voiceover": "认识参与者，要弄清谁能决定，以及他们在乎什么。",
+      "draft_block_ids": [
+        "zk01_b05",
+        "zk01_b06"
+      ],
+      "draft_voiceovers": [
+        "普通僵尸和路障僵尸各自选牌，他们就是这场博弈的参与者。",
+        "这一局，我们设定双方都希望自己的得分更高。"
+      ]
+    },
+    {
+      "original_id": "s07_question",
+      "original_voiceover": "第二，做决定时，知道什么？",
+      "draft_block_ids": [
+        "zk01_b07"
+      ],
+      "draft_voiceovers": [
+        "第二，做决定时，知道什么？"
+      ]
+    },
+    {
+      "original_id": "s08_known_unknown",
+      "original_voiceover": "两人都知道计分规则，但看不到对方这次选的牌。",
+      "draft_block_ids": [
+        "zk01_b08"
+      ],
+      "draft_voiceovers": [
+        "双方都知道计分规则，但选牌时，看不到对方这一轮选了什么。"
+      ]
+    },
+    {
+      "original_id": "s09_simultaneous",
+      "original_voiceover": "他们各自选好，再一起亮牌。",
+      "draft_block_ids": [
+        "zk01_b09"
+      ],
+      "draft_voiceovers": [
+        "他们各自选好，再一起亮牌。"
+      ]
+    },
+    {
+      "original_id": "s10_distinction",
+      "original_voiceover": "知道规则，不等于知道对方这次出什么。",
+      "draft_block_ids": [
+        "zk01_b08",
+        "zk01_b10"
+      ],
+      "draft_voiceovers": [
+        "双方都知道计分规则，但选牌时，看不到对方这一轮选了什么。",
+        "这叫同时行动：做决定时，不能先看见对方的选择，再决定自己出什么。"
+      ]
+    },
+    {
+      "original_id": "s11_timing",
+      "original_voiceover": "谁先行动，能看到什么，也要交代清楚。",
+      "draft_block_ids": [
+        "zk01_b10"
+      ],
+      "draft_voiceovers": [
+        "这叫同时行动：做决定时，不能先看见对方的选择，再决定自己出什么。"
+      ]
+    },
+    {
+      "original_id": "s12_question",
+      "original_voiceover": "第三，能怎样选择？",
+      "draft_block_ids": [
+        "zk01_b11"
+      ],
+      "draft_voiceovers": [
+        "第三，能怎样选择？"
+      ]
+    },
+    {
+      "original_id": "s13_options",
+      "original_voiceover": "这一轮，每人都可以选红牌，或者蓝牌。",
+      "draft_block_ids": [
+        "zk01_b12"
+      ],
+      "draft_voiceovers": [
+        "这一轮，每位都可以选红牌，或者蓝牌。"
+      ]
+    },
+    {
+      "original_id": "s14_simple_case",
+      "original_voiceover": "这里只有一次选择，红和蓝就是两个纯策略。",
+      "draft_block_ids": [
+        "zk01_b13"
+      ],
+      "draft_voiceovers": [
+        "这里只做一次决定，固定选红或固定选蓝，就是两种纯策略。"
+      ]
+    },
+    {
+      "original_id": "s15_definition",
+      "original_voiceover": "一般来说，策略是一整套应对计划。",
+      "draft_block_ids": [
+        "zk01_b14"
+      ],
+      "draft_voiceovers": [
+        "一般来说，策略是一整套应对计划：每种可能遇到的情况，都根据当时能知道的信息，安排好怎么选。"
+      ]
+    },
+    {
+      "original_id": "s16_comparison_intro",
+      "original_voiceover": "比如，如果改成多轮：",
+      "draft_block_ids": [
+        "zk01_b15"
+      ],
+      "draft_voiceovers": [
+        "比如，假如改成多轮，每轮结束都能看到对方出的牌。"
+      ]
+    },
+    {
+      "original_id": "s17_comparison_example",
+      "original_voiceover": "第一轮选红；以后，跟着对方上一轮的牌选。",
+      "draft_block_ids": [
+        "zk01_b16"
+      ],
+      "draft_voiceovers": [
+        "就可以先定好：第一轮选红；以后每一轮，跟着对方上一轮的牌选。"
+      ]
+    },
+    {
+      "original_id": "s18_return_single_round",
+      "original_voiceover": "这是一套跨轮次的计划。本片仍然只玩一轮。",
+      "draft_block_ids": [
+        "zk01_b17"
+      ],
+      "draft_voiceovers": [
+        "这是一个跨轮次的计划。现在回到本集，只玩一轮。"
+      ]
+    },
+    {
+      "original_id": "s19_question",
+      "original_voiceover": "第四，不同选择，各得多少分？",
+      "draft_block_ids": [
+        "zk01_b18"
+      ],
+      "draft_voiceovers": [
+        "第四，双方这样选，各会得到什么？"
+      ]
+    },
+    {
+      "original_id": "s20_definition",
+      "original_voiceover": "这就是收益，也叫支付。",
+      "draft_block_ids": [
+        "zk01_b19"
+      ],
+      "draft_voiceovers": [
+        "这一局，用得分表示收益。分数越高，对自己越好。"
+      ]
+    },
+    {
+      "original_id": "s21_rows",
+      "original_voiceover": "看这张表：行，是小A的选择。",
+      "draft_block_ids": [
+        "zk01_b20",
+        "zk01_b21"
+      ],
+      "draft_voiceovers": [
+        "把四种选择组合放进表里，就得到了这张收益矩阵。",
+        "普通僵尸选的牌，决定看哪一行。"
+      ]
+    },
+    {
+      "original_id": "s22_columns",
+      "original_voiceover": "列，是小B的选择。",
+      "draft_block_ids": [
+        "zk01_b20",
+        "zk01_b22"
+      ],
+      "draft_voiceovers": [
+        "把四种选择组合放进表里，就得到了这张收益矩阵。",
+        "路障僵尸选的牌，决定看哪一列。"
+      ]
+    },
+    {
+      "original_id": "s23_score_order",
+      "original_voiceover": "每格先读小A的得分，再读小B的得分。",
+      "draft_block_ids": [
+        "zk01_b23"
+      ],
+      "draft_voiceovers": [
+        "每个格子里，先读普通僵尸的分数，再读路障僵尸的分数。"
+      ]
+    },
+    {
+      "original_id": "s24_rr_select",
+      "original_voiceover": "小A选红，小B也选红。",
+      "draft_block_ids": [
+        "zk01_b24"
+      ],
+      "draft_voiceovers": [
+        "两位都选红牌。"
+      ]
+    },
+    {
+      "original_id": "s25_rr_score",
+      "original_voiceover": "两个人，各得三分。",
+      "draft_block_ids": [
+        "zk01_b25"
+      ],
+      "draft_voiceovers": [
+        "各得三分。"
+      ]
+    },
+    {
+      "original_id": "s26_rb_select",
+      "original_voiceover": "小A选红，小B选蓝。",
+      "draft_block_ids": [
+        "zk01_b26"
+      ],
+      "draft_voiceovers": [
+        "普通僵尸选红，路障僵尸选蓝。"
+      ]
+    },
+    {
+      "original_id": "s27_rb_score",
+      "original_voiceover": "小A得零分，小B得五分。",
+      "draft_block_ids": [
+        "zk01_b27"
+      ],
+      "draft_voiceovers": [
+        "普通僵尸得零分，路障僵尸得五分。"
+      ]
+    },
+    {
+      "original_id": "s28_br_select",
+      "original_voiceover": "小A选蓝，小B选红。",
+      "draft_block_ids": [
+        "zk01_b28"
+      ],
+      "draft_voiceovers": [
+        "普通僵尸选蓝，路障僵尸选红。"
+      ]
+    },
+    {
+      "original_id": "s29_br_score",
+      "original_voiceover": "小A得五分，小B得零分。",
+      "draft_block_ids": [
+        "zk01_b29"
+      ],
+      "draft_voiceovers": [
+        "普通僵尸得五分，路障僵尸得零分。"
+      ]
+    },
+    {
+      "original_id": "s30_bb_select",
+      "original_voiceover": "小A选蓝，小B也选蓝。",
+      "draft_block_ids": [
+        "zk01_b30"
+      ],
+      "draft_voiceovers": [
+        "两位都选蓝牌。"
+      ]
+    },
+    {
+      "original_id": "s31_bb_score",
+      "original_voiceover": "两个人，各得一分。",
+      "draft_block_ids": [
+        "zk01_b31"
+      ],
+      "draft_voiceovers": [
+        "各得一分。"
+      ]
+    },
+    {
+      "original_id": "s32_joint_choices",
+      "original_voiceover": "所以，收益取决于两个人的选择组合。",
+      "draft_block_ids": [
+        "zk01_b32",
+        "zk01_b33"
+      ],
+      "draft_voiceovers": [
+        "盯住普通僵尸选红的这一行：对方选红，他得三分；对方选蓝，他得零分。",
+        "所以，收益取决于双方的选择组合。"
+      ]
+    },
+    {
+      "original_id": "s33_beyond_money",
+      "original_voiceover": "收益不一定是钱，还可以表示节省的时间、声誉，或对结果的偏好。",
+      "draft_block_ids": [
+        "zk01_b34",
+        "zk01_b35"
+      ],
+      "draft_voiceovers": [
+        "收益未必是钱，也可以表示省下的时间，或者对结果的偏好。",
+        "具体怎么计，要看参与者在乎什么。"
+      ]
+    },
+    {
+      "original_id": "s34_intro",
+      "original_voiceover": "最后，记住这四问：",
+      "draft_block_ids": [
+        "zk01_b36"
+      ],
+      "draft_voiceovers": [
+        "最后，记住这四问："
+      ]
+    },
+    {
+      "original_id": "s35_first_pair",
+      "original_voiceover": "谁来决定？知道什么？",
+      "draft_block_ids": [
+        "zk01_b37",
+        "zk01_b39"
+      ],
+      "draft_voiceovers": [
+        "谁来决定？知道什么？",
+        "对应的概念，就是参与者、信息、策略和收益。"
+      ]
+    },
+    {
+      "original_id": "s36_second_pair",
+      "original_voiceover": "怎么选择？各得什么？",
+      "draft_block_ids": [
+        "zk01_b38",
+        "zk01_b39"
+      ],
+      "draft_voiceovers": [
+        "怎么选择？各得什么？",
+        "对应的概念，就是参与者、信息、策略和收益。"
+      ]
+    },
+    {
+      "original_id": "s37_closing",
+      "original_voiceover": "先把博弈讲清楚，再分析大家会怎么选。",
+      "draft_block_ids": [
+        "zk01_b40"
+      ],
+      "draft_voiceovers": [
+        "先把这场博弈讲清楚，再分析他们会怎么选。"
+      ]
+    }
+  ]
+}

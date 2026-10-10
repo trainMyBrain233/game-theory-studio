@@ -1,0 +1,86 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Quality (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    # Core runs for both the default and changed case, followed by native QA.
+    # Keep a finite ceiling with room for slower runners; this is not a test skip.
+    timeout-minutes: 60
+    steps:
+      - name: Check out source without persisted credentials
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up Node LTS
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+      - name: Clean locked dependency installation
+        run: |
+          node --version
+          npm --version
+          python3 --version
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run setup:python
+      - name: Content and configuration contracts
+        run: |
+          npm run qa:data
+          npm run qa:editorial
+      - name: Prepare checksum-pinned official SC fonts
+        run: npm run setup:fonts -- --download
+      - name: Font registration and complete glyph coverage
+        run: npm run qa:fonts
+      - name: Core and negative regression tests
+        run: npm run test:core
+      - name: Public animatic components with synthetic assets
+        run: npm run test:animatic
+      - name: Static templates, measured layout and original cast clearance
+        run: npm run test:render
+      - name: Non-IP rendering and deterministic time smoke
+        run: npm run render:smoke
+      - name: Full-episode original placeholder smoke and intermediate layouts
+        run: npm run test:episode
+      - name: Actual custom and default still contact sheets
+        if: ${{ matrix.os == 'ubuntu-24.04' }}
+        run: |
+          npm run setup:media
+          npm run make:episode:boards
+          npm run render:episode:stills -- --placeholder-cast
+          npm run make:episode:boards
+          node scripts/python.mjs - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          output = Path('production/output')
+          for name in ('custom_contact_sheet.png', 'keyframes_contact_sheet.png', 'transitions_contact_sheet.png'):
+              with Image.open(output / name) as image:
+                  image.load()
+                  assert image.format == 'PNG', f'{name}: expected PNG'
+                  assert image.width > 0 and image.height > 0, f'{name}: empty image'
+                  print(f'{name}: decoded {image.width}x{image.height}')
+          PY
+      - name: Public source boundary and read-only validation
+        run: |
+          npm run qa:source
+          git diff --exit-code

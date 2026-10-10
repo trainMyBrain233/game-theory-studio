@@ -1,0 +1,26 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {withSourceFixture} from './source-fixture.mjs';
+import {ROOT,pythonCommand} from './python.mjs';
+const diagnostics=result=>`status=${result.status}, signal=${result.signal??'none'}, spawn error=${result.error?.message??'none'}\n${result.stdout??''}${result.stderr??''}`;
+withSourceFixture(temp=>{
+ const scenes=JSON.parse(fs.readFileSync(path.join(temp,'design/scenes.json'),'utf8'));
+ scenes.actors[0].label='甲';scenes.actors[1].label='乙';scenes.strategies[0].label='合作';scenes.strategies[1].label='退出';
+ scenes.payoffs=[[[11,12],[21,22]],[[31,32],[41,42]]];scenes.selected={row:1,column:0,actorA:'blue',actorB:'red'};
+ fs.writeFileSync(path.join(temp,'design/scenes.json'),JSON.stringify(scenes));
+ const tokens=JSON.parse(fs.readFileSync(path.join(temp,'design/tokens.json'),'utf8'));
+ tokens.canvas.subtitleFont=48;tokens.styles.textbook.titleFamily='serif';
+ tokens.semantic.strategyRed.fill='#8D2638';tokens.semantic.strategyBlue.fill='#215F78';
+ tokens.styles.textbook.paper='#FFF7E6';tokens.styles.textbook.ink='#1E304F';
+ fs.writeFileSync(path.join(temp,'design/tokens.json'),JSON.stringify(tokens));
+ const build=spawnSync(pythonCommand(),[path.join(temp,'chapters/01-four-elements/narration/build_narration.py')],{encoding:'utf8'});
+ assert.equal(build.status,0,diagnostics(build));
+ const args=['--import',path.join(temp,'scripts/isolated-fonts.mjs'),path.join(temp,'production/qa/model-smoke.mjs')];
+ const run=spawnSync(process.execPath,[...args,'--placeholder-cast'],{encoding:'utf8',cwd:temp,env:{...process.env,PYTHON:pythonCommand()}});
+ assert.equal(run.status,0,diagnostics(run));console.log(run.stdout.trim());
+ const missing=spawnSync(process.execPath,args,{encoding:'utf8',cwd:temp,env:{...process.env,PYTHON:pythonCommand()}});
+ assert.notEqual(missing.status,0,diagnostics(missing));assert.match(missing.stderr,/PRIVATE_ASSET_MISSING/,diagnostics(missing));
+ console.log('Public episode smoke: changed case, actual matrix pixels/glyphs, typography, selection and explicit missing-private failure passed.');
+});

@@ -1,0 +1,159 @@
+/** Pinned Unicode 15.0 text policy; host-independent properties, standard stable NFKC. */
+import unicode from './unicode-text-15.0.0.json' with {type: 'json'};
+
+export const TEXT_UNICODE_VERSION = unicode.unicodeVersion;
+const requireText = (condition, message) => {if (!condition) throw new Error(message);};
+function includes(ranges, point) {
+  let low = 0, high = ranges.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1, [start, end] = ranges[mid];
+    if (point < start) high = mid - 1;
+    else if (point > end) low = mid + 1;
+    else return true;
+  }
+  return false;
+}
+function points(text) {
+  requireText(typeof text === 'string', 'Text must be a string');
+  const result = Array.from(text, char => char.codePointAt(0));
+  requireText(result.every(point => !includes(unicode.unsupported, point)), 'Text must be well-formed and use supported, assigned Unicode 15.0 characters (no private-use code points)');
+  return result;
+}
+export function readableCount(text) {
+  return points(text).filter(point => includes(unicode.readable, point)).length;
+}
+/** Inputs are restricted to assigned Unicode 15.0 scalars before normalization.
+ * Node 22+ supports Unicode >=15; UAX #15 normalization stability then applies.
+ */
+export function normalizeNFKC(text) {
+  points(text);
+  return text.normalize('NFKC');
+}
+function singleLine(text, role, requireVisible) {
+  const value = points(text);
+  requireText(value.length > 0 && !includes(unicode.spaces, value[0]) && !includes(unicode.spaces, value.at(-1)) &&
+    value.every(point => !includes(unicode.singleLineForbidden, point) && !includes(unicode.defaultIgnorable, point)),
+  `${role}: ${requireVisible ? 'label' : 'text'} must be trimmed, well-formed, visible and single-line without controls or default-ignorable characters`);
+  if (requireVisible) requireText(value.some(point => includes(unicode.readable, point)), `${role}: label must contain a visible letter or number`);
+}
+export function normalizedLabel(label, role = 'Label') {
+  try {singleLine(label, role, true);} catch (error) {throw new Error(`${role}: label must meet the Unicode text contract: ${error.message}`);}
+  let previousSpace = false, result = '';
+  for (const char of normalizeNFKC(label)) {
+    const space = includes(unicode.spaces, char.codePointAt(0));
+    if (!space || !previousSpace) result += space ? ' ' : char;
+    previousSpace = space;
+  }
+  return result;
+}
+export function validateSubtitleLine(line, role = 'Subtitle') {
+  singleLine(line, role, false);
+  const count = readableCount(line);
+  requireText(count >= 1, `${role}: subtitle line must contain at least one readable letter or number`);
+  requireText(count <= 22, `${role}: subtitle line exceeds 22 readable characters`);
+}
+export function spokenNumber(value) {
+  requireText(Number.isInteger(value) && value >= 0 && value <= 99, 'Narrated score must be integer 0..99');
+  const digits = '零一二三四五六七八九';
+  return value < 10 ? digits[value] : (value >= 20 ? digits[Math.floor(value / 10)] : '') + '十' + (value % 10 ? digits[value % 10] : '');
+}
+const BREAKS = '，；。！？：';
+export function protectedSubtitleTokens(players, strategies, cue = {}) {
+  const tokens = [...players, ...strategies];
+  for (const [index, owner] of ['A', 'B'].entries()) {
+    if (cue.choices?.[owner]) for (const verb of ['选', '也选', '选择']) {
+      tokens.push(`${players[index]}${verb}${cue.choices[owner]}`, `${players[index]}，${verb}${cue.choices[owner]}`);
+    }
+    if (cue.scores) {
+      const result = `得${spokenNumber(cue.scores[index])}分`;
+      tokens.push(`${players[index]}${result}`, `${players[index]}，${result}`);
+    }
+  }
+  if (cue.scores && cue.scores[0] === cue.scores[1]) tokens.push(`两个人，各得${spokenNumber(cue.scores[0])}分`);
+  return tokens;
+}
+// These are clause patterns, not prescribed utterances. Authors can reorder
+// owners, add introductory clauses, and use ordinary choice/result synonyms.
+// Literal labels are escaped: punctuation in a valid current name is data.
+const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const CHOICE_VERB = '(?:也)?(?:决定)?(?:选择|选)(?:了)?';
+const SCORE_VERB = '(?:也)?(?:得到|获得|拿到|得|拿)(?:了)?';
+function matchingClauses(voiceover, subjects, predicate) {
+  const subject = subjects.map(escapeRegex).join('|');
+  const pattern = new RegExp(`(?:^|[${BREAKS}])(?:现在|这时|其中|而|那么)?((?:${subject})，?${predicate})(?=$|[${BREAKS}])`, 'gu');
+  return Array.from(voiceover.matchAll(pattern), match => match[1]);
+}
+function clausesStayWhole(clauses, lines, voiceover) {
+  return clauses.every(clause => {
+    const count = text => text.split(clause).length - 1;
+    return lines.reduce((sum, line) => sum + count(line), 0) === count(voiceover);
+  });
+}
+export function validateCueNarration(lines, voiceover, players, cue = {}, role = 'Subtitle', strategies = []) {
+  // Bounded positive identity/binding evidence, not general Chinese NLP.
+  const identity = (pattern, description) => {
+    requireText(new RegExp(pattern, 'u').test(voiceover), `${role}: narration missing current-case ${description} clause`);
+  };
+  const [a, b] = players.map(escapeRegex), [r, c] = strategies.map(escapeRegex);
+  const pair = (first, second, join) => `(?:${first}(?:牌)?${join}${second}(?:牌)?|${second}(?:牌)?${join}${first}(?:牌)?)`;
+  const alternatives = pair(r, c, '，?(?:或者|或是|或|和|与|、)');
+  switch (cue.action) {
+    case 'introduce_players':
+      identity(pair(a, b, '，?(?:和|与|、)'), 'players'); return;
+    case 'show_two_actions':
+      identity(`(?:选择|选)${alternatives}`, 'strategy alternatives'); return;
+    case 'map_actions_to_pure_strategies':
+      identity(`${alternatives}(?:就是|是|作为)(?:两个|两种)?纯策略`, 'pure strategies'); return;
+    case 'show_multi_round_plan':
+      identity(`第一轮(?:，)?(?:选择|选)${r}(?:牌)?(?=$|[${BREAKS}])`, 'first-round strategy'); return;
+    case 'introduce_matrix_rows':
+    case 'introduce_matrix_columns': {
+      const axis = cue.action === 'introduce_matrix_rows' ? '行' : '列';
+      const owner = axis === '行' ? a : b;
+      identity(`(?:${axis}，?(?:是|表示|代表|对应)${owner}的选择|${owner}的选择(?:在|对应)${axis})(?=$|[${BREAKS}])`, `matrix ${axis} owner`); return;
+    }
+    case 'introduce_score_order':
+      identity(`先(?:读|看)${a}的得分，(?:然后|再)(?:读|看)${b}的得分(?=$|[${BREAKS}])`, 'score order'); return;
+  }
+  if (!['highlight_choices', 'reveal_scores'].includes(cue.action)) return;
+  const requireClause = (subjects, predicate, description) => {
+    const clauses = matchingClauses(voiceover, subjects, predicate);
+    requireText(clauses.length > 0, `${role}: narration missing current-case ${description} clause`);
+    requireText(clausesStayWhole(clauses, lines, voiceover),
+      `${role}: subtitle splits protected current-case token or clause: ${description}`);
+  };
+  if (cue.action === 'highlight_choices') {
+    for (const [index, owner] of ['A', 'B'].entries()) {
+      requireClause([players[index]], `${CHOICE_VERB}${escapeRegex(cue.choices?.[owner] ?? '')}(?:牌)?`, `${owner} choice`);
+    }
+  } else {
+    const scores = cue.scores ?? [];
+    if (scores.length === 2 && scores[0] === scores[1]) {
+      const collective = matchingClauses(voiceover, ['两个人', '两人', '双方', '他们'], `(?:各|都)${SCORE_VERB}${spokenNumber(scores[0])}分`);
+      if (collective.length) {
+        requireText(clausesStayWhole(collective, lines, voiceover),
+          `${role}: subtitle splits protected current-case token or clause: collective score`);
+        return;
+      }
+    }
+    for (const [index, owner] of ['A', 'B'].entries()) {
+      requireClause([players[index]], `${SCORE_VERB}${spokenNumber(scores[index])}分`, `${owner} score`);
+    }
+  }
+}
+/** Break only at authored clause punctuation, never inside current-case labels/results. */
+export function validateSubtitleChunk(lines, voiceover, players, strategies, cue = {}, role = 'Subtitle') {
+  requireText(Array.isArray(lines) && lines.length >= 1 && lines.length <= 2, `${role}: subtitles require one or two lines`);
+  lines.forEach(line => validateSubtitleLine(line, role));
+  requireText(lines.join('') === voiceover, `${role}: subtitle lines must preserve the exact voiceover`);
+  for (const line of lines.slice(0, -1)) requireText(BREAKS.includes(line.at(-1)), `${role}: subtitle splits a semantic clause; break only after clause punctuation`);
+  for (const token of protectedSubtitleTokens(players, strategies, cue)) {
+    const occurrences = text => text.split(token).length - 1;
+    requireText(lines.reduce((sum, line) => sum + occurrences(line), 0) === occurrences(voiceover), `${role}: subtitle splits protected current-case token or clause: ${token}`);
+  }
+}
+/** A complete cue-bearing spoken segment needs every current owner/predicate. */
+export function validateSubtitleLines(lines, voiceover, players, strategies, cue = {}, role = 'Subtitle') {
+  validateSubtitleChunk(lines, voiceover, players, strategies, cue, role);
+  validateCueNarration(lines, voiceover, players, cue, role, strategies);
+}

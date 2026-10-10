@@ -1,0 +1,119 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {loadImage} from '@napi-rs/canvas';
+import {CAST,resolveCastText} from './cast.mjs';
+import {registerFonts,canvasFont,FONT_FAMILY,SERIF_FAMILY} from '../typography/fonts.mjs';
+import {assertAppliedFont} from '../../typography/font-contract.mjs';
+import {mix,transformState,textTransitionState} from './motion.mjs';
+import {createCardElement} from './elements/card.mjs';
+export {clamp,ease,mix,ramp,span} from './motion.mjs';
+registerFonts({serif:true});
+export {TOKENS} from './model.mjs';
+import {TOKENS} from './model.mjs';
+const tc=TOKENS.colors;
+export const C={paper:tc.paper,ink:tc.ink,muted:tc.secondary,light:tc.line,faint:tc.focus_fill,blue:tc.blue_strategy,red:tc.red_strategy,beige:'#F2E7CE',white:'#FFFFFF'};
+export const assets={};
+let characterRenderer=null,currentSceneTime=0;
+let assetPreparation='unprepared';
+export function assertAssetsReady(){
+ if(assetPreparation!=='ready')throw Error(`Assets are ${assetPreparation}; await successful prepareAssets() before drawing.`);
+}
+export function setSceneTime(t,canvas){currentSceneTime=t;characterRenderer?.beginFrame?.(canvas)}
+export function finishActorLayers(canvas){characterRenderer?.flush?.(canvas)}
+export function getActorMask(){return characterRenderer?.getMask?.()||null}
+const root=path.dirname(fileURLToPath(import.meta.url));
+export const assetLoadReport=[];
+export async function prepareAssets(scale=2){
+ // The adapter owns mutable rig state: never run two preparations concurrently.
+ if(assetPreparation==='preparing')throw Error('Asset preparation already in progress; await the active prepareAssets() call.');
+ // Retire the previous session immediately; a failed retry must not render it.
+ assetPreparation='preparing';
+ characterRenderer=null;
+ for(const name of Object.keys(assets))delete assets[name];
+ assetLoadReport.length=0;
+ const preparedAssets={},preparedReport=[];
+ try{
+ const names=['person-a','person-b','card-red','card-blue','card-back'];
+ const placeholder=process.argv.includes('--placeholder-cast');
+ let preparedRenderer=null;
+ if(CAST.renderer_module&&!placeholder){preparedRenderer=await import(new URL('../'+CAST.renderer_module,import.meta.url));await preparedRenderer.prepare();}
+ for(const n of names){
+  const isPerson=n.startsWith('person'),reg=isPerson?CAST.actors[n.at(-1).toUpperCase()]:CAST.strategies[n.slice(5)];
+  if(isPerson&&preparedRenderer){preparedReport.push({id:n,type:'layered_raster',source:reg.asset,pixel_budget:preparedRenderer.pixelBudget});continue;}
+  const file=path.resolve(root,'..',placeholder&&isPerson?reg.fallback_asset||reg.asset:reg.asset);
+  const vw=isPerson?420:140,vh=isPerson?500:190;
+  if(path.extname(file).toLowerCase()==='.svg'){
+   let svg=fs.readFileSync(file,'utf8');
+   if(!isPerson){
+    const colors={'#FFFEF8':C.paper,'#243E66':C.ink,'#BC3D31':C.red,'#345D9E':C.blue};
+    svg=svg.replace(/\b(fill|stroke)="(#[0-9a-f]{6})"/gi,(_,attribute,color)=>`${attribute}="${colors[color.toUpperCase()]??color}"`);
+   }
+   // Rasterize true vectors at the delivery resolution; preserve an explicit viewBox.
+   const vb=reg.viewBox||[0,0,vw,vh];
+   svg=svg.replace(/<svg\b[^>]*>/,`<svg xmlns="http://www.w3.org/2000/svg" width="${vw*scale}" height="${vh*scale}" viewBox="${vb.join(' ')}">`);
+   preparedAssets[n]=await loadImage(Buffer.from(svg));
+   preparedReport.push({id:n,type:'svg',source:reg.asset,render_width:vw*scale,render_height:vh*scale,embedded_raster:/<image\b/i.test(svg)});
+  } else {
+   // High-resolution transparent character layers may be used without mislabeling them as vectors.
+   preparedAssets[n]=await loadImage(fs.readFileSync(file));
+   preparedReport.push({id:n,type:'raster',source:reg.asset,native_width:preparedAssets[n].width,native_height:preparedAssets[n].height,planned_width:vw*scale,planned_height:vh*scale});
+  }
+ }
+ // Publish only a complete cast/card set; no await may split this commit.
+ Object.assign(assets,preparedAssets);
+ assetLoadReport.push(...preparedReport);
+ characterRenderer=preparedRenderer;
+ assetPreparation='ready';
+ }catch(error){assetPreparation='failed';throw error;}
+}
+// Record the applied context alpha after all parent groups. Never use a visual
+// cutoff: even the faintest nonzero transition participates in clearance QA.
+export let records=[];
+export let routes=[];
+export function resetRecords(){records=[];routes=[]}
+export function tx(c,str,x,y,size=36,weight=400,color=C.ink,align='left',opts={}){
+ str=resolveCastText(str);const role=opts.role??(Object.values(CAST.actors).some(actor=>actor.display_name===str)?'actor-name':'body'); c.save(); c.font=canvasFont(size,weight,{serif:opts.serif??false});
+ const applied=assertAppliedFont(c,{size,weight,family:opts.serif?SERIF_FAMILY:FONT_FAMILY});
+ c.fillStyle=color;c.textAlign=align;c.textBaseline=opts.baseline??'alphabetic';
+ const m=c.measureText(str);c.fillText(str,x,y);
+ if(opts.record!==false && c.globalAlpha>0){
+  // Canvas actual bounds are relative to the active textAlign/textBaseline
+  // anchor, not the advance-width origin. Signed bearings include overhangs.
+  if(![m.actualBoundingBoxLeft,m.actualBoundingBoxRight,m.actualBoundingBoxAscent,m.actualBoundingBoxDescent].every(Number.isFinite))throw Error('Text ink QA requires finite actual Canvas bounding-box metrics.');
+  const left=x-m.actualBoundingBoxLeft,right=x+m.actualBoundingBoxRight;
+  const top=y-m.actualBoundingBoxAscent,bottom=y+m.actualBoundingBoxDescent;
+  if(![left,right,top,bottom].every(Number.isFinite)||right<left||bottom<top)throw Error('Text ink QA received invalid ink bounds.');
+  // Empty strings/whitespace have no ink; zero ascent is valid (e.g. '_').
+  if(right>left&&bottom>top){
+   const tr=c.getTransform(),scale=c.canvas.width/1920;
+   const corners=[[left,top],[right,top],[left,bottom],[right,bottom]].map(([px,py])=>[(tr.a*px+tr.c*py+tr.e)/scale,(tr.b*px+tr.d*py+tr.f)/scale]);
+   if(!Number.isFinite(scale)||!(scale>0)||!corners.flat().every(Number.isFinite))throw Error('Text ink QA requires finite transformed bounds and a positive canvas scale.');
+   const xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]);
+   const x0=Math.min(...xs),y0=Math.min(...ys),width=Math.max(...xs)-x0,height=Math.max(...ys)-y0;
+   if(![width,height].every(Number.isFinite))throw Error('Text ink QA received nonfinite transformed extents.');
+   if(width>0&&height>0)records.push({text:str,role,x:x0,y:y0,width,height,size:applied.size,weight:applied.weight,family:applied.family,appliedFont:c.font,alpha:c.globalAlpha});
+  }
+ }
+ c.restore();
+}
+export function line(c,x1,y1,x2,y2,color=C.ink,w=3,p=1,dashed=false){if(p<=0)return;c.save();c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';if(dashed)c.setLineDash([10,10]);c.beginPath();c.moveTo(x1,y1);c.lineTo(mix(x1,x2,p),mix(y1,y2,p));c.stroke();if(c.globalAlpha>0){const tr=c.getTransform(),s=c.canvas.width/1920;const point=(x,y)=>[(tr.a*x+tr.c*y+tr.e)/s,(tr.b*x+tr.d*y+tr.f)/s];routes.push({from:point(x1,y1),to:point(mix(x1,x2,p),mix(y1,y2,p)),width:w,alpha:c.globalAlpha});}c.restore()}
+export function round(c,x,y,w,h,r=12,fill=null,stroke=C.ink,lw=3){c.save();c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke()}c.restore()}
+export function circle(c,x,y,r,fill=C.paper,stroke=C.ink,w=3){c.save();c.beginPath();c.arc(x,y,r,0,Math.PI*2);if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=w;c.stroke()}c.restore()}
+export function arrow(c,x1,y1,x2,y2,p=1,{color=C.ink,w=3,dashed=false}={}){
+ line(c,x1,y1,x2,y2,color,w,p,dashed);if(p<.97)return;const a=Math.atan2(y2-y1,x2-x1);c.save();c.fillStyle=color;c.beginPath();c.moveTo(x2,y2);c.lineTo(x2-15*Math.cos(a-.42),y2-15*Math.sin(a-.42));c.lineTo(x2-15*Math.cos(a+.42),y2-15*Math.sin(a+.42));c.closePath();c.fill();c.restore();
+}
+export function group(c,alpha,dx,dy,fn){const state=transformState(alpha,dx,dy);if(!state.visible)return;c.save();c.globalAlpha*=state.alpha;c.translate(state.dx,state.dy);fn();c.restore()}
+export function reveal(c,t,start,fn,{d=.55,dy=12}={}){const state=textTransitionState(t,start,{d,dy});group(c,state.alpha,state.dx,state.dy,fn)}
+export function person(c,id,x,y,s=1,alpha=1){if(characterRenderer){characterRenderer.draw(c,id,{x,y,scale:s,alpha,t:currentSceneTime});return;}if(!assets['person-'+id.toLowerCase()])return;group(c,alpha,0,0,()=>{c.drawImage(assets['person-'+id.toLowerCase()],x,y,420*s,500*s);if(CAST.actors[id].badge_anchor!==null)tx(c,id,x+(CAST.actors[id].badge_anchor?.[0]||164)*s,y+((CAST.actors[id].badge_anchor?.[1]||374)+10)*s,26*s,700,C.white,'center',{record:false})})}
+export function badge(c,id,x,y,r=25,{name=false}={}){if(id==='A')circle(c,x,y,r,C.ink,null);else round(c,x-r,y-r,r*2,r*2,1,C.ink,null);tx(c,id,x,y+r*.4,r*1.05,700,C.white,'center',{record:false});if(name)tx(c,CAST.actors[id].display_name,x+r+17,y+11,31,700)}
+export function card(c,kind,x,y,w=112,{angle=0,flip=1,alpha=1,label=true}={}){
+ return cardElement.draw(c,{kind,x,y,width:w,angle,flip,alpha,label});
+}
+export function cardFlip(c,from,to,x,y,w,p,{angle=0,alpha=1,label=true}={}){return cardElement.drawFlip(c,{from,to,x,y,width:w,progress:p,angle,alpha,label})}
+const cardHotspots=JSON.parse(fs.readFileSync(new URL('../assets/asset-hotspots.json',import.meta.url),'utf8')).cards;
+export const cardElement=createCardElement({assets,palette:C,strategies:CAST.strategies,drawing:{tx,round},labelContract:{sourceViewBox:cardHotspots.viewBox,anchor:cardHotspots.labelCenter,style:cardHotspots.labelStyle}});
+export function tag(c,text,x,y,w,{fill=C.faint,size=30,stroke=null}={}){round(c,x,y,w,54,10,fill,stroke,2);tx(c,text,x+w/2,y+38,size,700,C.ink,'center')}
+export function desk(c,alpha=1,y=796,x1=235,x2=1685){group(c,alpha,0,0,()=>{line(c,x1,y,x2,y,C.ink,3.5);line(c,x1+50,y,x1+31,y+72,C.ink,3);line(c,x2-50,y,x2-31,y+72,C.ink,3)})}
+export function cross(c,x,y,size=10){line(c,x-size,y-size,x+size,y+size,C.muted,3);line(c,x-size,y+size,x+size,y-size,C.muted,3)}
+export function eye(c,x,y,s=1){c.save();c.translate(x,y);c.scale(s,s);c.strokeStyle=C.ink;c.lineWidth=3;c.beginPath();c.moveTo(-30,0);c.quadraticCurveTo(0,-28,30,0);c.quadraticCurveTo(0,28,-30,0);c.stroke();circle(c,0,0,8,C.ink,null);c.restore()}

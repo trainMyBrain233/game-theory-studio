@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "0.1",
+  "status": "draft",
+  "series": "僵尸王国",
+  "episode": {"number": "01", "title": "红蓝牌局"},
+  "actors": {
+    "A": {"name": "普通僵尸", "avatar": {"actor": "A", "layer": "head"}},
+    "B": {"name": "路障僵尸", "avatar": {"actor": "B", "layer": "head"}}
+  }
+}

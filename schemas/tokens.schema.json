@@ -1,0 +1,373 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:game-theory-studio:tokens:1.0",
+  "type": "object",
+  "properties": {
+    "canvas": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "const": 1920
+        },
+        "height": {
+          "const": 1080
+        },
+        "fps": {
+          "const": 30
+        },
+        "safeMargin": {
+          "const": 84
+        },
+        "subtitleTop": {
+          "const": 954
+        },
+        "subtitleFont": {
+          "type": "integer",
+          "minimum": 38,
+          "maximum": 48
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fps",
+        "safeMargin",
+        "subtitleTop",
+        "subtitleFont"
+      ],
+      "additionalProperties": false
+    },
+    "font": {
+      "type": "object",
+      "properties": {
+        "sans": {
+          "const": "GameTheory Noto Sans SC"
+        },
+        "serif": {
+          "const": "GameTheory Noto Serif SC"
+        },
+        "weights": {
+          "const": [
+            400,
+            700
+          ]
+        },
+        "minMeaningfulLabel": {
+          "const": 30
+        },
+        "body": {
+          "type": "integer",
+          "minimum": 36,
+          "maximum": 42
+        }
+      },
+      "required": [
+        "sans",
+        "serif",
+        "weights",
+        "minMeaningfulLabel",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "semantic": {
+      "type": "object",
+      "properties": {
+        "actorA": {
+          "type": "object",
+          "properties": {
+            "shape": {
+              "const": "circle"
+            },
+            "position": {
+              "const": "first"
+            }
+          },
+          "required": [
+            "shape",
+            "position"
+          ],
+          "additionalProperties": false
+        },
+        "actorB": {
+          "type": "object",
+          "properties": {
+            "shape": {
+              "const": "square"
+            },
+            "position": {
+              "const": "second"
+            }
+          },
+          "required": [
+            "shape",
+            "position"
+          ],
+          "additionalProperties": false
+        },
+        "strategyRed": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "const": "红"
+            },
+            "fill": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "symbol": {
+              "const": "disc"
+            }
+          },
+          "required": [
+            "name",
+            "fill",
+            "symbol"
+          ],
+          "additionalProperties": false
+        },
+        "strategyBlue": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "const": "蓝"
+            },
+            "fill": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "symbol": {
+              "const": "bar"
+            }
+          },
+          "required": [
+            "name",
+            "fill",
+            "symbol"
+          ],
+          "additionalProperties": false
+        },
+        "scoreOrder": {
+          "const": [
+            "A",
+            "B"
+          ]
+        }
+      },
+      "required": [
+        "actorA",
+        "actorB",
+        "strategyRed",
+        "strategyBlue",
+        "scoreOrder"
+      ],
+      "additionalProperties": false
+    },
+    "styles": {
+      "type": "object",
+      "properties": {
+        "editorial": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subtitle": {
+              "type": "string",
+              "minLength": 1
+            },
+            "paper": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "ink": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "line": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "wash": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "stroke": {
+              "const": 3
+            },
+            "titleFamily": {
+              "enum": [
+                "sans",
+                "serif"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "subtitle",
+            "paper",
+            "ink",
+            "muted",
+            "line",
+            "accent",
+            "wash",
+            "stroke",
+            "titleFamily"
+          ],
+          "additionalProperties": false
+        },
+        "textbook": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subtitle": {
+              "type": "string",
+              "minLength": 1
+            },
+            "paper": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "ink": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "line": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "wash": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "stroke": {
+              "const": 3
+            },
+            "titleFamily": {
+              "enum": [
+                "sans",
+                "serif"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "subtitle",
+            "paper",
+            "ink",
+            "muted",
+            "line",
+            "accent",
+            "wash",
+            "stroke",
+            "titleFamily"
+          ],
+          "additionalProperties": false
+        },
+        "bright": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subtitle": {
+              "type": "string",
+              "minLength": 1
+            },
+            "paper": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "ink": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "line": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "wash": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "purple": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "stroke": {
+              "const": 5
+            },
+            "titleFamily": {
+              "enum": [
+                "sans",
+                "serif"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "subtitle",
+            "paper",
+            "ink",
+            "muted",
+            "line",
+            "accent",
+            "wash",
+            "purple",
+            "stroke",
+            "titleFamily"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "editorial",
+        "textbook",
+        "bright"
+      ],
+      "additionalProperties": false
+    },
+    "schemaVersion": {
+      "const": "1.0"
+    }
+  },
+  "required": [
+    "canvas",
+    "font",
+    "semantic",
+    "styles",
+    "schemaVersion"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Design tokens 1.0: fixed template geometry, editable palette/type"
+}

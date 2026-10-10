@@ -1,0 +1,4 @@
+# Optional original SFX synthesis and contact-sheet previews, in the same .venv.
+-r requirements.txt
+numpy==2.3.5
+Pillow==12.3.0

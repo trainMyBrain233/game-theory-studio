@@ -1,0 +1,369 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:game-theory-studio:timeline:2.1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "2.1"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "language": {
+      "const": "zh-CN"
+    },
+    "duration": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "fps_reference": {
+      "const": 30
+    },
+    "timing_status": {
+      "const": "manual_voiceover_reference_not_audio_aligned"
+    },
+    "timing_notice": {
+      "type": "string",
+      "minLength": 1
+    },
+    "speech_guidance": {
+      "type": "object"
+    },
+    "visual_contract": {
+      "type": "object",
+      "required": [
+        "participants",
+        "matrix_values",
+        "matrix_score_order",
+        "game_rounds"
+      ],
+      "properties": {
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "matrix_score_order": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "game_rounds": {
+          "const": 1
+        },
+        "matrix_values": {
+          "type": "object",
+          "properties": {
+            "RR": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            },
+            "RB": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            },
+            "BR": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            },
+            "BB": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              }
+            }
+          },
+          "required": [
+            "RR",
+            "RB",
+            "BR",
+            "BB"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "end": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "start",
+          "end"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "section": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "voiceover": {
+            "type": "string",
+            "minLength": 1
+          },
+          "spoken_duration": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "pause_after": {
+            "type": "number",
+            "minimum": 0
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "visual_cue": {
+            "type": "object",
+            "required": [
+              "action"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "minLength": 1
+              },
+              "note": {
+                "type": "string"
+              },
+              "question": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
+              "matrix_cell": {
+                "enum": [
+                  "RR",
+                  "RB",
+                  "BR",
+                  "BB"
+                ]
+              },
+              "choices": {
+                "type": "object",
+                "properties": {
+                  "A": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2
+                  },
+                  "B": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2
+                  }
+                },
+                "required": [
+                  "A",
+                  "B"
+                ],
+                "additionalProperties": false
+              },
+              "scores": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 99
+                }
+              },
+              "score_reveals": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 2,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "offset": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "player": {
+                      "enum": [
+                        "A",
+                        "B"
+                      ]
+                    },
+                    "value": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 99
+                    }
+                  },
+                  "required": [
+                    "offset",
+                    "player",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "action": {
+                      "const": "reveal_scores"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "matrix_cell",
+                    "scores",
+                    "score_reveals"
+                  ],
+                  "properties": {
+                    "score_reveals": {
+                      "type": "array",
+                      "minItems": 2
+                    },
+                    "matrix_cell": {},
+                    "scores": {}
+                  }
+                }
+              }
+            ]
+          },
+          "breath_points": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "voiceover_end": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "end": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "display_duration": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "speech_plan_note": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "section",
+          "text",
+          "voiceover",
+          "spoken_duration",
+          "pause_after",
+          "lines",
+          "visual_cue",
+          "breath_points",
+          "start",
+          "voiceover_end",
+          "end",
+          "display_duration",
+          "speech_plan_note"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "title",
+    "language",
+    "duration",
+    "fps_reference",
+    "timing_status",
+    "timing_notice",
+    "speech_guidance",
+    "visual_contract",
+    "sections",
+    "segments"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Manual voiceover reference timeline; no audio alignment claim"
+}

@@ -1,0 +1,224 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:game-theory-studio:scenes:1.0",
+  "type": "object",
+  "properties": {
+    "caseId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "caseName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actors": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "A",
+              "B"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4
+          },
+          "goal": {
+            "const": "自己的得分更高"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "goal"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "strategies": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "red",
+              "blue"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "payoffs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 99
+          }
+        }
+      }
+    },
+    "selected": {
+      "type": "object",
+      "properties": {
+        "row": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "actorA": {
+          "enum": [
+            "red",
+            "blue"
+          ]
+        },
+        "actorB": {
+          "enum": [
+            "red",
+            "blue"
+          ]
+        }
+      },
+      "required": [
+        "row",
+        "column",
+        "actorA",
+        "actorB"
+      ],
+      "additionalProperties": false
+    },
+    "frames": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "participants",
+              "payoff"
+            ]
+          },
+          "chapter": {
+            "type": "string",
+            "minLength": 1
+          },
+          "section": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lead": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subtitle": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "chapter",
+          "section",
+          "title",
+          "lead",
+          "subtitle"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "nextChapterExample": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "chapter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "section": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "primitive": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subtitle": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "chapter",
+        "section",
+        "title",
+        "primitive",
+        "subtitle"
+      ],
+      "additionalProperties": false
+    },
+    "schemaVersion": {
+      "const": "1.0"
+    }
+  },
+  "required": [
+    "caseId",
+    "caseName",
+    "actors",
+    "strategies",
+    "payoffs",
+    "selected",
+    "frames",
+    "schemaVersion"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "One-round two-player scene template contract"
+}

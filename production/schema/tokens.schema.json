@@ -1,0 +1,256 @@
+{
+  "type": "object",
+  "properties": {
+    "style": {
+      "const": "B_clean_textbook"
+    },
+    "canvas": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "const": 1920
+        },
+        "height": {
+          "const": 1080
+        },
+        "fps": {
+          "const": 30
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fps"
+      ],
+      "additionalProperties": false
+    },
+    "spacing": {
+      "type": "object",
+      "properties": {
+        "safe_margin": {
+          "const": 84
+        },
+        "header_bottom": {
+          "const": 116
+        },
+        "main_body_top": {
+          "const": 332
+        },
+        "main_body_bottom": {
+          "const": 917
+        },
+        "subtitle_divider_y": {
+          "const": 936
+        },
+        "subtitle_baselines": {
+          "const": [
+            990,
+            1043
+          ]
+        },
+        "graphic_text_gap_target": {
+          "const": 24
+        },
+        "connector_text_gap_min": {
+          "const": 8
+        },
+        "figure_name_gap": {
+          "const": 32
+        }
+      },
+      "required": [
+        "safe_margin",
+        "header_bottom",
+        "main_body_top",
+        "main_body_bottom",
+        "subtitle_divider_y",
+        "subtitle_baselines",
+        "graphic_text_gap_target",
+        "connector_text_gap_min",
+        "figure_name_gap"
+      ],
+      "additionalProperties": false
+    },
+    "type": {
+      "type": "object",
+      "properties": {
+        "font_family": {
+          "const": "GameTheory Noto Sans SC"
+        },
+        "weights": {
+          "const": [
+            400,
+            700
+          ]
+        },
+        "title": {
+          "const": 72
+        },
+        "body": {
+          "const": 33
+        },
+        "matrix_scores": {
+          "const": 64
+        },
+        "main_min": {
+          "const": 27
+        },
+        "auxiliary_identity_badge_min": {
+          "const": 14
+        }
+      },
+      "required": [
+        "font_family",
+        "weights",
+        "title",
+        "body",
+        "matrix_scores",
+        "main_min",
+        "auxiliary_identity_badge_min"
+      ],
+      "additionalProperties": false
+    },
+    "motion": {
+      "type": "object",
+      "properties": {
+        "easing": {
+          "const": "quintic_smoothstep"
+        },
+        "title_out_seconds": {
+          "const": 0.25
+        },
+        "title_in_seconds": {
+          "const": 0.42
+        },
+        "text_reveal_seconds": {
+          "const": 0.55
+        },
+        "card_flip_seconds": {
+          "const": 0.85
+        },
+        "matrix_migration_seconds": {
+          "const": 1.2
+        },
+        "text_transition": {
+          "const": "out_before_in"
+        }
+      },
+      "required": [
+        "easing",
+        "title_out_seconds",
+        "title_in_seconds",
+        "text_reveal_seconds",
+        "card_flip_seconds",
+        "matrix_migration_seconds",
+        "text_transition"
+      ],
+      "additionalProperties": false
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "A": {
+          "type": "object",
+          "properties": {
+            "matrix": {
+              "const": "row"
+            },
+            "score_index": {
+              "const": 0
+            },
+            "shape": {
+              "const": "circle"
+            }
+          },
+          "required": [
+            "matrix",
+            "score_index",
+            "shape"
+          ],
+          "additionalProperties": false
+        },
+        "B": {
+          "type": "object",
+          "properties": {
+            "matrix": {
+              "const": "column"
+            },
+            "score_index": {
+              "const": 1
+            },
+            "shape": {
+              "const": "square"
+            }
+          },
+          "required": [
+            "matrix",
+            "score_index",
+            "shape"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "A",
+        "B"
+      ],
+      "additionalProperties": false
+    },
+    "encoding": {
+      "type": "object",
+      "properties": {
+        "codec": {
+          "const": "libx264"
+        },
+        "crf": {
+          "const": 16
+        },
+        "preset": {
+          "const": "slow"
+        },
+        "pixel_format": {
+          "const": "yuv420p"
+        },
+        "color_space": {
+          "const": "bt709"
+        },
+        "faststart": {
+          "const": true
+        }
+      },
+      "required": [
+        "codec",
+        "crf",
+        "preset",
+        "pixel_format",
+        "color_space",
+        "faststart"
+      ],
+      "additionalProperties": false
+    },
+    "colors_source": {
+      "const": "../design/tokens.json"
+    },
+    "subtitle_source": {
+      "const": "../design/tokens.json#canvas.subtitleFont"
+    },
+    "schema_version": {
+      "const": "1.0"
+    }
+  },
+  "required": [
+    "schema_version",
+    "style",
+    "canvas",
+    "spacing",
+    "type",
+    "motion",
+    "identity",
+    "encoding",
+    "colors_source",
+    "subtitle_source"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Production layout 1.0; fixed episode geometry, root palette and subtitle size"
+}

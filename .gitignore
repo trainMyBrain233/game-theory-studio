@@ -1,0 +1,55 @@
+# Dependencies and local tools
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.cache/
+*.log
+.DS_Store
+
+# Credentials and machine-specific configuration
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.pub
+.ssh/
+private-access/
+
+# Font binaries and local manifests
+*.otf
+*.ttf
+*.ttc
+*.woff
+*.woff2
+/typography/fonts/
+
+# Generated visual/audio/video artifacts
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.mp4
+*.mov
+*.webm
+*.wav
+*.mp3
+*.zip
+/design/frames/
+/design/boards/
+/design/qa/
+/typography/qa/
+/chapters/*/narration/qa/
+/artifacts/
+/output/
+/dist/
+/coverage/
+
+# Keep only source SVGs; no generated proposal sheets
+/assets/characters/archive/proposals/generated/
+
+/assets/characters/archive/proposals/qa/
+/assets/characters/archive/proposals/png/

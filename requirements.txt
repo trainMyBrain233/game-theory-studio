@@ -1,0 +1,2 @@
+# Complete SC face extraction and font metadata/glyph checks.
+fonttools==4.61.1

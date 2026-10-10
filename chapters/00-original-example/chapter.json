@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "1.0",
+  "id": "00-original-example",
+  "title": "共同选择测试",
+  "contentVersion": "1.0.0",
+  "stage": "prototype",
+  "visualStyle": "textbook",
+  "caseId": "one_round_red_blue"
+}

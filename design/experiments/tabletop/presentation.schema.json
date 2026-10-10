@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "status", "series", "episode", "actors"],
+  "properties": {
+    "schemaVersion": {"const": "0.1"}, "status": {"const": "draft"},
+    "series": {"type": "string", "$ref": "#/$defs/singleLineText", "maxLength": 16},
+    "episode": {
+      "type": "object", "additionalProperties": false, "required": ["number", "title"],
+      "properties": {"number": {"type": "string", "pattern": "^[0-9]{2}$"}, "title": {"type": "string", "$ref": "#/$defs/singleLineText", "maxLength": 16}}
+    },
+    "actors": {
+      "type": "object", "additionalProperties": false, "required": ["A", "B"],
+      "properties": {"A": {"$ref": "#/$defs/actor"}, "B": {"$ref": "#/$defs/actor"}}
+    }
+  },
+  "$defs": {
+    "singleLineText": {
+      "type": "string", "minLength": 1, "pattern": "\\S",
+      "not": {"pattern": "[\\p{Cc}\\p{Cf}\\u2028\\u2029]"}
+    },
+    "actor": {
+      "type": "object", "additionalProperties": false, "required": ["name", "avatar"],
+      "properties": {
+        "name": {"type": "string", "$ref": "#/$defs/singleLineText", "maxLength": 10},
+        "avatar": {"type": "object", "additionalProperties": false, "required": ["actor", "layer"], "properties": {"actor": {"enum": ["A", "B"]}, "layer": {"const": "head"}}}
+      }
+    }
+  }
+}

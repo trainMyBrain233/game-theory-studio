@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {pythonCommand} from '../scripts/python.mjs';
+import {withSourceFixture} from '../scripts/source-fixture.mjs';
+
+test('real drawFrame requires complete preparation across pending, failure, retry and private/public routing',()=>withSourceFixture(root=>{
+ const result=spawnSync(process.execPath,['--import','./scripts/isolated-fonts.mjs','--loader','./tests/fixtures/asset-readiness-native-loader.mjs','--input-type=module','-e',`
+  import assert from 'node:assert/strict';
+  import fs from 'node:fs';
+  import {createCanvas} from '@napi-rs/canvas';
+  import {drawFrame} from './production/src/scenes.mjs';
+  import * as p from './production/src/primitives.mjs';
+  const canvas=createCanvas(960,540),ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ff00ff';ctx.fillRect(0,0,960,540);
+  function blocked(state){
+   const before=canvas.toBuffer('image/png');
+   p.records.push({sentinel:state});p.routes.push({sentinel:state});
+   const records=p.records,routes=p.routes;
+   assert.throws(()=>drawFrame(canvas,25),new RegExp('Assets are '+state));
+   assert.deepEqual(canvas.toBuffer('image/png'),before,'No canvas mutation before readiness');
+   assert.equal(p.records,records);assert.equal(p.routes,routes);
+   const untouched={width:960,height:540,getContext(){throw Error('Context touched');}};
+   assert.throws(()=>drawFrame(untouched,25),new RegExp('Assets are '+state));
+  }
+  blocked('unprepared');
+  await assert.rejects(p.prepareAssets(1),/Missing private character layer/);
+  blocked('failed');assert.deepEqual(Object.keys(p.assets),[]);assert.equal(p.assetLoadReport.length,0);
+  process.argv.push('--placeholder-cast');
+  let release;
+  const control=globalThis.assetDecodeControl={calls:0,pauseAt:3,gate:new Promise(resolve=>release=resolve)};
+  const pending=p.prepareAssets(1);
+  while(control.calls<3)await new Promise(resolve=>setTimeout(resolve,1));
+  blocked('preparing');assert.deepEqual(Object.keys(p.assets),[]);assert.equal(p.assetLoadReport.length,0);
+  await assert.rejects(p.prepareAssets(2),/already in progress/);
+  blocked('preparing');release();await pending;
+  assert.equal(p.assetLoadReport.length,5);assert.equal(Object.keys(p.assets).length,5);
+  drawFrame(canvas,25);assert(p.records.length>0);
+  const publicFrame=canvas.toBuffer('image/png');
+  drawFrame(canvas,25);assert.deepEqual(canvas.toBuffer('image/png'),publicFrame);
+  globalThis.assetDecodeControl={calls:0,failAt:5};
+  await assert.rejects(p.prepareAssets(1),/Injected late decode failure/);
+  blocked('failed');assert.deepEqual(Object.keys(p.assets),[]);assert.equal(p.assetLoadReport.length,0);
+  globalThis.assetDecodeControl=null;
+  await p.prepareAssets(1);drawFrame(canvas,25);assert.deepEqual(canvas.toBuffer('image/png'),publicFrame);
+  process.argv.splice(process.argv.indexOf('--placeholder-cast'),1);
+  await assert.rejects(p.prepareAssets(1),/Missing private character layer/);
+  blocked('failed');
+  const directory='production/private_characters/pvz/assets';fs.mkdirSync(directory,{recursive:true});
+  const image=createCanvas(320,500),ink=image.getContext('2d');ink.fillStyle='#345D9E';ink.fillRect(150,140,20,20);
+  for(const id of ['a','b'])for(const part of ['head','torso','upper','forearm'])fs.writeFileSync(directory+'/'+id+'_'+part+'.png',image.toBuffer('image/png'));
+  await p.prepareAssets(1);assert.equal(p.assetLoadReport.filter(x=>x.type==='layered_raster').length,2);
+  drawFrame(canvas,25);assert.notDeepEqual(canvas.toBuffer('image/png'),publicFrame);
+  fs.writeFileSync(directory+'/b_forearm.png','broken synthetic image');
+  await assert.rejects(p.prepareAssets(1));blocked('failed');
+  assert.deepEqual(Object.keys(p.assets),[]);assert.equal(p.assetLoadReport.length,0);
+  fs.writeFileSync(directory+'/b_forearm.png',image.toBuffer('image/png'));
+  await p.prepareAssets(1);drawFrame(canvas,25);assert(p.records.length>0);
+ `],{cwd:root,encoding:'utf8',timeout:120000,env:{...process.env,PYTHON:pythonCommand()}});
+ assert.equal(result.status,0,result.stdout+result.stderr);
+}));
